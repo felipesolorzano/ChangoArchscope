@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { defaultConfig } from "./defaultConfig.mjs";
 
-export const CONFIG_FILE = "chango-architecture.config.mjs";
+export const CONFIG_FILE = "chango-archscope.config.mjs";
 
 export async function loadConfig(cwd = process.cwd(), explicitConfigPath = null) {
   const projectRoot = explicitConfigPath ? cwd : detectProjectRoot(cwd);
