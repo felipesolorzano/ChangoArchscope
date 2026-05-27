@@ -1,0 +1,688 @@
+.architecture-explorer {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.architecture-explorer--sidebar-closed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.architecture-sidebar {
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  background: #0f172a;
+  padding: 18px;
+  overflow-y: auto;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.architecture-explorer--sidebar-closed .architecture-sidebar {
+  opacity: 0;
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+  pointer-events: none;
+  transform: translateX(-12px);
+}
+
+.architecture-brand {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.architecture-brand > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.architecture-brand h1 {
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.architecture-brand p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.architecture-sidebar-toggle,
+.architecture-sidebar-open {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  background: #020617;
+  color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.architecture-sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+}
+
+.architecture-sidebar-toggle:hover,
+.architecture-sidebar-open:hover {
+  border-color: rgba(204, 251, 241, 0.58);
+  color: #ccfbf1;
+  background: #0f172a;
+}
+
+.architecture-sidebar-open {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 3;
+  min-height: 38px;
+  padding: 0 12px;
+  gap: 8px;
+  font-weight: 800;
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.34);
+}
+
+.architecture-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.architecture-controls label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.architecture-controls select,
+.architecture-controls input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #020617;
+  color: #f8fafc;
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 0 10px;
+  outline: none;
+}
+
+.architecture-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.architecture-search svg {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+}
+
+.architecture-search input {
+  padding-left: 34px;
+}
+
+.architecture-refresh,
+.architecture-check-button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.architecture-refresh {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.architecture-check-button {
+  background: #14b8a6;
+  color: #042f2e;
+}
+
+.architecture-check-button:hover {
+  background: #5eead4;
+}
+
+.architecture-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.architecture-stats div {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.architecture-stats span {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.architecture-stats strong {
+  display: block;
+  font-size: 21px;
+  margin-top: 4px;
+}
+
+.architecture-focus {
+  margin-top: 18px;
+  border: 1px solid rgba(20, 184, 166, 0.38);
+  background: rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.architecture-focus span {
+  display: block;
+  color: #99f6e4;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.architecture-focus strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fafc;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.architecture-focus button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: #ccfbf1;
+  color: #042f2e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.architecture-legend {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.architecture-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.architecture-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.architecture-inspector {
+  margin-top: 18px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(30, 64, 175, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.architecture-inspector strong {
+  font-size: 13px;
+}
+
+.architecture-inspector span {
+  color: #bfdbfe;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.architecture-canvas {
+  width: 100%;
+  height: 100vh;
+  min-height: 720px;
+  position: relative;
+}
+
+.architecture-flow-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 720px;
+}
+
+.architecture-canvas .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.architecture-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #cbd5e1;
+  background: #020617;
+  z-index: 2;
+}
+
+.architecture-state--error {
+  color: #fecaca;
+}
+
+.architecture-canvas .react-flow__controls {
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.34);
+}
+
+.architecture-canvas .react-flow__controls-button {
+  background: #0f172a;
+  border-bottom-color: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+  fill: #f8fafc;
+}
+
+.architecture-canvas .react-flow__controls-button:hover {
+  background: #1e293b;
+  color: #ccfbf1;
+  fill: #ccfbf1;
+}
+
+.architecture-canvas .react-flow__controls-button svg {
+  color: inherit;
+  fill: currentColor;
+}
+
+.architecture-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.architecture-modal {
+  width: min(1120px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.architecture-modal__header {
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.architecture-modal__header span {
+  color: #0f766e;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.architecture-modal__header h2 {
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.2;
+  margin: 3px 0 0;
+}
+
+.architecture-modal__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.architecture-modal__actions button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.architecture-modal__actions button:hover {
+  border-color: #14b8a6;
+  color: #0f766e;
+}
+
+.architecture-modal__actions button:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.architecture-check,
+.architecture-check-state {
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.architecture-check-state {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #475569;
+}
+
+.architecture-check-state--error {
+  color: #b91c1c;
+}
+
+.architecture-check-status {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fef2f2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.architecture-check-status--pass {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.architecture-check-status strong {
+  color: #991b1b;
+  font-size: 16px;
+}
+
+.architecture-check-status--pass strong {
+  color: #0f766e;
+}
+
+.architecture-check-status span {
+  color: #475569;
+  font-size: 13px;
+}
+
+.architecture-check-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.architecture-check-reports {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.architecture-check-report {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.architecture-check-report--pass {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.architecture-check-report--review {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.architecture-check-report > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.architecture-check-report > header strong {
+  display: block;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.architecture-check-report > header span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.architecture-check-report > header b {
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.architecture-check-report > header b.is-pass {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.architecture-check-empty,
+.architecture-check-issues {
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.architecture-check-empty span,
+.architecture-check-issues > span {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.architecture-check-empty strong {
+  color: #334155;
+  font-size: 13px;
+}
+
+.architecture-check-issue {
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  padding: 10px;
+  background: #ffffff;
+  display: grid;
+  gap: 5px;
+}
+
+.architecture-check-issue + .architecture-check-issue {
+  margin-top: 8px;
+}
+
+.architecture-check-issue strong {
+  color: #c2410c;
+  font-size: 13px;
+}
+
+.architecture-check-issue code,
+.architecture-check-issue small,
+.architecture-check-issue em {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.architecture-check-issue p {
+  color: #0f172a;
+  font-size: 13px;
+  margin: 0;
+}
+
+.architecture-check-issue em {
+  color: #1d4ed8;
+  font-style: normal;
+}
+
+.architecture-node {
+  position: relative;
+  width: 210px;
+  min-height: 58px;
+  border: 1px solid rgba(226, 232, 240, 0.26);
+  border-radius: 8px;
+  padding: 10px;
+  color: #f8fafc;
+  background: #1e293b;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+  cursor: pointer;
+}
+
+.react-flow__node.selected .architecture-node,
+.architecture-flow-fallback__node.selected .architecture-node {
+  border-color: #ccfbf1;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.45), 0 14px 30px rgba(2, 6, 23, 0.32);
+}
+
+.architecture-node__handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #020617;
+  background: #e2e8f0;
+}
+
+.architecture-node__handle--target {
+  left: -5px;
+}
+
+.architecture-node__handle--source {
+  right: -5px;
+}
+
+.architecture-node__label {
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.architecture-node__meta {
+  font-size: 11px;
+  color: #cbd5e1;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.architecture-node__meta > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.architecture-node__role {
+  flex: 0 0 auto;
+  max-width: 98px;
+  border: 1px solid rgba(226, 232, 240, 0.24);
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.52);
+  font-size: 10px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.architecture-node-module {
+  background: #334155;
+  border-color: #f8fafc;
+}
+
+.architecture-node-domain {
+  background: #064e3b;
+  border-color: #34d399;
+}
+
+.architecture-node-application {
+  background: #1e3a8a;
+  border-color: #60a5fa;
+}
+
+.architecture-node-infrastructure {
+  background: #78350f;
+  border-color: #fbbf24;
+}
+
+.architecture-node-presentation {
+  background: #831843;
+  border-color: #f472b6;
+}
+
+@media (max-width: 900px) {
+  .architecture-explorer {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .architecture-canvas {
+    min-height: 72vh;
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "chango-archsocope",
+  "version": "0.1.0",
+  "description": "Standalone architecture explorer and checker for Laravel-style PHP modules and React modules.",
+  "type": "module",
+  "bin": {
+    "chango-archscope": "./bin/chango-archscope.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "src/node",
+    "src/ui",
+    "index.html",
+    "vite.config.mjs",
+    "tsconfig.json",
+    "README.md"
+  ],
+  "scripts": {
+    "serve": "node ./bin/chango-archscope.mjs serve",
+    "graph": "node ./bin/chango-archscope.mjs graph",
+    "check": "node ./bin/chango-archscope.mjs check",
+    "dev:ui": "vite --host 0.0.0.0",
+    "build:ui": "vite build",
+    "preview:ui": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "@xyflow/react": "^12.10.2",
+    "lucide-react": "^0.542.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
