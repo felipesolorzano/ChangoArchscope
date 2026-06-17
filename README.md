@@ -11,7 +11,7 @@ npx chango-architecture serve
 Default paths:
 
 - Laravel modules: `app/Modules`
-- React modules: `resources/js/react/src/modules`
+- React modules: `resources/js/react/modules`
 - UI server: `http://localhost:4590`
 
 For editing the React Flow UI inside this package:

@@ -57,7 +57,7 @@ function detectProjectRoot(cwd) {
   while (true) {
     if (
       existsSync(path.join(current, "app/Modules")) ||
-      existsSync(path.join(current, "resources/js/react/src/modules")) ||
+      existsSync(path.join(current, "resources/js/react/modules")) ||
       existsSync(path.join(current, CONFIG_FILE))
     ) {
       return current;

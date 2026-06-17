@@ -2,30 +2,19 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildArchitectureGraph, checkArchitecture } from "../analyzers/index.mjs";
+import { resolveArchitectureApiRoute } from "../app/Modules/Architecture/presentation/routes/api.mjs";
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const uiDist = path.join(packageRoot, "dist/ui");
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../");
+const uiDist = path.join(packageRoot, "public/build");
 
-export function createArchitectureServer(config) {
+export function createChangoArchscopeServer(config) {
   return http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+      const apiRoute = await resolveArchitectureApiRoute(url, config);
 
-      if (url.pathname === "/graph.json") {
-        sendJson(response, buildArchitectureGraph(config, {
-          target: url.searchParams.get("target") ?? "laravel",
-          module: url.searchParams.get("module") || null,
-        }));
-        return;
-      }
-
-      if (url.pathname === "/check.json") {
-        sendJson(response, checkArchitecture(config, {
-          target: url.searchParams.get("target") ?? "laravel",
-          module: url.searchParams.get("module") || null,
-          failOnCoupling: url.searchParams.get("fail_on_coupling") !== "false",
-        }));
+      if (apiRoute) {
+        sendJson(response, apiRoute.payload, apiRoute.statusCode);
         return;
       }
 
@@ -38,8 +27,8 @@ export function createArchitectureServer(config) {
   });
 }
 
-export function listenArchitectureServer(config) {
-  const server = createArchitectureServer(config);
+export function listenChangoArchscopeServer(config) {
+  const server = createChangoArchscopeServer(config);
   const host = config.server.host ?? "127.0.0.1";
   const port = Number(config.server.port ?? 4590);
 

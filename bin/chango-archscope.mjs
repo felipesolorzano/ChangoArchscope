@@ -2,9 +2,9 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE, loadConfig } from "../src/node/config.mjs";
-import { buildArchitectureGraph, checkArchitecture } from "../src/node/analyzers/index.mjs";
-import { listenArchitectureServer } from "../src/node/server/server.mjs";
+import { buildArchitectureGraph, checkArchitecture } from "../app/Modules/Architecture/application/analyzers/index.mjs";
+import { CONFIG_FILE, loadConfig } from "../app/Modules/Architecture/infrastructure/config/config.mjs";
+import { listenChangoArchscopeServer } from "../bootstrap/server.mjs";
 
 const args = process.argv.slice(2);
 const command = args[0] ?? "serve";
@@ -17,7 +17,7 @@ try {
     const config = await loadRuntimeConfig(flags);
     const port = flags.port ? Number(flags.port) : config.server.port;
     const host = flags.host ?? config.server.host;
-    const started = await listenArchitectureServer({
+    const started = await listenChangoArchscopeServer({
       ...config,
       server: { ...config.server, port, host },
     });
@@ -76,7 +76,7 @@ function initConfig() {
     namespaceRoot: "App\\\\Modules",
   },
   react: {
-    modulesPath: "resources/js/react/src/modules",
+    modulesPath: "resources/js/react/modules",
     alias: "@modules",
   },
   server: {

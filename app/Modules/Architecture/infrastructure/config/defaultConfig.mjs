@@ -55,7 +55,7 @@ export const defaultConfig = {
     },
   },
   react: {
-    modulesPath: "resources/js/react/src/modules",
+    modulesPath: "resources/js/react/modules",
     alias: "@modules",
     layers: {
       domain: "Domain",

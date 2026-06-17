@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import ArchitectureExplorer from "./interfaces/pages/ArchitectureExplorer";
-import { createArchitectureExplorerDependencies } from "./infrastructure/factory/createArchitectureExplorerDependencies";
+import ArchitectureExplorer from "./pages/ArchitectureExplorer";
+import { createArchitectureExplorerDependencies } from "../infrastructure/factory/createArchitectureExplorerDependencies";
 
 const architectureExplorer = document.getElementById("react-component-architecture-explorer");
 

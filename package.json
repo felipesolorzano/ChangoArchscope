@@ -7,22 +7,22 @@
     "chango-archscope": "./bin/chango-archscope.mjs"
   },
   "files": [
+    "app",
     "bin",
-    "dist",
-    "src/node",
-    "src/ui",
-    "index.html",
-    "vite.config.mjs",
-    "tsconfig.json",
+    "bootstrap",
+    "config",
+    "public",
+    "resources/js/react",
+    "routes",
     "README.md"
   ],
   "scripts": {
     "serve": "node ./bin/chango-archscope.mjs serve",
     "graph": "node ./bin/chango-archscope.mjs graph",
     "check": "node ./bin/chango-archscope.mjs check",
-    "dev:ui": "vite --host 0.0.0.0",
-    "build:ui": "vite build",
-    "preview:ui": "vite preview --host 0.0.0.0"
+    "dev:ui": "vite --config config/react/vite.config.mjs --host 0.0.0.0",
+    "build:ui": "vite build --config config/react/vite.config.mjs",
+    "preview:ui": "vite preview --config config/react/vite.config.mjs --host 0.0.0.0"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.1",

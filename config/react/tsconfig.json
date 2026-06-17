@@ -16,5 +16,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/ui"]
+  "include": ["../../resources/js/react/modules/**/*.ts", "../../resources/js/react/modules/**/*.tsx"]
 }
