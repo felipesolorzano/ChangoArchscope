@@ -2,7 +2,7 @@ import { Router } from "express";
 import { buildArchitectureGraph } from "../../application/buildArchitectureGraph.js";
 import { checkArchitecture } from "../../application/checkArchitecture.js";
 import { getArchitectureConfig } from "../../infrastructure/config/architectureConfigStore.js";
-import { NodeFsSourceTreeReader } from "../../infrastructure/filesystem/NodeFsSourceTreeReader.js";
+import { NodeFsSourceTreeReader } from "../../../shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
 function targetFromQuery(value) {
     return value === "react" ? "react" : "laravel";
 }

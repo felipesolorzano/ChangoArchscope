@@ -3,8 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { NodeFsSourceTreeReader } from "../../../../../app/modules/architecture/infrastructure/filesystem/NodeFsSourceTreeReader.js";
-import { relativePosix } from "../../../../../app/modules/architecture/domain/services/architecturePathUtils.js";
+import { NodeFsSourceTreeReader } from "../../../../../app/modules/shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
+
+function relativePosix(from: string, to: string): string {
+  return path.relative(from, to).split(path.sep).join("/");
+}
 
 let tempDirectory: string | null = null;
 

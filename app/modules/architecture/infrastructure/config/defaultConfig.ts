@@ -6,6 +6,7 @@ export const defaultConfig: ArchitectureConfig = {
     namespaceRoot: "App\\Modules",
     layers: ["Domain", "Application", "Presentation", "Infrastructure"],
     ignoredPaths: ["**/README.md"],
+    phpExtensions: [".php"],
     forbiddenImports: {
       Domain: [
         {

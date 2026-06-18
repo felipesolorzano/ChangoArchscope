@@ -1,4 +1,4 @@
-import type { SourceTreeReader } from "../domain/repositories/SourceTreeReader.js";
+import type { SourceTreeReader } from "../../shared/domain/repositories/SourceTreeReader.js";
 import type { ArchitectureCheckResult } from "../domain/value-objects/ArchitectureCheckReport.js";
 import type { ArchitectureConfig } from "../domain/value-objects/ArchitectureConfig.js";
 import type { CheckOptions } from "../domain/value-objects/ArchitectureTarget.js";

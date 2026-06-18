@@ -1,0 +1,6 @@
+export const SEVERITY_WEIGHTS = {
+    low: 1,
+    medium: 2,
+    high: 3,
+    critical: 4,
+};

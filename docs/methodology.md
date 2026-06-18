@@ -86,6 +86,8 @@ Artefactos principales:
 - `RiskScore`
 - `TechnicalDebtSignal`
 
+El detalle de categorias de finding, fases de construccion y formato de salida vive en [`audit.md`](audit.md).
+
 ### Reporting
 
 Responsabilidad: convertir diagnostico en comunicacion clara.

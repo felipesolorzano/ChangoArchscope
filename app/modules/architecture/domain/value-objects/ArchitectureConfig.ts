@@ -20,6 +20,7 @@ export type LaravelArchitectureConfig = {
   namespaceRoot: string;
   layers: string[];
   ignoredPaths: string[];
+  phpExtensions: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;
 };

@@ -145,16 +145,20 @@ app/modules/
 
 Modulos actuales:
 
-- `shared`: piezas transversales (conexion y migraciones SQLite, formateo de errores HTTP). `domain` y `application` estan intencionalmente vacios por ahora (solo `.gitkeep`).
+- `shared`: piezas transversales.
+  - `domain/repositories/SourceTreeReader.ts`: puerto para listar directorios, recorrer archivos, leer texto y comprobar si una ruta es un archivo. Vivia originalmente en `architecture`; se movio aqui cuando `audit` tambien necesito recorrer archivos, para que ningun modulo dependa de un detalle interno del otro.
+  - `infrastructure/filesystem/NodeFsSourceTreeReader.ts`: implementacion real del puerto con `node:fs`.
+  - `infrastructure/persistence/sqlite/`: conexion y migraciones SQLite.
+  - `presentation/http/formatHttpError.ts`, `presentation/cli/`: formateo de errores HTTP y CLI de migraciones.
+  - `application` esta intencionalmente vacio por ahora (solo `.gitkeep`).
 - `architecture`: analizadores de arquitectura Laravel/PHP y React/TypeScript.
-  - `domain/repositories/SourceTreeReader.ts`: puerto para listar directorios, recorrer archivos, leer texto y comprobar si una ruta es un archivo.
   - `domain/value-objects/`: tipos del grafo (`ArchitectureGraph`), del reporte de validacion (`ArchitectureCheckReport`), de la configuracion (`ArchitectureConfig`) y del target (`ArchitectureTarget`).
   - `domain/services/`: utilidades puras (`architecturePathUtils`, `resolveSourceFileCandidate`) sin acceso a filesystem.
-  - `application/analyzers/`: `laravelAnalyzer`, `reactAnalyzer`, `phpImports`, `tsImports`, `reports`; reciben el `SourceTreeReader` como parametro en vez de importar `node:fs`.
+  - `application/analyzers/`: `laravelAnalyzer`, `reactAnalyzer`, `phpImports`, `tsImports`, `reports`; reciben el `SourceTreeReader` (de `shared`) como parametro en vez de importar `node:fs`.
   - `application/buildArchitectureGraph.ts` y `application/checkArchitecture.ts`: casos de uso que despachan por `target`.
-  - `infrastructure/filesystem/NodeFsSourceTreeReader.ts`: implementacion real del puerto con `node:fs`.
   - `infrastructure/config/`: carga y merge de `chango-archscope.config.mjs` (`config.ts`, `defaultConfig.ts`) y el singleton `architectureConfigStore.ts` que comparte la configuracion ya resuelta por el CLI con las rutas.
   - `presentation/routes/web.ts`: expone `/graph.json` y `/check.json`.
+- `audit`: diagnostico tecnico (severidad, riesgo) sobre lo que ya calculo `architecture`, y analizadores nativos de PHP. Detalle completo en [`audit.md`](audit.md).
 
 ## Core: Framework Interno
 

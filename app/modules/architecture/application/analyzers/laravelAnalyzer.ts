@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 
-import type { SourceTreeReader } from "../../domain/repositories/SourceTreeReader.js";
+import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 import type { ArchitectureConfig } from "../../domain/value-objects/ArchitectureConfig.js";
 import type { ArchitectureCheckResult } from "../../domain/value-objects/ArchitectureCheckReport.js";
 import type { ArchitectureEdge, ArchitectureGraph, ArchitectureNode } from "../../domain/value-objects/ArchitectureGraph.js";
@@ -29,7 +29,7 @@ export function buildLaravelGraph(
     const moduleNodeId = `module:${module}`;
     addNode(nodes, nodeIds, moduleNode(moduleNodeId, module, modulePath));
 
-    for (const file of reader.walkFiles(modulePath, [".php"])) {
+    for (const file of reader.walkFiles(modulePath, config.laravel.phpExtensions)) {
       const relative = relativePosix(modulesPath, file);
       const layer = laravelLayerFor(config, modulePath, file);
       const fileNodeId = `file:${relative}`;
@@ -104,7 +104,7 @@ export function checkLaravelArchitecture(
   failOnCoupling = true,
 ): ArchitectureCheckResult {
   const reports = laravelModules(config, reader, onlyModule).map(([module, modulePath]) => {
-    const scannedFiles = reader.walkFiles(modulePath, [".php"]);
+    const scannedFiles = reader.walkFiles(modulePath, config.laravel.phpExtensions);
     const violations = [];
     const couplings = [];
 

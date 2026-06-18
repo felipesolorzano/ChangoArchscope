@@ -225,7 +225,7 @@ La entrada comun son los casos de uso `app/modules/architecture/application/buil
 - `buildArchitectureGraph(config, reader, options)`
 - `checkArchitecture(config, reader, options)`
 
-`reader` implementa el puerto de dominio `SourceTreeReader` (`listDirectories`, `walkFiles`, `readText`, `isFile`); la implementacion real con `node:fs` es `NodeFsSourceTreeReader` (`infrastructure/filesystem`). Esto mantiene `domain` y `application` sin tocar el sistema de archivos directamente.
+`reader` implementa el puerto de dominio `SourceTreeReader` (`listDirectories`, `walkFiles`, `readText`, `isFile`), definido en `app/modules/shared/domain/repositories`; la implementacion real con `node:fs` es `NodeFsSourceTreeReader` (`app/modules/shared/infrastructure/filesystem`). Esto mantiene `domain` y `application` sin tocar el sistema de archivos directamente.
 
 Estos casos de uso delegan segun `target`:
 
@@ -439,15 +439,17 @@ npm run build:react
 
 ```text
 app/modules/architecture/
-  domain/                      Puerto SourceTreeReader y value objects
+  domain/                      Value objects de arquitectura (grafo, reporte, config, target)
   application/analyzers/       Analizadores Laravel y React (reciben el reader)
   infrastructure/config/       Defaults y carga de configuracion
-  infrastructure/filesystem/   NodeFsSourceTreeReader (implementacion real)
   presentation/routes/web.ts   Rutas /graph.json y /check.json
 app/modules/shared/
+  domain/repositories/         Puerto SourceTreeReader
+  infrastructure/filesystem/   NodeFsSourceTreeReader (implementacion real)
   infrastructure/persistence/sqlite/   Conexion, drizzle, migraciones
   presentation/http/           formatHttpError
   presentation/cli/            CLI de migraciones
+app/modules/audit/              Diagnostico (AuditSnapshot) sobre architecture + analizadores PHP nativos, ver docs/audit.md
 core/
   http/createHttpApp.ts        Framework interno HTTP (igual que Chango Modeler)
   views/                       renderAppLayout, view, viteAssetManifest

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 
-import type { SourceTreeReader } from "../../domain/repositories/SourceTreeReader.js";
+import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 import { resolveSourceFileCandidate } from "../../domain/services/resolveSourceFileCandidate.js";
 import type { ArchitectureConfig } from "../../domain/value-objects/ArchitectureConfig.js";
 import type { ArchitectureCheckResult } from "../../domain/value-objects/ArchitectureCheckReport.js";

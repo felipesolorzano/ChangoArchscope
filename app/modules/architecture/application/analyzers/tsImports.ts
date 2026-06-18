@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { SourceTreeReader } from "../../domain/repositories/SourceTreeReader.js";
+import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 import { resolveSourceFileCandidate } from "../../domain/services/resolveSourceFileCandidate.js";
 import type { ImportReference } from "./phpImports.js";
 

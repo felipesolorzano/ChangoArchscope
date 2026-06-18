@@ -1,4 +1,4 @@
-import type { SourceTreeReader } from "../../domain/repositories/SourceTreeReader.js";
+import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 
 export type ImportReference = {
   import: string;

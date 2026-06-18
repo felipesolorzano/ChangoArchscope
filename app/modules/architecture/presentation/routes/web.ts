@@ -4,7 +4,7 @@ import { buildArchitectureGraph } from "../../application/buildArchitectureGraph
 import { checkArchitecture } from "../../application/checkArchitecture.js";
 import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget.js";
 import { getArchitectureConfig } from "../../infrastructure/config/architectureConfigStore.js";
-import { NodeFsSourceTreeReader } from "../../infrastructure/filesystem/NodeFsSourceTreeReader.js";
+import { NodeFsSourceTreeReader } from "../../../shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
 
 function targetFromQuery(value: unknown): ArchitectureTarget {
   return value === "react" ? "react" : "laravel";
