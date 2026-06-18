@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "reporters": ["progress", "clear-text", "html"],
+  "mutate": [
+    "app/modules/**/*.ts",
+    "core/**/*.ts",
+    "routes/**/*.ts",
+    "!app/modules/**/*.test.ts",
+    "!app/modules/**/*.spec.ts",
+    "!app/modules/**/presentation/cli/**/*.ts",
+    "!bootstrap/server.ts",
+    "!app/modules/shared/infrastructure/persistence/sqlite/createDrizzleDatabase.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "thresholds": {
+    "high": 85,
+    "low": 80,
+    "break": 80
+  },
+  "htmlReporter": {
+    "fileName": "reports/mutation/node/index.html"
+  }
+}

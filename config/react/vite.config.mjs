@@ -14,6 +14,10 @@ export default defineConfig({
   build: {
     outDir: resolve(projectRoot, "public/build"),
     emptyOutDir: true,
+    manifest: true,
+    rollupOptions: {
+      input: resolve(reactRoot, "modules/app/presentation/main.tsx"),
+    },
   },
   server: {
     port: 4591,

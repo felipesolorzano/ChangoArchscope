@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS cycle_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);

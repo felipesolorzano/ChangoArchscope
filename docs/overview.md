@@ -1,17 +1,47 @@
-# Chango Archscope
+# Referencia Tecnica
 
-Chango Archscope es una herramienta standalone para explorar y validar la arquitectura de proyectos organizados por modulos. Esta pensada principalmente para dos ecosistemas:
+Esta herramienta standalone permite explorar y validar arquitectura en proyectos organizados por modulos. Actualmente soporta dos targets:
 
-- Laravel/PHP con modulos bajo `app/Modules`.
+- Laravel/PHP con modulos bajo `app/modules`.
 - React/TypeScript con modulos bajo `resources/js/react/modules`.
 
-El repo combina un CLI de Node, analizadores de codigo y una UI en React Flow. La estructura sigue una convencion tipo Laravel: codigo de aplicacion en `app/Modules`, entrada y bootstrap separados, configuracion en `config`, assets publicos en `public`, React en `resources`, rutas en `routes`, pruebas en `tests` y archivos runtime en `storage`.
+El repo contiene un CLI de Node, analizadores de imports, un servidor Express, persistencia SQLite/Drizzle, tests, mutation testing y una UI React Flow. El objetivo es convertir dependencias reales del codigo en un grafo navegable y detectar reglas de arquitectura incumplidas, especialmente dependencias indebidas entre capas o acoplamientos directos entre modulos.
 
-El objetivo es convertir importaciones reales del proyecto en un grafo navegable, y ademas detectar reglas de arquitectura incumplidas como dependencias de `Domain` hacia infraestructura, UI o framework.
+La metodologia propuesta para crecer este repo por bounded contexts esta documentada en [`methodology.md`](methodology.md).
+
+## Estado actual
+
+El paquete declara:
+
+- Nombre npm actual: `chango-archsocope`.
+- Binario: `chango-archscope`.
+- Node requerido: `>=18.18`.
+- UI: React 18, Vite y `@xyflow/react`.
+
+Scripts disponibles:
+
+| Script | Descripcion |
+| --- | --- |
+| `npm run serve` | Ejecuta `node ./bin/chango-archscope.mjs serve`. |
+| `npm run graph` | Ejecuta el comando `graph` del CLI. |
+| `npm run check` | Ejecuta el comando `check` del CLI. |
+| `npm run build:node` | Compila `app/modules`, `core`, `bootstrap` y `routes` (TypeScript) hacia `build/server/`. Requerido antes de `serve`/`graph`/`check` locales. |
+| `npm run dev:node` | Corre `build:node` y luego `serve`. |
+| `npm run start:node` | Alias de `serve` (asume que `build/server` ya existe). |
+| `npm run dev:react` | Levanta Vite en modo desarrollo. |
+| `npm run build:react` | Compila la UI con Vite. |
+| `npm run preview:react` | Sirve el build de Vite para previsualizacion. |
+| `npm run dev:ui` | Alias historico de `dev:react`. |
+| `npm run build:ui` | Alias historico de `build:react`. |
+| `npm test` | Ejecuta tests backend y frontend con Vitest. |
+| `npm run test:mutation` | Ejecuta mutation testing backend y frontend con Stryker. |
+| `npm run db:migrate` | Crea/actualiza la base SQLite local (corre el CLI de migraciones con `tsx`, sin build previo). |
+
+Nota de publicacion: el nombre npm actual contiene `archsocope`; el binario usa `archscope`.
 
 ## Para que sirve
 
-La herramienta ayuda a responder preguntas como:
+La herramienta ayuda a responder:
 
 - Que modulos existen en el proyecto.
 - Que archivos pertenecen a cada modulo.
@@ -22,16 +52,16 @@ La herramienta ayuda a responder preguntas como:
 
 El resultado se puede consultar de tres formas:
 
-- Como UI web servida por el comando `serve`.
-- Como JSON de grafo con el comando `graph` o el endpoint `/graph.json`.
-- Como reporte de validacion con el comando `check` o el endpoint `/check.json`.
+- UI web servida por `serve`.
+- JSON de grafo con `graph` o `/graph.json`.
+- Reporte de validacion con `check` o `/check.json`.
 
 ## Uso principal
 
-Instalacion esperada como dependencia de desarrollo:
+Instalar como dependencia de desarrollo:
 
 ```bash
-npm install -D chango-archscope
+npm install -D chango-archsocope
 ```
 
 Crear configuracion inicial:
@@ -40,19 +70,19 @@ Crear configuracion inicial:
 npx chango-archscope init
 ```
 
-Levantar el servidor con UI y API:
+Levantar servidor con UI y API:
 
 ```bash
 npx chango-archscope serve
 ```
 
-Por defecto el servidor queda en:
+Por defecto:
 
 ```text
 http://127.0.0.1:4590
 ```
 
-Generar el grafo por consola:
+Generar grafo por consola:
 
 ```bash
 npx chango-archscope graph --target laravel
@@ -66,14 +96,14 @@ npx chango-archscope check --target laravel
 npx chango-archscope check --target react
 ```
 
-Tambien se puede limitar el analisis a un modulo:
+Filtrar por modulo:
 
 ```bash
 npx chango-archscope graph --target laravel --module Users
 npx chango-archscope check --target react --module billing
 ```
 
-## Comandos del CLI
+## CLI
 
 El ejecutable principal esta en `bin/chango-archscope.mjs`.
 
@@ -84,28 +114,36 @@ El ejecutable principal esta en `bin/chango-archscope.mjs`.
 | `graph` | Imprime en stdout el grafo de arquitectura. |
 | `check` | Imprime en stdout el reporte de validacion y usa exit code `1` si falla. |
 
-Flags utiles:
+Flags disponibles:
 
 | Flag | Uso |
 | --- | --- |
-| `--target laravel\|react` | Selecciona que tipo de modulos analizar. |
-| `--module <name>` | Filtra el analisis a un modulo. |
+| `--target laravel\|react` | Selecciona el target a analizar. |
+| `--module <name>` | Filtra el analisis a un modulo. En Laravel normaliza a formato Studly; en React compara sin distinguir mayusculas. |
 | `--config <file>` | Usa un archivo de configuracion explicito. |
 | `--laravel-modules <path>` | Sobrescribe la ruta de modulos Laravel. |
 | `--react-modules <path>` | Sobrescribe la ruta de modulos React. |
 | `--port <number>` | Cambia el puerto del servidor. |
 | `--host <host>` | Cambia el host del servidor. |
+| `--fail-on-coupling false` | En `check`, reporta acoplamientos sin hacer fallar el resultado. |
 
 ## Configuracion
 
-La configuracion por defecto vive en `app/Modules/Architecture/infrastructure/config/defaultConfig.mjs`. Si existe `chango-archscope.config.mjs`, se mezcla con los valores por defecto.
+La configuracion por defecto vive en `app/modules/architecture/infrastructure/config/defaultConfig.ts`.
+
+Si existe `chango-archscope.config.mjs`, se mezcla con los defaults. La carga esta en `app/modules/architecture/infrastructure/config/config.ts` y hace lo siguiente:
+
+- Detecta la raiz del proyecto.
+- Busca `chango-archscope.config.mjs` hacia arriba desde la raiz detectada.
+- Mezcla configuracion de usuario con defaults.
+- Normaliza rutas relativas a rutas absolutas.
 
 Configuracion generada por `init`:
 
 ```js
 export default {
   laravel: {
-    modulesPath: "app/Modules",
+    modulesPath: "app/modules",
     namespaceRoot: "App\\Modules",
   },
   react: {
@@ -119,16 +157,22 @@ export default {
 };
 ```
 
-La carga de configuracion esta en `app/Modules/Architecture/infrastructure/config/config.mjs`. Ese modulo:
+Defaults relevantes:
 
-- Detecta automaticamente la raiz del proyecto.
-- Busca `chango-archscope.config.mjs` hacia arriba desde la raiz detectada.
-- Mezcla configuracion de usuario con defaults.
-- Normaliza rutas relativas a rutas absolutas.
+| Target | Default |
+| --- | --- |
+| Laravel modules | `app/modules` |
+| Laravel namespace root | `App\Modules` |
+| React modules | `resources/js/react/modules` |
+| React alias | `@modules` |
+| Server host | `127.0.0.1` |
+| Server port | `4590` |
 
 ## Reglas de arquitectura
 
-Las reglas se basan en capas. Para Laravel las capas por defecto son:
+Las reglas se basan en capas.
+
+Para Laravel las capas por defecto son:
 
 - `Domain`
 - `Application`
@@ -143,7 +187,7 @@ Para React, los directorios se mapean a capas:
 | `application` | `Application` |
 | `contracts` | `Application` |
 | `infrastructure` | `Infrastructure` |
-| `interfaces` | `Presentation` |
+| `presentation` | `Presentation` |
 
 Cada capa puede declarar `forbiddenImports`. Una regla tiene:
 
@@ -151,34 +195,39 @@ Cada capa puede declarar `forbiddenImports`. Una regla tiene:
 - `message`: mensaje mostrado cuando se incumple.
 - `suggestion`: recomendacion para corregirla.
 
-Ejemplos de reglas incluidas:
+Reglas incluidas:
 
-- `Domain` no debe importar Laravel en proyectos PHP.
-- `Domain` no debe depender de `Infrastructure`.
-- `Application` no debe depender de `Presentation`.
-- En React, `Domain` no debe depender de `react`, `infrastructure` ni `interfaces`.
+- En Laravel, `Domain` no debe importar `Illuminate`, `Infrastructure` ni `Presentation`.
+- En Laravel, `Application` no debe importar `Infrastructure` ni `Presentation`.
+- En Laravel, `Presentation` no debe consultar modelos bajo `Infrastructure/Persistence/Eloquent` directamente.
+- En React, `Domain` no debe depender de `react`, `infrastructure` ni `presentation`.
+- En React, `Application` no debe depender de `infrastructure` ni `presentation`.
 
 ## Deteccion de acoplamiento
 
-Ademas de reglas por capa, la herramienta detecta dependencias directas entre modulos.
+Ademas de reglas por capa, la herramienta detecta dependencias directas entre modulos cuando un import interno apunta a otro modulo.
 
 La configuracion `coupling` permite:
 
-- Activar o desactivar la deteccion con `enabled`.
-- Ignorar modulos compartidos con `ignoredModules`.
+- Activar o desactivar deteccion con `enabled`.
+- Ignorar modulos con `ignoredModules`.
 - Permitir dependencias concretas con `allowedDependencies`.
 - Personalizar mensaje, sugerencia, evaluacion, recomendacion y accion.
 
-Si `failOnCoupling` esta activo, los acoplamientos encontrados hacen fallar el reporte de `check`.
+En Laravel, `Shared` esta ignorado por defecto (es el nombre de modulo Laravel convencional para codigo compartido en el proyecto analizado, no el `shared` propio de Chango Archscope). En React, no hay modulos ignorados por defecto.
+
+Si `failOnCoupling` esta activo, los acoplamientos encontrados hacen fallar el reporte de `check`. En CLI se desactiva con `--fail-on-coupling false`; en HTTP se desactiva con `fail_on_coupling=false`.
 
 ## Analizadores
 
-La entrada comun esta en `app/Modules/Architecture/application/analyzers/index.mjs`:
+La entrada comun son los casos de uso `app/modules/architecture/application/buildArchitectureGraph.ts` y `app/modules/architecture/application/checkArchitecture.ts`:
 
-- `buildArchitectureGraph(config, options)`
-- `checkArchitecture(config, options)`
+- `buildArchitectureGraph(config, reader, options)`
+- `checkArchitecture(config, reader, options)`
 
-Ese modulo delega segun `target`:
+`reader` implementa el puerto de dominio `SourceTreeReader` (`listDirectories`, `walkFiles`, `readText`, `isFile`); la implementacion real con `node:fs` es `NodeFsSourceTreeReader` (`infrastructure/filesystem`). Esto mantiene `domain` y `application` sin tocar el sistema de archivos directamente.
+
+Estos casos de uso delegan segun `target`:
 
 | Target | Grafo | Check |
 | --- | --- | --- |
@@ -187,68 +236,77 @@ Ese modulo delega segun `target`:
 
 ### Laravel
 
-El analizador esta en `app/Modules/Architecture/application/analyzers/laravelAnalyzer.mjs`.
+El analizador esta en `app/modules/architecture/application/analyzers/laravelAnalyzer.ts`.
 
 Hace lo siguiente:
 
-- Lista directorios dentro de `config.laravel.modulesPath`.
-- Recorre archivos `.php`.
+- Lista directorios dentro de `config.laravel.modulesPath` (via `reader.listDirectories`).
+- Recorre archivos `.php` (via `reader.walkFiles`).
 - Detecta la capa usando el primer segmento de la ruta dentro del modulo.
-- Extrae imports PHP con `app/Modules/Architecture/application/analyzers/phpImports.mjs`.
+- Extrae imports PHP con `phpImports.ts`.
 - Resuelve imports que empiezan con `namespaceRoot`, por defecto `App\Modules`.
-- Crea nodos de modulo, nodos de archivo y edges de tipo `contains` e `import`.
+- Crea nodos de modulo, nodos de archivo y edges `contains` e `import`.
 - Marca edges cross-module cuando el import apunta a otro modulo.
 - Ejecuta reglas `forbiddenImports` y chequeos de `coupling`.
 
-Tambien asigna roles visuales segun rutas conocidas, por ejemplo:
+Roles visuales detectados:
 
-- `Application/UseCases`: caso de uso.
-- `Application/Contracts`: conector.
-- `Infrastructure/Persistence`: adaptador de persistencia.
-- `Presentation/Http/Controllers`: controlador.
-- `Domain/ValueObjects`: value object.
+| Ruta | Rol |
+| --- | --- |
+| `Application/UseCases` | `use_case` |
+| `Application/Contracts` o `Application/Repositories` | `connector` |
+| `Infrastructure/Providers` | `provider` |
+| `Infrastructure/Persistence` | `persistence_adapter` |
+| `Infrastructure` | `adapter` |
+| `Presentation/Http/Controllers` | `controller` |
+| `Domain/ValueObjects` | `value_object` |
 
 ### React
 
-El analizador esta en `app/Modules/Architecture/application/analyzers/reactAnalyzer.mjs`.
+El analizador esta en `app/modules/architecture/application/analyzers/reactAnalyzer.ts`.
 
 Hace lo siguiente:
 
-- Lista directorios dentro de `config.react.modulesPath`.
-- Recorre archivos `.ts`, `.tsx`, `.js` y `.jsx`.
-- Detecta la capa usando el primer segmento del archivo dentro del modulo.
-- Extrae imports con `app/Modules/Architecture/application/analyzers/tsImports.mjs`.
+- Lista directorios dentro de `config.react.modulesPath` (via `reader.listDirectories`).
+- Recorre archivos `.ts`, `.tsx`, `.js` y `.jsx` (via `reader.walkFiles`).
+- Detecta la capa usando el primer segmento de la ruta dentro del modulo.
+- Extrae imports con `tsImports.ts`.
 - Resuelve imports por alias, por defecto `@modules`.
 - Resuelve imports relativos cuando apuntan dentro de la carpeta de modulos.
 - Crea nodos y edges equivalentes a Laravel.
 - Ejecuta reglas `forbiddenImports` y chequeos de `coupling`.
 
-Roles visuales comunes:
+Roles visuales detectados:
 
-- `application/use-cases`: caso de uso.
-- `application/contracts`: conector.
-- `application/dtos`: DTO.
-- `domain/value-objects`: value object.
-- `infrastructure/api`: adaptador API.
-- `infrastructure/react-flow`: React Flow.
-- `interfaces/components`: componente UI.
-- `interfaces/pages`: pagina.
-- `interfaces/hooks`: hook UI.
+| Ruta | Rol |
+| --- | --- |
+| `application/use-cases` | `use_case` |
+| `application/contracts` o `contracts` | `connector` |
+| `application/dtos` | `dto` |
+| `domain/value-objects` | `value_object` |
+| `infrastructure/api` | `adapter` |
+| `infrastructure/react-flow` | `adapter` |
+| `presentation/components` | `ui_component` |
+| `presentation/pages` | `page` |
+| `presentation/hooks` | `hook` |
 
 ## Servidor HTTP
 
-El servidor esta en `bootstrap/server.mjs`. Es un servidor HTTP nativo de Node.
-Las rutas HTTP propias del modulo Architecture estan en `app/Modules/Architecture/presentation/routes/api.mjs`.
+El servidor esta en `bootstrap/server.ts` y usa Express a traves de `core/http/createHttpApp.ts` (el mismo framework interno que usa Chango Modeler): body parsing JSON, archivos estaticos de `public/`, el middleware `response.view(...)` y un error handler centralizado.
 
-Endpoints principales:
+El registro central de rutas vive en `routes/web.ts` y `routes/api.ts`. Las rutas del modulo `architecture` (`/graph.json`, `/check.json`) se montan desde `routes/web.ts` (no `routes/api.ts`), para que sigan respondiendo en la raiz en vez de bajo el prefijo `/api`. La ruta `/` viene de `core/routes/web.ts` y renderiza `resources/views/layout/app.edge` con Edge.js, inyectando el entry de React desde el manifest de Vite.
+
+Endpoints:
 
 | Endpoint | Descripcion |
 | --- | --- |
 | `/graph.json?target=laravel&module=Users` | Devuelve el grafo de arquitectura. |
-| `/check.json?target=react&module=billing` | Devuelve el reporte de validacion. |
-| `/` | Sirve la UI compilada desde `public/build`. |
+| `/graph.json?target=react&module=billing` | Devuelve el grafo de arquitectura React. |
+| `/check.json?target=laravel&module=Users` | Devuelve el reporte de validacion. |
+| `/check.json?target=react&module=billing&fail_on_coupling=false` | Devuelve el reporte sin fallar por acoplamiento. |
+| `/` | Renderiza el layout Edge que monta la UI React compilada en `public/build`. |
 
-Si `public/build` no existe, el servidor muestra una pagina simple indicando que la API esta corriendo y que hay que compilar la UI con `npm run build:ui`.
+`npm run build:react` debe haberse ejecutado al menos una vez para que exista `public/build/.vite/manifest.json`; si no existe, `/` responde con un error 400 (a diferencia de la version anterior, que mostraba una pagina de aviso). Esto es intencional para mantener la misma mecanica que `core/views/viteAssetManifest.ts` usa en Chango Modeler.
 
 ## Formato del grafo
 
@@ -268,7 +326,7 @@ El grafo tiene esta forma general:
 }
 ```
 
-Cada nodo representa un modulo o archivo:
+Nodo de archivo:
 
 ```json
 {
@@ -283,7 +341,7 @@ Cada nodo representa un modulo o archivo:
 }
 ```
 
-Cada edge representa contencion o importacion:
+Edge de import:
 
 ```json
 {
@@ -321,25 +379,33 @@ El reporte tiene esta forma general:
 
 Cada reporte por modulo incluye:
 
-- `passed`: si el modulo paso la validacion.
-- `files_scanned`: cantidad de archivos analizados.
-- `violations`: reglas de capas incumplidas.
-- `couplings`: dependencias directas entre modulos.
+- `module`
+- `module_path`
+- `passed`
+- `files_scanned`
+- `violations_count`
+- `couplings_count`
+- `violations`
+- `couplings`
+
+Cada issue incluye `module`, `layer`, `file`, `line`, `import`, `message` y `suggestion`. Los issues de acoplamiento tambien pueden incluir `target_module`, `assessment`, `recommendation` y `action`.
 
 ## UI
 
-La UI esta en `resources/js/react/modules/architecture-explorer` y usa React con `@xyflow/react`.
+La UI esta repartida en dos modulos React: `app` (entry point y composicion de pagina) y `architecture-explorer` (el explorador en si), y usa React con `@xyflow/react`.
 
 Estructura relevante:
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `resources/js/react/modules/architecture-explorer/interfaces/main.tsx` | Punto de entrada de React. |
-| `resources/js/react/modules/architecture-explorer/interfaces/pages/ArchitectureExplorer.tsx` | Pantalla principal del explorador. |
-| `resources/js/react/modules/architecture-explorer/interfaces/components/ArchitectureSidebar.tsx` | Filtros, seleccion de target/modulo/capa y acciones. |
-| `resources/js/react/modules/architecture-explorer/interfaces/components/ArchitectureCanvas.tsx` | Lienzo del grafo. |
-| `resources/js/react/modules/architecture-explorer/interfaces/components/ArchitectureCheckModal.tsx` | Modal con resultados de validacion. |
-| `resources/js/react/modules/architecture-explorer/infrastructure/react-flow/*` | Adaptadores y layout para React Flow. |
+| `resources/js/react/modules/app/presentation/main.tsx` | Punto de entrada de Vite; monta `App` en `#root` (el `div` que renderiza `resources/views/layout/app.edge`). |
+| `resources/js/react/modules/app/presentation/App.tsx` | Compone `ArchitectureExplorer` con las dependencias HTTP apuntando a `/graph.json` y `/check.json`. |
+| `resources/js/react/modules/architecture-explorer/presentation/pages/ArchitectureExplorer.tsx` | Pantalla principal del explorador. |
+| `resources/js/react/modules/architecture-explorer/presentation/components/ArchitectureSidebar.tsx` | Filtros, seleccion de target/modulo/capa y acciones. |
+| `resources/js/react/modules/architecture-explorer/presentation/components/ArchitectureCanvas.tsx` | Lienzo del grafo. |
+| `resources/js/react/modules/architecture-explorer/presentation/components/ArchitectureCheckModal.tsx` | Modal con resultados de validacion. |
+| `resources/js/react/modules/architecture-explorer/presentation/hooks/*` | Controladores de estado de grafo y check. |
+| `resources/js/react/modules/architecture-explorer/infrastructure/react-flow/*` | Adaptadores, layout y fallback para React Flow. |
 | `resources/js/react/modules/architecture-explorer/infrastructure/api/*` | Providers HTTP para consumir `/graph.json` y `/check.json`. |
 | `resources/js/react/modules/architecture-explorer/application/*` | Casos de uso, contratos y DTOs. |
 | `resources/js/react/modules/architecture-explorer/domain/*` | Value objects del dominio de la UI. |
@@ -349,7 +415,7 @@ Para desarrollo de la UI dentro de este repo:
 ```bash
 npm install
 npm run serve
-npm run dev:ui
+npm run dev:react
 ```
 
 Luego abrir:
@@ -358,53 +424,58 @@ Luego abrir:
 http://localhost:4591
 ```
 
-Vite proxyea `/graph.json` y `/check.json` al servidor Node standalone.
-
 En desarrollo hay dos procesos:
 
-- `npm run serve` levanta la API y la UI compilada en `http://127.0.0.1:4590`.
-- `npm run dev:ui` levanta Vite en `http://localhost:4591` y usa proxy hacia `4590`.
+- `npm run serve` (requiere `build:node` previo) levanta la API y renderiza el layout Edge con la UI compilada en `http://127.0.0.1:4590`.
+- `npm run dev:react` levanta Vite en `http://localhost:4591` y usa proxy hacia `4590` para `/graph.json` y `/check.json`.
 
-Para produccion o uso empaquetado, compilar la UI genera archivos en `public/build`:
+Para generar los archivos que sirve el servidor standalone:
 
 ```bash
-npm run build:ui
+npm run build:react
 ```
 
-## Estructura del repo
+## Estructura del repo actual
 
 ```text
+app/modules/architecture/
+  domain/                      Puerto SourceTreeReader y value objects
+  application/analyzers/       Analizadores Laravel y React (reciben el reader)
+  infrastructure/config/       Defaults y carga de configuracion
+  infrastructure/filesystem/   NodeFsSourceTreeReader (implementacion real)
+  presentation/routes/web.ts   Rutas /graph.json y /check.json
+app/modules/shared/
+  infrastructure/persistence/sqlite/   Conexion, drizzle, migraciones
+  presentation/http/           formatHttpError
+  presentation/cli/            CLI de migraciones
+core/
+  http/createHttpApp.ts        Framework interno HTTP (igual que Chango Modeler)
+  views/                       renderAppLayout, view, viteAssetManifest
+  routes/web.ts                Ruta "/" (layout Edge)
 bin/
-  chango-archscope.mjs        CLI principal
+  chango-archscope.mjs         CLI principal (importa desde build/server)
 bootstrap/
-  .gitkeep                    Punto reservado para bootstrap estilo Laravel
-app/Modules/Architecture/
-  domain/                     Capa de dominio del modulo Architecture
-  application/analyzers/      Analizadores Laravel y React
-  infrastructure/config/      Carga, normalizacion y defaults
-  infrastructure/http/        Servidor HTTP standalone
-  presentation/               Punto reservado para entrada/presentacion Node
-config/
-  react/
-    vite.config.mjs           Configuracion Vite de la UI
-    tsconfig.json             TypeScript de la UI React
-public/
-  build/                      UI compilada para servir en produccion
+  server.ts                    Servidor HTTP (createHttpApp + config store)
+build/server/                  Salida compilada de TypeScript (generada)
+config/node/
+  tsconfig.json, vitest.config.ts, stryker.conf.json
+config/react/
+  vite.config.mjs              Configuracion Vite de la UI
+  tsconfig.json                TypeScript de la UI React
+resources/views/layout/app.edge  Layout Edge que monta la UI o vistas server-side
 resources/js/react/
-  index.html                  HTML base de Vite
+  modules/app/                 Entry de Vite (main.tsx, App.tsx)
   modules/architecture-explorer/
-    domain/                   Modelo de dominio de la UI
-    application/              Casos de uso, contratos y DTOs
-    infrastructure/           API HTTP y React Flow
-    interfaces/               Pagina, componentes, hooks y estilos
+    domain/                    Value objects de la UI
+    application/               Casos de uso, contratos y DTOs
+    infrastructure/            API HTTP y React Flow
+    presentation/               Pagina, componentes, hooks y estilos
 routes/
-  .gitkeep                    Punto reservado para rutas estilo Laravel
-storage/
-  framework/                  Archivos runtime del framework/aplicacion
-  logs/                       Logs locales
-tests/
-  .gitkeep                    Punto reservado para pruebas
+  web.ts                       Rutas web raiz (core + architecture)
+  api.ts                       Rutas API raiz (vacio por ahora)
 ```
+
+`build/server/` y `public/build/` no estan versionados; son salida generada de `npm run build:node` y `npm run build:react` respectivamente.
 
 ## Flujo interno
 
@@ -416,20 +487,3 @@ tests/
 6. Se generan nodos, edges y resumen.
 7. Si es `check`, tambien se generan violations y couplings.
 8. La UI consume los endpoints JSON y renderiza el mapa interactivo.
-
-## Paquete npm
-
-El `package.json` declara:
-
-- Nombre actual del paquete: `chango-archsocope`.
-- Binario: `chango-archscope`.
-- Node requerido: `>=18.18`.
-- Scripts principales:
-  - `npm run serve`
-  - `npm run graph`
-  - `npm run check`
-  - `npm run dev:ui`
-  - `npm run build:ui`
-  - `npm run preview:ui`
-
-Nota: el README menciona `chango-architecture`, mientras que el `package.json` actual declara `chango-archsocope` y el binario `chango-archscope`. Conviene alinear esos nombres antes de publicar o documentar instalacion definitiva.

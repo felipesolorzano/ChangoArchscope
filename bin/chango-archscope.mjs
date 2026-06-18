@@ -2,13 +2,16 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { buildArchitectureGraph, checkArchitecture } from "../app/Modules/Architecture/application/analyzers/index.mjs";
-import { CONFIG_FILE, loadConfig } from "../app/Modules/Architecture/infrastructure/config/config.mjs";
-import { listenChangoArchscopeServer } from "../bootstrap/server.mjs";
+import { buildArchitectureGraph } from "../build/server/app/modules/architecture/application/buildArchitectureGraph.js";
+import { checkArchitecture } from "../build/server/app/modules/architecture/application/checkArchitecture.js";
+import { NodeFsSourceTreeReader } from "../build/server/app/modules/architecture/infrastructure/filesystem/NodeFsSourceTreeReader.js";
+import { CONFIG_FILE, loadConfig } from "../build/server/app/modules/architecture/infrastructure/config/config.js";
+import { listenChangoArchscopeServer } from "../build/server/bootstrap/server.js";
 
 const args = process.argv.slice(2);
 const command = args[0] ?? "serve";
 const flags = parseFlags(args.slice(1));
+const reader = new NodeFsSourceTreeReader();
 
 try {
   if (command === "init") {
@@ -22,16 +25,16 @@ try {
       server: { ...config.server, port, host },
     });
 
-    console.log(`Chango Architecture running at http://${started.host}:${started.port}`);
+    console.log(`Architecture Toolkit running at http://${started.host}:${started.port}`);
   } else if (command === "graph") {
     const config = await loadRuntimeConfig(flags);
-    console.log(JSON.stringify(buildArchitectureGraph(config, {
+    console.log(JSON.stringify(buildArchitectureGraph(config, reader, {
       target: flags.target ?? "laravel",
       module: flags.module ?? null,
     }), null, 2));
   } else if (command === "check") {
     const config = await loadRuntimeConfig(flags);
-    const result = checkArchitecture(config, {
+    const result = checkArchitecture(config, reader, {
       target: flags.target ?? "laravel",
       module: flags.module ?? null,
       failOnCoupling: flags["fail-on-coupling"] !== "false",
@@ -72,7 +75,7 @@ function initConfig() {
 
   writeFileSync(target, `export default {
   laravel: {
-    modulesPath: "app/Modules",
+    modulesPath: "app/modules",
     namespaceRoot: "App\\\\Modules",
   },
   react: {
@@ -126,5 +129,7 @@ Options:
   --config <file>
   --laravel-modules <path>
   --react-modules <path>
+
+Note: run "npm run build:node" first so build/server exists.
 `);
 }
