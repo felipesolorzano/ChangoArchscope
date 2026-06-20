@@ -1,12 +1,14 @@
 import { buildRiskBreakdown } from "./auditRiskBreakdown.js";
 import { SEVERITY_WEIGHTS } from "./auditSeverityWeights.js";
 export function buildAuditSnapshot(findings, context) {
+    const skippedFiles = context.skippedFiles ?? [];
     return {
         generatedAt: new Date().toISOString(),
         target: context.target,
         module: context.module,
         summary: {
             files_scanned: context.filesScanned,
+            files_skipped: skippedFiles.length,
             modules: context.modules,
             findings_count: findings.length,
             by_category: countBy(findings, (finding) => finding.category),
@@ -15,6 +17,7 @@ export function buildAuditSnapshot(findings, context) {
         findings,
         riskScore: buildRiskScore(findings),
         riskBreakdown: buildRiskBreakdown(findings, context.phpRoot),
+        skippedFiles,
     };
 }
 function buildRiskScore(findings) {

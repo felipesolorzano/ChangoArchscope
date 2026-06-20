@@ -34,9 +34,21 @@ describe("buildRiskBreakdown", () => {
     const breakdown = buildRiskBreakdown(findings);
 
     expect(breakdown.byFile).toEqual([
-      { key: "A.php", value: 5, byCategory: { complexity: 2, security: 3 }, findingsCount: 2 },
-      { key: "B.php", value: 1, byCategory: { complexity: 1 }, findingsCount: 1 },
+      { key: "A.php", value: 5, byCategory: { complexity: 2, security: 3 }, bySeverity: { medium: 1, high: 1 }, findingsCount: 2 },
+      { key: "B.php", value: 1, byCategory: { complexity: 1 }, bySeverity: { low: 1 }, findingsCount: 1 },
     ]);
+  });
+
+  it("byFile agrega bySeverity contando 1 por finding segun su severidad", () => {
+    const findings = [
+      buildFinding({ file: "A.php", severity: "high" }),
+      buildFinding({ file: "A.php", severity: "high" }),
+      buildFinding({ file: "A.php", severity: "low" }),
+    ];
+
+    const breakdown = buildRiskBreakdown(findings);
+
+    expect(breakdown.byFile[0].bySeverity).toEqual({ high: 2, low: 1 });
   });
 
   it("byFile esta ordenado de mayor a menor value", () => {
@@ -60,8 +72,8 @@ describe("buildRiskBreakdown", () => {
     const breakdown = buildRiskBreakdown(findings);
 
     expect(breakdown.byClass).toEqual([
-      { key: "A.php#Foo", value: 3, byCategory: { complexity: 3 }, findingsCount: 1 },
-      { key: "B.php#Foo", value: 1, byCategory: { complexity: 1 }, findingsCount: 1 },
+      { key: "A.php#Foo", value: 3, byCategory: { complexity: 3 }, bySeverity: { high: 1 }, findingsCount: 1 },
+      { key: "B.php#Foo", value: 1, byCategory: { complexity: 1 }, bySeverity: { low: 1 }, findingsCount: 1 },
     ]);
   });
 
@@ -78,7 +90,7 @@ describe("buildRiskBreakdown", () => {
 
     const breakdown = buildRiskBreakdown(findings);
 
-    expect(breakdown.byModule).toEqual([{ key: "Users", value: 3, byCategory: { complexity: 3 }, findingsCount: 1 }]);
+    expect(breakdown.byModule).toEqual([{ key: "Users", value: 3, byCategory: { complexity: 3 }, bySeverity: { high: 1 }, findingsCount: 1 }]);
   });
 
   it("byModule deriva el modulo desde la ruta relativa a phpRoot cuando finding.module es vacio", () => {
@@ -86,7 +98,7 @@ describe("buildRiskBreakdown", () => {
 
     const breakdown = buildRiskBreakdown(findings, "/app/Modules");
 
-    expect(breakdown.byModule).toEqual([{ key: "Users", value: 2, byCategory: { complexity: 2 }, findingsCount: 1 }]);
+    expect(breakdown.byModule).toEqual([{ key: "Users", value: 2, byCategory: { complexity: 2 }, bySeverity: { medium: 1 }, findingsCount: 1 }]);
   });
 
   it("byModule ignora un finding con module vacio cuando no se recibe phpRoot", () => {
@@ -105,7 +117,7 @@ describe("buildRiskBreakdown", () => {
 
     const breakdown = buildRiskBreakdown(findings, "/app/Modules");
 
-    expect(breakdown.byModule).toEqual([{ key: "Users", value: 2, byCategory: { complexity: 2 }, findingsCount: 2 }]);
+    expect(breakdown.byModule).toEqual([{ key: "Users", value: 2, byCategory: { complexity: 2 }, bySeverity: { low: 2 }, findingsCount: 2 }]);
   });
 
   it("topRiskiestFiles tiene como maximo 20 elementos, ordenados de mayor a menor value", () => {

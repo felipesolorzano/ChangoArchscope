@@ -31,7 +31,7 @@ export function buildReactGraph(
     const moduleNodeId = `module:react:${module}`;
     addNode(nodes, nodeIds, reactModuleNode(moduleNodeId, module, modulePath));
 
-    for (const file of reader.walkFiles(modulePath, reactSourceExtensions)) {
+    for (const file of reader.walkFiles(modulePath, reactSourceExtensions, config.react.ignoredPaths)) {
       const relative = relativePosix(modulesPath, file);
       const layer = reactLayerFor(config, modulePath, file);
       const fileNodeId = `file:react:${relative}`;
@@ -106,7 +106,7 @@ export function checkReactArchitecture(
   failOnCoupling = true,
 ): ArchitectureCheckResult {
   const reports = reactModules(config, reader, onlyModule).map(([module, modulePath]) => {
-    const scannedFiles = reader.walkFiles(modulePath, reactSourceExtensions);
+    const scannedFiles = reader.walkFiles(modulePath, reactSourceExtensions, config.react.ignoredPaths);
     const violations = [];
     const couplings = [];
 

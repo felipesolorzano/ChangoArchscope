@@ -12,7 +12,7 @@ export function buildLaravelGraph(config, reader, onlyModule = null) {
     for (const [module, modulePath] of modules) {
         const moduleNodeId = `module:${module}`;
         addNode(nodes, nodeIds, moduleNode(moduleNodeId, module, modulePath));
-        for (const file of reader.walkFiles(modulePath, [".php"])) {
+        for (const file of reader.walkFiles(modulePath, config.laravel.phpExtensions, config.laravel.ignoredPaths)) {
             const relative = relativePosix(modulesPath, file);
             const layer = laravelLayerFor(config, modulePath, file);
             const fileNodeId = `file:${relative}`;
@@ -72,7 +72,7 @@ export function buildLaravelGraph(config, reader, onlyModule = null) {
 }
 export function checkLaravelArchitecture(config, reader, onlyModule = null, failOnCoupling = true) {
     const reports = laravelModules(config, reader, onlyModule).map(([module, modulePath]) => {
-        const scannedFiles = reader.walkFiles(modulePath, [".php"]);
+        const scannedFiles = reader.walkFiles(modulePath, config.laravel.phpExtensions, config.laravel.ignoredPaths);
         const violations = [];
         const couplings = [];
         for (const file of scannedFiles) {

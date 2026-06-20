@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
 import path from "node:path";
 
+import { minimatch } from "minimatch";
+
 import type { SourceTreeReader } from "../../domain/repositories/SourceTreeReader.js";
 
 export class NodeFsSourceTreeReader implements SourceTreeReader {
@@ -15,8 +17,13 @@ export class NodeFsSourceTreeReader implements SourceTreeReader {
     }
   }
 
-  walkFiles(directory: string, extensions: string[]): string[] {
+  walkFiles(directory: string, extensions: string[], ignoredPaths: string[] = []): string[] {
     const files: string[] = [];
+
+    const isIgnored = (target: string): boolean => {
+      const relative = path.relative(directory, target).split(path.sep).join("/");
+      return ignoredPaths.some((pattern) => minimatch(relative, pattern, { dot: true }));
+    };
 
     const visit = (current: string) => {
       let entries: Dirent[] = [];
@@ -31,11 +38,14 @@ export class NodeFsSourceTreeReader implements SourceTreeReader {
         const entryPath = path.join(current, entry.name);
 
         if (entry.isDirectory()) {
-          visit(entryPath);
+          if (!isIgnored(entryPath)) {
+            visit(entryPath);
+          }
+
           continue;
         }
 
-        if (entry.isFile() && extensions.includes(path.extname(entry.name))) {
+        if (entry.isFile() && extensions.some((extension) => entry.name.endsWith(extension)) && !isIgnored(entryPath)) {
           files.push(entryPath);
         }
       }

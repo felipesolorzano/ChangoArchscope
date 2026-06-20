@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { minimatch } from "minimatch";
 export class NodeFsSourceTreeReader {
     listDirectories(directory) {
         try {
@@ -12,8 +13,12 @@ export class NodeFsSourceTreeReader {
             return [];
         }
     }
-    walkFiles(directory, extensions) {
+    walkFiles(directory, extensions, ignoredPaths = []) {
         const files = [];
+        const isIgnored = (target) => {
+            const relative = path.relative(directory, target).split(path.sep).join("/");
+            return ignoredPaths.some((pattern) => minimatch(relative, pattern, { dot: true }));
+        };
         const visit = (current) => {
             let entries = [];
             try {
@@ -25,10 +30,12 @@ export class NodeFsSourceTreeReader {
             for (const entry of entries) {
                 const entryPath = path.join(current, entry.name);
                 if (entry.isDirectory()) {
-                    visit(entryPath);
+                    if (!isIgnored(entryPath)) {
+                        visit(entryPath);
+                    }
                     continue;
                 }
-                if (entry.isFile() && extensions.includes(path.extname(entry.name))) {
+                if (entry.isFile() && extensions.some((extension) => entry.name.endsWith(extension)) && !isIgnored(entryPath)) {
                     files.push(entryPath);
                 }
             }

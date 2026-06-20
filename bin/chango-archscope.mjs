@@ -7,15 +7,7 @@ import { checkArchitecture } from "../build/server/app/modules/architecture/appl
 import { NodeFsSourceTreeReader } from "../build/server/app/modules/shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
 import { CONFIG_FILE, loadConfig } from "../build/server/app/modules/architecture/infrastructure/config/config.js";
 import { listenChangoArchscopeServer } from "../build/server/bootstrap/server.js";
-import { architectureFindings } from "../build/server/app/modules/audit/application/use-cases/RunAudit.js";
-import { scanPhpFiles } from "../build/server/app/modules/audit/application/use-cases/ScanPhpFiles.js";
-import { phpComplexityAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpComplexityAnalyzer.js";
-import { phpCouplingAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpCouplingAnalyzer.js";
-import { phpDeadCodeAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpDeadCodeAnalyzer.js";
-import { phpSecurityAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpSecurityAnalyzer.js";
-import { phpDatabaseAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpDatabaseAnalyzer.js";
-import { phpTestingAnalyzer } from "../build/server/app/modules/audit/application/analyzers/phpTestingAnalyzer.js";
-import { buildAuditSnapshot } from "../build/server/app/modules/audit/domain/services/auditSnapshotBuilder.js";
+import { auditProject } from "../build/server/app/modules/audit/application/use-cases/AuditProject.js";
 import { exceedsSeverityThreshold } from "../build/server/app/modules/audit/domain/services/auditSeverityUtils.js";
 import { PhpAstParser } from "../build/server/app/modules/audit/infrastructure/parser/PhpAstParser.js";
 
@@ -65,21 +57,13 @@ try {
     const target = flags.target ?? "laravel";
     const config = await loadRuntimeConfig(flags);
     const checkResult = checkArchitecture(config, reader, { target, module: flags.module ?? null });
-    const phpFiles = target === "laravel" ? scanPhpFiles(reader, new PhpAstParser(), config.laravel.modulesPath) : [];
-    const nativeFindings = [
-      ...phpComplexityAnalyzer(phpFiles),
-      ...phpCouplingAnalyzer(phpFiles),
-      ...phpDeadCodeAnalyzer(phpFiles),
-      ...phpSecurityAnalyzer(phpFiles),
-      ...phpDatabaseAnalyzer(phpFiles),
-      ...phpTestingAnalyzer(phpFiles),
-    ];
-    const snapshot = buildAuditSnapshot([...architectureFindings(checkResult), ...nativeFindings], {
-      target: checkResult.target,
-      module: checkResult.module,
-      filesScanned: checkResult.summary.files_scanned,
-      modules: checkResult.summary.modules,
-      phpRoot: target === "laravel" ? config.laravel.modulesPath : undefined,
+    const snapshot = auditProject({
+      checkResult,
+      reader,
+      parser: new PhpAstParser(),
+      phpRoot: target === "laravel" ? config.laravel.modulesPath : null,
+      phpExtensions: config.laravel.phpExtensions,
+      ignoredPaths: config.laravel.ignoredPaths,
     });
 
     console.log(JSON.stringify(snapshot, null, 2));

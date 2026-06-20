@@ -1,4 +1,5 @@
 import type { AuditFinding, AuditSnapshot } from "../value-objects/AuditSnapshot.js";
+import type { PhpParseFailure } from "../value-objects/PhpFileStructure.js";
 import { buildRiskBreakdown } from "./auditRiskBreakdown.js";
 import { SEVERITY_WEIGHTS } from "./auditSeverityWeights.js";
 
@@ -8,15 +9,19 @@ export type AuditSnapshotContext = {
   filesScanned: number;
   modules: number;
   phpRoot?: string;
+  skippedFiles?: PhpParseFailure[];
 };
 
 export function buildAuditSnapshot(findings: AuditFinding[], context: AuditSnapshotContext): AuditSnapshot {
+  const skippedFiles = context.skippedFiles ?? [];
+
   return {
     generatedAt: new Date().toISOString(),
     target: context.target,
     module: context.module,
     summary: {
       files_scanned: context.filesScanned,
+      files_skipped: skippedFiles.length,
       modules: context.modules,
       findings_count: findings.length,
       by_category: countBy(findings, (finding) => finding.category),
@@ -25,6 +30,7 @@ export function buildAuditSnapshot(findings: AuditFinding[], context: AuditSnaps
     findings,
     riskScore: buildRiskScore(findings),
     riskBreakdown: buildRiskBreakdown(findings, context.phpRoot),
+    skippedFiles,
   };
 }
 

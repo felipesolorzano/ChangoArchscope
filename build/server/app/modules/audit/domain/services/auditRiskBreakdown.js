@@ -27,9 +27,10 @@ function buildEntries(findings, keyFn) {
     for (const finding of findings) {
         const key = keyFn(finding);
         const weight = SEVERITY_WEIGHTS[finding.severity];
-        const entry = entries.get(key) ?? { key, value: 0, byCategory: {}, findingsCount: 0 };
+        const entry = entries.get(key) ?? { key, value: 0, byCategory: {}, bySeverity: {}, findingsCount: 0 };
         entry.value += weight;
         entry.byCategory[finding.category] = (entry.byCategory[finding.category] ?? 0) + weight;
+        entry.bySeverity[finding.severity] = (entry.bySeverity[finding.severity] ?? 0) + 1;
         entry.findingsCount += 1;
         entries.set(key, entry);
     }

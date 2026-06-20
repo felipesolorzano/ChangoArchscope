@@ -13,7 +13,7 @@ export function buildReactGraph(config, reader, onlyModule = null) {
     for (const [module, modulePath] of modules) {
         const moduleNodeId = `module:react:${module}`;
         addNode(nodes, nodeIds, reactModuleNode(moduleNodeId, module, modulePath));
-        for (const file of reader.walkFiles(modulePath, reactSourceExtensions)) {
+        for (const file of reader.walkFiles(modulePath, reactSourceExtensions, config.react.ignoredPaths)) {
             const relative = relativePosix(modulesPath, file);
             const layer = reactLayerFor(config, modulePath, file);
             const fileNodeId = `file:react:${relative}`;
@@ -73,7 +73,7 @@ export function buildReactGraph(config, reader, onlyModule = null) {
 }
 export function checkReactArchitecture(config, reader, onlyModule = null, failOnCoupling = true) {
     const reports = reactModules(config, reader, onlyModule).map(([module, modulePath]) => {
-        const scannedFiles = reader.walkFiles(modulePath, reactSourceExtensions);
+        const scannedFiles = reader.walkFiles(modulePath, reactSourceExtensions, config.react.ignoredPaths);
         const violations = [];
         const couplings = [];
         for (const file of scannedFiles) {

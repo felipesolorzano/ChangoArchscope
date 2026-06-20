@@ -4,6 +4,7 @@ export const defaultConfig = {
         namespaceRoot: "App\\Modules",
         layers: ["Domain", "Application", "Presentation", "Infrastructure"],
         ignoredPaths: ["**/README.md"],
+        phpExtensions: [".php"],
         forbiddenImports: {
             Domain: [
                 {
@@ -57,6 +58,7 @@ export const defaultConfig = {
     react: {
         modulesPath: "resources/js/react/modules",
         alias: "@modules",
+        ignoredPaths: [],
         layers: {
             domain: "Domain",
             application: "Application",

@@ -1,0 +1,46 @@
+.app-shell {
+  position: relative;
+  width: 100%;
+}
+
+.app-tabs {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 40px -20px rgba(0, 0, 0, 0.9);
+}
+
+.app-tab {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.app-tab:hover {
+  color: #e2e8f0;
+}
+
+.app-tab--active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #f8fafc;
+}
+
+.app-view {
+  width: 100%;
+}

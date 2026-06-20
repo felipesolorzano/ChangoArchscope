@@ -29,6 +29,7 @@ export type ReactArchitectureConfig = {
   modulesPath: string;
   alias: string;
   layers: Record<string, string>;
+  ignoredPaths: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;
 };

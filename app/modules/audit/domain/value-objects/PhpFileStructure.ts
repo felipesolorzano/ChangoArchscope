@@ -37,3 +37,8 @@ export type PhpFileStructure = {
   securityIssues: PhpSecurityIssue[];
   sqlLiterals: PhpSqlLiteral[];
 };
+
+export type PhpParseFailure = {
+  file: string;
+  error: string;
+};

@@ -36,6 +36,7 @@ Consolidar el reporte de chequeo de arquitectura (`ArchitectureCheckResult`, pro
   module: string | null,
   summary: {
     files_scanned: number,
+    files_skipped: number,
     modules: number,
     findings_count: number,
     by_category: Record<string, number>,
@@ -43,6 +44,7 @@ Consolidar el reporte de chequeo de arquitectura (`ArchitectureCheckResult`, pro
   },
   findings: AuditFinding[],
   riskScore: { value: number, breakdown: Record<string, number> },
+  skippedFiles: Array<{ file: string, error: string }>,
 }
 ```
 

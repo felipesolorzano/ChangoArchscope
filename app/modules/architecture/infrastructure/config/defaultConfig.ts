@@ -60,6 +60,7 @@ export const defaultConfig: ArchitectureConfig = {
   react: {
     modulesPath: "resources/js/react/modules",
     alias: "@modules",
+    ignoredPaths: [],
     layers: {
       domain: "Domain",
       application: "Application",

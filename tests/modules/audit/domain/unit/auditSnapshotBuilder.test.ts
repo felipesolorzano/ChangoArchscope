@@ -89,4 +89,23 @@ describe("buildAuditSnapshot", () => {
 
     expect(snapshot.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
+
+  it("copia skippedFiles del contexto y refleja su conteo en summary.files_skipped", () => {
+    const skippedFiles = [
+      { file: "lib/Bad.php", error: "Parse Error : x" },
+      { file: "lib/Bad2.php", error: "Parse Error : y" },
+    ];
+
+    const snapshot = buildAuditSnapshot([], { target: "laravel", module: null, filesScanned: 5, modules: 1, skippedFiles });
+
+    expect(snapshot.skippedFiles).toEqual(skippedFiles);
+    expect(snapshot.summary.files_skipped).toBe(2);
+  });
+
+  it("sin skippedFiles en el contexto, snapshot.skippedFiles es [] y files_skipped es 0", () => {
+    const snapshot = buildAuditSnapshot([], { target: "laravel", module: null, filesScanned: 0, modules: 0 });
+
+    expect(snapshot.skippedFiles).toEqual([]);
+    expect(snapshot.summary.files_skipped).toBe(0);
+  });
 });

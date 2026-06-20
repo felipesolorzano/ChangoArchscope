@@ -29,7 +29,7 @@ export function buildLaravelGraph(
     const moduleNodeId = `module:${module}`;
     addNode(nodes, nodeIds, moduleNode(moduleNodeId, module, modulePath));
 
-    for (const file of reader.walkFiles(modulePath, config.laravel.phpExtensions)) {
+    for (const file of reader.walkFiles(modulePath, config.laravel.phpExtensions, config.laravel.ignoredPaths)) {
       const relative = relativePosix(modulesPath, file);
       const layer = laravelLayerFor(config, modulePath, file);
       const fileNodeId = `file:${relative}`;
@@ -104,7 +104,7 @@ export function checkLaravelArchitecture(
   failOnCoupling = true,
 ): ArchitectureCheckResult {
   const reports = laravelModules(config, reader, onlyModule).map(([module, modulePath]) => {
-    const scannedFiles = reader.walkFiles(modulePath, config.laravel.phpExtensions);
+    const scannedFiles = reader.walkFiles(modulePath, config.laravel.phpExtensions, config.laravel.ignoredPaths);
     const violations = [];
     const couplings = [];
 

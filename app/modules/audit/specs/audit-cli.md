@@ -16,7 +16,7 @@ Exponer el comando `audit` en `bin/chango-archscope.mjs`, que construye el `Arch
 - Carga la configuracion con el mismo mecanismo que `graph`/`check` (`loadRuntimeConfig`).
 - Llama a `checkArchitecture(config, reader, { target, module })` para obtener el `ArchitectureCheckResult`. El flag `--fail-on-coupling` de `check` no aplica aqui: el snapshot ignora `passed`/`fail_on_coupling` (ver `run-audit.md`).
 - Calcula `architectureFindings(checkResult)` (ver `run-audit.md`).
-- Si `target === "laravel"`: llama a `scanPhpFiles(reader, new PhpAstParser(), config.laravel.modulesPath, config.laravel.phpExtensions)` para obtener `PhpFileStructure[]`, y corre sobre ese mismo resultado `phpComplexityAnalyzer` (ver `php-complexity-analyzer.md`) y `phpCouplingAnalyzer` (ver `php-coupling-analyzer.md`), concatenando sus findings. Los archivos se escanean y parsean una sola vez para ambos analizadores. Si `target === "react"`: no hay findings nativos todavia (lista vacia); React/TypeScript no tiene analizador nativo en esta fase.
+- Si `target === "laravel"`: llama a `scanPhpFiles(reader, new PhpAstParser(), config.laravel.modulesPath, config.laravel.phpExtensions, config.laravel.ignoredPaths)` para obtener `PhpFileStructure[]`, y corre sobre ese mismo resultado `phpComplexityAnalyzer` (ver `php-complexity-analyzer.md`) y `phpCouplingAnalyzer` (ver `php-coupling-analyzer.md`), concatenando sus findings. Los archivos se escanean y parsean una sola vez para ambos analizadores. Si `target === "react"`: no hay findings nativos todavia (lista vacia); React/TypeScript no tiene analizador nativo en esta fase.
 - Combina la lista de `architectureFindings` con todas las listas de findings nativos y llama a `buildAuditSnapshot(findings, { target, module, filesScanned: checkResult.summary.files_scanned, modules: checkResult.summary.modules })` para obtener el `AuditSnapshot` final.
 - Imprime `JSON.stringify(snapshot, null, 2)` en stdout.
 - Calcula `exceedsSeverityThreshold(snapshot, threshold)`: verdadero si algun finding tiene severidad igual o mayor al umbral, segun el orden `low < medium < high < critical`.
@@ -25,18 +25,21 @@ Exponer el comando `audit` en `bin/chango-archscope.mjs`, que construye el `Arch
 
 ### `scanPhpFiles`
 
-Caso de uso en `app/modules/audit/application/use-cases/ScanPhpFiles.ts`: `scanPhpFiles(reader: SourceTreeReader, parser: PhpSourceParser, phpRoot: string, extensions: string[] = [".php"]): PhpFileStructure[]`.
+Caso de uso en `app/modules/audit/application/use-cases/ScanPhpFiles.ts`: `scanPhpFiles(reader: SourceTreeReader, parser: PhpSourceParser, phpRoot: string, extensions: string[] = [".php"], ignoredPaths: string[] = []): PhpScanResult`, donde `PhpScanResult = { files: PhpFileStructure[]; skipped: PhpParseFailure[] }` y `PhpParseFailure = { file: string; error: string }`.
 
-- Recorre `phpRoot` con `reader.walkFiles(phpRoot, extensions)` (recursivo, igual que usa `architecture`). El default `[".php"]` mantiene el comportamiento actual cuando no se pasa nada (por ejemplo, en los tests existentes).
+- Recorre `phpRoot` con `reader.walkFiles(phpRoot, extensions, ignoredPaths)` (recursivo, igual que usa `architecture`). El default `[".php"]` para `extensions` y `[]` para `ignoredPaths` mantienen el comportamiento actual cuando no se pasan (por ejemplo, en los tests existentes).
 - Por cada archivo, lee el texto con `reader.readText(file)` y lo parsea con `parser.parse(file, source)`.
+- **Resiliencia ante errores de parseo**: si `parser.parse` lanza (archivo con sintaxis que el parser no soporta, codigo de terceros, etc.), `scanPhpFiles` **no propaga el error**: omite ese archivo de `files` y registra `{ file, error: <mensaje> }` en `skipped`. Asi un solo archivo no parseable no tumba toda la auditoria de un repo grande. El parser de dominio (`PhpAstParser`) se mantiene puro y sigue lanzando ante input invalido; la politica de tolerancia vive en este caso de uso de aplicacion.
+- `files` mantiene el orden de `walkFiles` para los archivos que si parsearon; `skipped` mantiene el orden en que se encontraron los fallos.
 - Solo escanea y parsea; no corre ningun analizador. Reemplaza a `scanPhpComplexity` (que hacia ambas cosas) para que multiples analizadores nativos puedan compartir el mismo resultado sin parsear los archivos mas de una vez.
-- El comando `audit` le pasa `config.laravel.phpExtensions`, la misma lista de extensiones que ya usa `architecture` (ver `architecture-analyzers.md`), para que ambos modulos vean el mismo conjunto de archivos PHP de un proyecto con extensiones no estandar (`.inc`, `.lib.inc`, etc.).
+- El comando `audit` le pasa `config.laravel.phpExtensions` y `config.laravel.ignoredPaths`, las mismas listas que ya usa `architecture` (ver `architecture-analyzers.md`), para que ambos modulos vean exactamente el mismo conjunto de archivos PHP de un proyecto con extensiones no estandar (`.inc`, `.lib.inc`, etc.) y con carpetas excluidas (`vendor`, etc.).
 
 ### `buildAuditSnapshot`
 
-Funcion pura en `app/modules/audit/domain/services/auditSnapshotBuilder.ts`: `buildAuditSnapshot(findings: AuditFinding[], context: { target: string; module: string | null; filesScanned: number; modules: number }): AuditSnapshot`.
+Funcion pura en `app/modules/audit/domain/services/auditSnapshotBuilder.ts`: `buildAuditSnapshot(findings: AuditFinding[], context: { target: string; module: string | null; filesScanned: number; modules: number; phpRoot?: string; skippedFiles?: PhpParseFailure[] }): AuditSnapshot`.
 
 - `summary.findings_count = findings.length`, `by_category`/`by_severity` agregados contando `findings`.
+- `skippedFiles` (opcional, default `[]`) se copia tal cual al campo `snapshot.skippedFiles` y su longitud queda en `summary.files_skipped`. Permite que el consumidor sepa que archivos no se pudieron analizar y por que, sin que cuenten como findings ni afecten el `riskScore`.
 - `riskScore`: cada finding aporta un peso segun su severidad (`low: 1, medium: 2, high: 3, critical: 4`) sumado a `riskScore.value`; `riskScore.breakdown` acumula ese peso por `category`.
 - `generatedAt` usa la hora actual (`new Date().toISOString()`).
 - Esta funcion reemplaza el calculo de `riskScore`/`summary` que antes vivia dentro de `RunAudit`; `runAudit(checkResult)` ahora es `buildAuditSnapshot(architectureFindings(checkResult), { target: checkResult.target, module: checkResult.module, filesScanned: checkResult.summary.files_scanned, modules: checkResult.summary.modules })`, sin cambiar su firma ni su salida observable (los pesos `high: 3` y `medium: 2` reproducen exactamente los pesos fijos que ya tenia `RunAudit` para violations/couplings).
@@ -51,15 +54,17 @@ Funcion pura en `app/modules/audit/domain/services/auditSnapshotBuilder.ts`: `bu
 - `--severity-threshold` con un valor invalido: error claro, exit code `1`, sin imprimir JSON parcial.
 - Snapshot sin findings: exit code `0` siempre, sin importar el umbral.
 - Snapshot con solo findings de severidad menor al umbral (ej. solo `medium` con umbral `high`): exit code `0`.
-- `target === "react"`: `scanPhpFiles` no se ejecuta; el snapshot solo trae findings de `architectureFindings`.
-- Un PHP root sin archivos `.php` (`reader.walkFiles` retorna `[]`): `scanPhpFiles` retorna `[]`, ningun analizador nativo aporta findings y no hay error.
+- `target === "react"`: `scanPhpFiles` no se ejecuta; el snapshot solo trae findings de `architectureFindings` y `skippedFiles` queda vacio.
+- Un PHP root sin archivos `.php` (`reader.walkFiles` retorna `[]`): `scanPhpFiles` retorna `{ files: [], skipped: [] }`, ningun analizador nativo aporta findings y no hay error.
+- Un archivo que el parser no puede procesar: se omite y aparece en `snapshot.skippedFiles`; el resto de archivos se analiza normalmente y el comando no falla por eso.
 
 ## Criterios de Aceptacion
 
 - `exceedsSeverityThreshold(snapshot, "high")` es `true` si hay al menos un finding `high` o `critical`, `false` si todos son `low`/`medium`.
 - `exceedsSeverityThreshold(snapshot, "medium")` es `true` si hay al menos un finding `medium`, `high` o `critical`.
 - Un snapshot sin findings nunca excede ningun umbral.
-- `scanPhpFiles` con dos archivos PHP retorna dos `PhpFileStructure`, uno por archivo, sin analizar nada todavia.
+- `scanPhpFiles` con dos archivos PHP retorna `files` con dos `PhpFileStructure` (uno por archivo) y `skipped` vacio, sin analizar nada todavia.
+- `scanPhpFiles` con un archivo que el parser rechaza retorna ese archivo en `skipped` (con su mensaje de error) y los demas en `files`, sin lanzar.
 - El `AuditSnapshot` final del comando `audit --target laravel` incluye findings de `architecture` y de ambos analizadores nativos (`complexity` y `coupling_low_level`) cuando todos producen resultados.
 - `buildAuditSnapshot` con los mismos findings que ya cubre `run-audit.test.ts` (mapeados desde un `checkResult`) produce el mismo `riskScore`/`summary` que el `runAudit` original.
 

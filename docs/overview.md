@@ -163,10 +163,42 @@ Defaults relevantes:
 | --- | --- |
 | Laravel modules | `app/modules` |
 | Laravel namespace root | `App\Modules` |
+| Laravel `phpExtensions` | `[".php"]` |
+| Laravel `ignoredPaths` | `["**/README.md"]` |
 | React modules | `resources/js/react/modules` |
 | React alias | `@modules` |
+| React `ignoredPaths` | `[]` |
 | Server host | `127.0.0.1` |
 | Server port | `4590` |
+
+### Extensiones de archivo y exclusion de carpetas
+
+`phpExtensions` (solo Laravel) define las extensiones que se recorren dentro de cada
+modulo. El emparejamiento es **por sufijo del nombre de archivo**, por lo que admite
+extensiones compuestas: `".inc"` incluye `foo.inc` y `foo.lib.inc`, mientras que
+`".lib.inc"` incluye solo `foo.lib.inc`. Util para proyectos PHP legacy con `.inc` o
+`.lib.inc`.
+
+`ignoredPaths` (Laravel y React) es una lista de **patrones glob** (minimatch, relativos
+al `modulesPath` de cada modulo) para excluir carpetas o archivos del escaneo. Aplica al
+grafo, al `check` y al `audit`. Una carpeta cuyo path coincide con un patron se poda sin
+descender en ella. Ejemplos: `"**/vendor/**"`, `"**/__tests__/**"`, `"**/*.test.php"`.
+
+```js
+export default {
+  laravel: {
+    modulesPath: "app/modules",
+    namespaceRoot: "App\\Modules",
+    phpExtensions: [".php", ".inc", ".lib.inc"],
+    ignoredPaths: ["**/README.md", "**/vendor/**"],
+  },
+  react: {
+    modulesPath: "resources/js/react/modules",
+    alias: "@modules",
+    ignoredPaths: ["**/__tests__/**", "**/*.test.*"],
+  },
+};
+```
 
 ## Reglas de arquitectura
 
@@ -294,7 +326,7 @@ Roles visuales detectados:
 
 El servidor esta en `bootstrap/server.ts` y usa Express a traves de `core/http/createHttpApp.ts` (el mismo framework interno que usa Chango Modeler): body parsing JSON, archivos estaticos de `public/`, el middleware `response.view(...)` y un error handler centralizado.
 
-El registro central de rutas vive en `routes/web.ts` y `routes/api.ts`. Las rutas del modulo `architecture` (`/graph.json`, `/check.json`) se montan desde `routes/web.ts` (no `routes/api.ts`), para que sigan respondiendo en la raiz en vez de bajo el prefijo `/api`. La ruta `/` viene de `core/routes/web.ts` y renderiza `resources/views/layout/app.edge` con Edge.js, inyectando el entry de React desde el manifest de Vite.
+El registro central de rutas vive en `routes/web.ts` y `routes/api.ts`. Las rutas del modulo `architecture` (`/graph.json`, `/check.json`) y las del modulo `audit` (`auditApiRoutes` en `app/modules/audit/presentation/routes/api.ts`, endpoint `/audit.json`) se montan desde `routes/web.ts` (no `routes/api.ts`), para que respondan en la raiz en vez de bajo el prefijo `/api`. La ruta `/` viene de `core/routes/web.ts` y renderiza `resources/views/layout/app.edge` con Edge.js, inyectando el entry de React desde el manifest de Vite.
 
 Endpoints:
 
@@ -304,6 +336,7 @@ Endpoints:
 | `/graph.json?target=react&module=billing` | Devuelve el grafo de arquitectura React. |
 | `/check.json?target=laravel&module=Users` | Devuelve el reporte de validacion. |
 | `/check.json?target=react&module=billing&fail_on_coupling=false` | Devuelve el reporte sin fallar por acoplamiento. |
+| `/audit.json?target=laravel&module=Users` | Devuelve el `AuditSnapshot` completo (findings de arquitectura + nativos PHP + `summary` + `riskScore` + `riskBreakdown`). Ver `app/modules/audit/specs/audit-api.md`. |
 | `/` | Renderiza el layout Edge que monta la UI React compilada en `public/build`. |
 
 `npm run build:react` debe haberse ejecutado al menos una vez para que exista `public/build/.vite/manifest.json`; si no existe, `/` responde con un error 400 (a diferencia de la version anterior, que mostraba una pagina de aviso). Esto es intencional para mantener la misma mecanica que `core/views/viteAssetManifest.ts` usa en Chango Modeler.
