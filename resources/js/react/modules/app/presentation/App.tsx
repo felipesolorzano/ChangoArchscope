@@ -4,6 +4,8 @@ import ArchitectureExplorer from "../../architecture-explorer/presentation/pages
 import { createArchitectureExplorerDependencies } from "../../architecture-explorer/infrastructure/factory/createArchitectureExplorerDependencies.js";
 import AuditExplorer from "../../audit-explorer/presentation/pages/AuditExplorer.js";
 import { createAuditExplorerDependencies } from "../../audit-explorer/infrastructure/factory/createAuditExplorerDependencies.js";
+import PlanExplorer from "../../plan-explorer/presentation/pages/PlanExplorer.js";
+import { createPlanExplorerDependencies } from "../../plan-explorer/infrastructure/factory/createPlanExplorerDependencies.js";
 
 import "./app.css";
 
@@ -16,11 +18,17 @@ const auditDependencies = createAuditExplorerDependencies({
   graphUrl: "/audit-graph.json",
 });
 
-type AppView = "architecture" | "audit";
+const planDependencies = createPlanExplorerDependencies({
+  planUrl: "/plan.json",
+  taskUrl: "/plan/tasks",
+});
+
+type AppView = "architecture" | "audit" | "plan";
 
 const TABS: Array<{ id: AppView; label: string }> = [
   { id: "architecture", label: "Arquitectura" },
   { id: "audit", label: "Auditoría" },
+  { id: "plan", label: "Plan" },
 ];
 
 export function App() {
@@ -42,11 +50,9 @@ export function App() {
       </nav>
 
       <div className="app-view">
-        {view === "architecture" ? (
-          <ArchitectureExplorer dependencies={architectureDependencies} />
-        ) : (
-          <AuditExplorer dependencies={auditDependencies} />
-        )}
+        {view === "architecture" && <ArchitectureExplorer dependencies={architectureDependencies} />}
+        {view === "audit" && <AuditExplorer dependencies={auditDependencies} />}
+        {view === "plan" && <PlanExplorer dependencies={planDependencies} />}
       </div>
     </div>
   );

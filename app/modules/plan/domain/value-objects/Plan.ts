@@ -45,3 +45,18 @@ export type PlanGraph = {
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 };
+
+// Hallazgo concreto que respalda una tarea del plan (puente plan -> audit).
+export type PlanFinding = {
+  file: string;
+  line: number;
+  rule: string;
+  severity: string;
+  message: string;
+};
+
+export type PlanTaskFindings = {
+  taskKey: string;
+  total: number;
+  items: PlanFinding[];
+};

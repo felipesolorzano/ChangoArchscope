@@ -1,8 +1,12 @@
 import type { Server } from "node:http";
+import path from "node:path";
 
 import { createHttpApp } from "../core/http/createHttpApp.js";
 import { setArchitectureConfig } from "../app/modules/architecture/infrastructure/config/architectureConfigStore.js";
 import type { ArchitectureConfig } from "../app/modules/architecture/domain/value-objects/ArchitectureConfig.js";
+import { runSqliteMigrations } from "../app/modules/shared/infrastructure/persistence/sqlite/runSqliteMigrations.js";
+import { createSqliteConnection } from "../app/modules/shared/infrastructure/persistence/sqlite/createSqliteConnection.js";
+import { setSqliteDatabaseConnection } from "../app/modules/shared/infrastructure/persistence/sqlite/sqliteDatabaseConnection.js";
 import { apiRoutes } from "../routes/api.js";
 import { webRoutes } from "../routes/web.js";
 
@@ -16,6 +20,7 @@ export type ListenChangoArchscopeServerResult = {
 
 export function createChangoArchscopeServer(config: ChangoArchscopeServerConfig) {
   setArchitectureConfig(config);
+  initSqliteDatabase();
 
   const app = createHttpApp({
     api: apiRoutes(),
@@ -25,6 +30,17 @@ export function createChangoArchscopeServer(config: ChangoArchscopeServerConfig)
   app.disable("x-powered-by");
 
   return app;
+}
+
+function initSqliteDatabase(): void {
+  const databasePath = path.resolve(process.cwd(), "database/architecture-toolkit.sqlite");
+
+  runSqliteMigrations({
+    databasePath,
+    migrationsDirectory: path.resolve(process.cwd(), "database/migrations"),
+  });
+
+  setSqliteDatabaseConnection(createSqliteConnection({ databasePath }));
 }
 
 export function listenChangoArchscopeServer(
