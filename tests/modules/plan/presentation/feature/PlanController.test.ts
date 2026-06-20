@@ -115,6 +115,33 @@ describe("PlanController", () => {
     expect(repo.setState).not.toHaveBeenCalled();
   });
 
+  it("findings responde 200 con los hallazgos concretos de la tarea", () => {
+    const controller = new PlanController({ snapshots, repository: repository() });
+    const { status, json, response } = fakeResponse();
+
+    controller.findings(
+      { params: { key: "close-sql-injections" }, query: {} } as unknown as Request,
+      response,
+      vi.fn() as unknown as NextFunction,
+    );
+
+    expect(status).toHaveBeenCalledWith(200);
+    const payload = json.mock.calls[0][0] as { taskKey: string; items: Array<{ rule: string }> };
+    expect(payload.taskKey).toBe("close-sql-injections");
+    expect(payload.items[0]?.rule).toBe("sql-concatenation");
+  });
+
+  it("findings delega a next si el provider lanza", () => {
+    const controller = new PlanController({ snapshots: { getSnapshot: () => { throw new Error("x"); } }, repository: repository() });
+    const { status, response } = fakeResponse();
+    const next = vi.fn();
+
+    controller.findings({ params: { key: "x" }, query: {} } as unknown as Request, response, next as unknown as NextFunction);
+
+    expect(next).toHaveBeenCalled();
+    expect(status).not.toHaveBeenCalled();
+  });
+
   it("update con estado invalido delega a next sin responder", () => {
     const repo = repository();
     const controller = new PlanController({ snapshots, repository: repo });

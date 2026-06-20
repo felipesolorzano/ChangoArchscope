@@ -1,7 +1,7 @@
 import type { PlanProvider } from "../../application/contracts/PlanProvider";
-import type { PlanGraph, PlanTaskState } from "../../domain/value-objects/PlanGraph";
+import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
 
-async function readJson(response: Response, message: string): Promise<PlanGraph> {
+async function readJson<T>(response: Response, message: string): Promise<T> {
   if (!response.ok) {
     throw new Error(`${message} (${response.status})`);
   }
@@ -18,7 +18,7 @@ export class HttpPlanProvider implements PlanProvider {
 
     const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
 
-    return readJson(response, "No se pudo cargar el plan");
+    return readJson<PlanGraph>(response, "No se pudo cargar el plan");
   }
 
   async setTaskState(taskKey: string, state: PlanTaskState, target: "laravel" | "react" = "laravel"): Promise<PlanGraph> {
@@ -31,6 +31,15 @@ export class HttpPlanProvider implements PlanProvider {
       body: JSON.stringify({ state }),
     });
 
-    return readJson(response, "No se pudo actualizar la tarea");
+    return readJson<PlanGraph>(response, "No se pudo actualizar la tarea");
+  }
+
+  async getTaskFindings(taskKey: string, target: "laravel" | "react" = "laravel"): Promise<PlanTaskFindings> {
+    const url = new URL(`${this.taskUrl}/${encodeURIComponent(taskKey)}/findings`, window.location.origin);
+    url.searchParams.set("target", target);
+
+    const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+
+    return readJson<PlanTaskFindings>(response, "No se pudieron cargar los hallazgos");
   }
 }

@@ -24,6 +24,7 @@ export function planApiRoutes() {
         repository: new SqlitePlanTaskStateRepository(createDrizzleDatabase(getSqliteDatabaseConnection())),
     });
     router.get("/plan.json", controller.show);
+    router.get("/plan/tasks/:key/findings", controller.findings);
     router.post("/plan/tasks/:key", controller.update);
     return router;
 }

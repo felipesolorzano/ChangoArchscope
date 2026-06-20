@@ -1,4 +1,5 @@
 import { buildPlan } from "../../application/use-cases/buildPlan.js";
+import { findingsForTask } from "../../application/use-cases/findingsForTask.js";
 import { updateTaskState } from "../../application/use-cases/updateTaskState.js";
 export class PlanController {
     deps;
@@ -21,6 +22,15 @@ export class PlanController {
             updateTaskState(this.deps.repository, String(request.params.key), state);
             const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
             response.status(200).json(buildPlan(snapshot, this.deps.repository));
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+    findings = (request, response, next) => {
+        try {
+            const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+            response.status(200).json(findingsForTask(snapshot, String(request.params.key)));
         }
         catch (error) {
             next(error);

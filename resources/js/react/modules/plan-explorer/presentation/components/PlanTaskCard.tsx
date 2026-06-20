@@ -12,17 +12,21 @@ export function PlanTaskCard({ data }: NodeProps) {
   const task = data as unknown as PlanGraphNode;
   const color = stateColor(task.state);
   const setTaskState = usePlanInteractionsStore((state) => state.setTaskState);
+  const openTask = usePlanInteractionsStore((state) => state.openTask);
 
   return (
     <div className="plan-task" style={{ borderColor: color }}>
       <Handle type="target" position={Position.Left} className="plan-task__handle" />
 
-      <div className="plan-task__head">
-        <span className="plan-task__category">{task.category}</span>
-        {task.metric > 0 && <span className="plan-task__metric">{formatNumber(task.metric)}</span>}
-      </div>
-      <div className="plan-task__title">{task.title}</div>
-      <p className="plan-task__desc">{task.description}</p>
+      <button type="button" className="plan-task__body" onClick={() => openTask(task.id)}>
+        <div className="plan-task__head">
+          <span className="plan-task__category">{task.category}</span>
+          {task.metric > 0 && <span className="plan-task__metric">{formatNumber(task.metric)}</span>}
+        </div>
+        <div className="plan-task__title">{task.title}</div>
+        <p className="plan-task__desc">{task.description}</p>
+        {task.metric > 0 && <span className="plan-task__link">Ver hallazgos →</span>}
+      </button>
 
       <div className="plan-task__states">
         {PLAN_STATE_OPTIONS.map((option) => (

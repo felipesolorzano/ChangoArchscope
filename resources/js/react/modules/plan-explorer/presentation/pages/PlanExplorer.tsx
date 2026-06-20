@@ -4,9 +4,10 @@ import "@xyflow/react/dist/style.css";
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
 import { toPlanFlowEdges, toPlanFlowNodes } from "../../infrastructure/react-flow/planFlowAdapter";
 import { PlanCanvas } from "../components/PlanCanvas";
+import { PlanFindingsDrawer } from "../components/PlanFindingsDrawer";
 import { PLAN_STATE_OPTIONS, stateColor, stateLabel } from "../constants/planView";
 import { usePlanController } from "../hooks/usePlanController";
-import { registerPlanSetState } from "../store/planInteractionsStore";
+import { registerPlanInteractions } from "../store/planInteractionsStore";
 
 import "./planExplorer.css";
 
@@ -15,11 +16,12 @@ interface PlanExplorerProps {
 }
 
 export default function PlanExplorer({ dependencies }: PlanExplorerProps) {
-  const { graph, loading, error, setTaskState } = usePlanController(dependencies);
+  const { graph, loading, error, setTaskState, focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask } =
+    usePlanController(dependencies);
 
   useEffect(() => {
-    registerPlanSetState(setTaskState);
-  }, [setTaskState]);
+    registerPlanInteractions({ setTaskState, openTask });
+  }, [setTaskState, openTask]);
 
   const flowNodes = useMemo(() => toPlanFlowNodes(graph?.nodes ?? []), [graph]);
   const flowEdges = useMemo(() => toPlanFlowEdges(graph?.edges ?? []), [graph]);
@@ -53,6 +55,14 @@ export default function PlanExplorer({ dependencies }: PlanExplorerProps) {
         nodes={flowNodes}
         edges={flowEdges}
         onInit={(instance) => instance.fitView({ padding: 0.2 })}
+      />
+
+      <PlanFindingsDrawer
+        graph={graph}
+        focusedTaskKey={focusedTaskKey}
+        findings={taskFindings}
+        loading={findingsLoading}
+        onClose={closeTask}
       />
     </main>
   );

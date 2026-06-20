@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
-import type { PlanGraph, PlanTaskState } from "../../domain/value-objects/PlanGraph";
+import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
 
 export function usePlanController(dependencies: PlanExplorerDependencies) {
   const [graph, setGraph] = useState<PlanGraph | null>(null);
@@ -37,5 +37,28 @@ export function usePlanController(dependencies: PlanExplorerDependencies) {
     [dependencies.planProvider],
   );
 
-  return { graph, loading, error, reload, setTaskState };
+  const [focusedTaskKey, setFocusedTaskKey] = useState<string | null>(null);
+  const [taskFindings, setTaskFindings] = useState<PlanTaskFindings | null>(null);
+  const [findingsLoading, setFindingsLoading] = useState(false);
+
+  const openTask = useCallback(
+    async (taskKey: string) => {
+      setFocusedTaskKey(taskKey);
+      setTaskFindings(null);
+      setFindingsLoading(true);
+
+      try {
+        setTaskFindings(await dependencies.planProvider.getTaskFindings(taskKey, "laravel"));
+      } catch {
+        setTaskFindings({ taskKey, total: 0, items: [] });
+      } finally {
+        setFindingsLoading(false);
+      }
+    },
+    [dependencies.planProvider],
+  );
+
+  const closeTask = useCallback(() => setFocusedTaskKey(null), []);
+
+  return { graph, loading, error, reload, setTaskState, focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask };
 }

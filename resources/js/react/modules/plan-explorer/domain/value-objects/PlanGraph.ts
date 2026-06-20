@@ -23,3 +23,17 @@ export interface PlanGraph {
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 }
+
+export interface PlanFinding {
+  file: string;
+  line: number;
+  rule: string;
+  severity: string;
+  message: string;
+}
+
+export interface PlanTaskFindings {
+  taskKey: string;
+  total: number;
+  items: PlanFinding[];
+}
