@@ -13,7 +13,8 @@ type HttpAppRoutes = {
 export function createHttpApp(routes: HttpAppRoutes) {
   const app = express();
 
-  app.use(express.json());
+  // Limite amplio: el mapa de bounded contexts de un proyecto grande puede tener miles de archivos.
+  app.use(express.json({ limit: "16mb" }));
   app.use(express.static(resolve(process.cwd(), "public")));
   app.use(viewMiddleware());
   app.use(routes.web);

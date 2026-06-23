@@ -4,7 +4,8 @@ import { formatHttpError } from "../../app/modules/shared/presentation/http/form
 import { viewMiddleware } from "./middleware/viewMiddleware.js";
 export function createHttpApp(routes) {
     const app = express();
-    app.use(express.json());
+    // Limite amplio: el mapa de bounded contexts de un proyecto grande puede tener miles de archivos.
+    app.use(express.json({ limit: "16mb" }));
     app.use(express.static(resolve(process.cwd(), "public")));
     app.use(viewMiddleware());
     app.use(routes.web);
