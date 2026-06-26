@@ -24,6 +24,8 @@ export default defineConfig({
     proxy: {
       "/graph.json": "http://localhost:4590",
       "/check.json": "http://localhost:4590",
+      "/audit.json": "http://localhost:4590",
+      "/audit-graph.json": "http://localhost:4590",
     },
   },
 });

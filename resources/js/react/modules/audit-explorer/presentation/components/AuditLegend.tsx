@@ -8,6 +8,7 @@ const ACCENTS: Array<{ accent: AuditGraphAccent; label: string }> = [
   { accent: "testing", label: "Testing" },
   { accent: "dead_code", label: "Codigo muerto" },
   { accent: "coupling_low_level", label: "Acoplamiento" },
+  { accent: "php_compatibility", label: "Compatibilidad PHP" },
   { accent: "mixed", label: "Mixto" },
 ];
 

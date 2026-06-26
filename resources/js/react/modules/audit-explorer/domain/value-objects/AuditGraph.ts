@@ -11,6 +11,7 @@ export type AuditGraphAccent =
   | "testing"
   | "dead_code"
   | "coupling_low_level"
+  | "php_compatibility"
   | "mixed";
 
 export interface AuditGraphPosition {
@@ -40,6 +41,7 @@ export interface AuditGraphNode {
   accent: AuditGraphAccent;
   severityMix: AuditGraphSeverityMix;
   metrics: { findings: number; risk: number };
+  byCategory: Record<string, number>;
   badges: string[];
   drill: boolean;
   findings?: AuditGraphFinding[];

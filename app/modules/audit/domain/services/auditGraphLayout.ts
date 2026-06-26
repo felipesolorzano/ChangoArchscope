@@ -20,6 +20,7 @@ const KNOWN_ACCENTS: AuditGraphAccent[] = [
   "testing",
   "dead_code",
   "coupling_low_level",
+  "php_compatibility",
 ];
 
 const TONE_BY_PRIORITY: Array<{ severity: string; tone: AuditGraphTone }> = [

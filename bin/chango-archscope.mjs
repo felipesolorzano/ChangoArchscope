@@ -2,6 +2,7 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { buildArchitectureGraph } from "../build/server/app/modules/architecture/application/buildArchitectureGraph.js";
 import { checkArchitecture } from "../build/server/app/modules/architecture/application/checkArchitecture.js";
 import { NodeFsSourceTreeReader } from "../build/server/app/modules/shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
@@ -10,8 +11,11 @@ import { listenChangoArchscopeServer } from "../build/server/bootstrap/server.js
 import { auditProject } from "../build/server/app/modules/audit/application/use-cases/AuditProject.js";
 import { exceedsSeverityThreshold } from "../build/server/app/modules/audit/domain/services/auditSeverityUtils.js";
 import { PhpAstParser } from "../build/server/app/modules/audit/infrastructure/parser/PhpAstParser.js";
+import { DockerPhpcsScanner } from "../build/server/app/modules/audit/infrastructure/compat/DockerPhpcsScanner.js";
 
 const SEVERITY_THRESHOLDS = ["low", "medium", "high", "critical"];
+const PHP_VERSION_PATTERN = /^\d+\.\d+$/;
+const DOCKERFILE_DIR = path.resolve(fileURLToPath(new URL("../tools/php-compatibility", import.meta.url)));
 
 const args = process.argv.slice(2);
 const command = args[0] ?? "serve";
@@ -57,13 +61,16 @@ try {
     const target = flags.target ?? "laravel";
     const config = await loadRuntimeConfig(flags);
     const checkResult = checkArchitecture(config, reader, { target, module: flags.module ?? null });
+    const phpRoot = target === "laravel" ? config.laravel.modulesPath : null;
+    const compatibilityScan = await runCompatibilityScan(flags["php-version"], phpRoot, config.laravel.phpExtensions);
     const snapshot = auditProject({
       checkResult,
       reader,
       parser: new PhpAstParser(),
-      phpRoot: target === "laravel" ? config.laravel.modulesPath : null,
+      phpRoot,
       phpExtensions: config.laravel.phpExtensions,
       ignoredPaths: config.laravel.ignoredPaths,
+      compatibilityScan,
     });
 
     console.log(JSON.stringify(snapshot, null, 2));
@@ -75,6 +82,19 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
+}
+
+async function runCompatibilityScan(phpVersion, phpRoot, phpExtensions) {
+  if (phpVersion === undefined || phpVersion === "true") return undefined;
+
+  if (!PHP_VERSION_PATTERN.test(phpVersion)) {
+    throw new Error(`Invalid --php-version "${phpVersion}". Use a version like 8.3.`);
+  }
+
+  if (phpRoot === null) return undefined;
+
+  const scanner = new DockerPhpcsScanner({ dockerfileDir: DOCKERFILE_DIR });
+  return scanner.scan(phpRoot, phpVersion, phpExtensions);
 }
 
 async function loadRuntimeConfig(flags) {
@@ -150,7 +170,7 @@ function printHelp() {
   chango-archscope serve [--port 4590] [--host 127.0.0.1]
   chango-archscope graph --target laravel|react [--module Users]
   chango-archscope check --target laravel|react [--module Users]
-  chango-archscope audit --target laravel|react [--module Users] [--severity-threshold high]
+  chango-archscope audit --target laravel|react [--module Users] [--severity-threshold high] [--php-version 8.3]
 
 Options:
   --config <file>

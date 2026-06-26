@@ -61,8 +61,8 @@ function fakeResponse() {
   return { status, json, response: { status } as unknown as Response };
 }
 
-describe("AuditGraphController", () => {
-  it("responde 200 con el AuditGraph (view overview) derivado del snapshot", () => {
+describe("AuditGraphController", async () => {
+  it("responde 200 con el AuditGraph (view overview) derivado del snapshot", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
@@ -70,7 +70,7 @@ describe("AuditGraphController", () => {
     const { status, json, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
 
     expect(check).toHaveBeenCalledWith(buildConfig(), reader, { target: "laravel", module: null });
     expect(status).toHaveBeenCalledWith(200);
@@ -80,14 +80,14 @@ describe("AuditGraphController", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("deriva target/module/view/focus del query", () => {
+  it("deriva target/module/view/focus del query", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { target: "react", module: "Billing", view: "overview", focus: "admin" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -98,14 +98,14 @@ describe("AuditGraphController", () => {
     expect(graph.focus).toBe("admin");
   });
 
-  it("con view=app y focus arma la vista de drill-down (view app)", () => {
+  it("con view=app y focus arma la vista de drill-down (view app)", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { view: "app", focus: "admin" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -116,14 +116,14 @@ describe("AuditGraphController", () => {
     expect(graph.focus).toBe("admin");
   });
 
-  it("con view=file y focus arma la vista de reglas (view file)", () => {
+  it("con view=file y focus arma la vista de reglas (view file)", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { view: "file", focus: "admin/X.php" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -132,26 +132,26 @@ describe("AuditGraphController", () => {
     expect((json.mock.calls[0][0] as { view: string }).view).toBe("file");
   });
 
-  it("con view=heatmap arma el mapa de calor global (view heatmap)", () => {
+  it("con view=heatmap arma el mapa de calor global (view heatmap)", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show({ query: { view: "heatmap" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+    await controller.show({ query: { view: "heatmap" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
     expect((json.mock.calls[0][0] as { view: string }).view).toBe("heatmap");
   });
 
-  it("con target react no hay phpRoot, asi que un view=app cae a overview", () => {
+  it("con target react no hay phpRoot, asi que un view=app cae a overview", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { target: "react", view: "app", focus: "admin" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -160,7 +160,7 @@ describe("AuditGraphController", () => {
     expect((json.mock.calls[0][0] as { view: string }).view).toBe("overview");
   });
 
-  it("delega el error a next sin responder cuando algo falla", () => {
+  it("delega el error a next sin responder cuando algo falla", async () => {
     const boom = new Error("config no registrada");
     const controller = new AuditGraphController({
       getConfig: () => {
@@ -173,7 +173,7 @@ describe("AuditGraphController", () => {
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
 
     expect(next).toHaveBeenCalledWith(boom);
     expect(status).not.toHaveBeenCalled();

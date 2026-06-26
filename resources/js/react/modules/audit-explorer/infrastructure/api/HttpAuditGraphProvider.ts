@@ -10,6 +10,7 @@ export class HttpAuditGraphProvider implements AuditGraphProvider {
     target: "laravel" | "react" = "laravel",
     view: AuditGraphView = "overview",
     focus: string | null = null,
+    phpVersion: string | null = null,
   ): Promise<AuditGraph> {
     const url = new URL(this.graphUrl, window.location.origin);
     url.searchParams.set("target", target);
@@ -17,6 +18,10 @@ export class HttpAuditGraphProvider implements AuditGraphProvider {
 
     if (focus) {
       url.searchParams.set("focus", focus);
+    }
+
+    if (phpVersion) {
+      url.searchParams.set("php", phpVersion);
     }
 
     const response = await fetchAuditJson<AuditGraphDto>(url, "No se pudo cargar el grafo de auditoria");

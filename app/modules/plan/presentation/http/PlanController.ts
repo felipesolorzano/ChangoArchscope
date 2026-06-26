@@ -14,9 +14,9 @@ export type PlanControllerDeps = {
 export class PlanController {
   constructor(private readonly deps: PlanControllerDeps) {}
 
-  show = (request: Request, response: Response, next: NextFunction): void => {
+  show = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+      const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
 
       response.status(200).json(buildPlan(snapshot, this.deps.repository));
     } catch (error) {
@@ -24,22 +24,22 @@ export class PlanController {
     }
   };
 
-  update = (request: Request, response: Response, next: NextFunction): void => {
+  update = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
       // La ruta /plan/tasks/:key garantiza `key`; el estado se valida en updateTaskState.
       const state = typeof request.body?.state === "string" ? request.body.state : "";
       updateTaskState(this.deps.repository, String(request.params.key), state);
 
-      const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+      const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
       response.status(200).json(buildPlan(snapshot, this.deps.repository));
     } catch (error) {
       next(error);
     }
   };
 
-  findings = (request: Request, response: Response, next: NextFunction): void => {
+  findings = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+      const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
 
       response.status(200).json(findingsForTask(snapshot, String(request.params.key)));
     } catch (error) {

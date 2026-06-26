@@ -6,6 +6,7 @@ export async function loadAuditGraph(
   target: "laravel" | "react" = "laravel",
   view: AuditGraphView = "overview",
   focus: string | null = null,
+  phpVersion: string | null = null,
 ): Promise<AuditGraph> {
-  return provider.getGraph(target, view, focus);
+  return provider.getGraph(target, view, focus, phpVersion);
 }

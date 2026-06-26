@@ -2,7 +2,13 @@ import type { PhpParseFailure } from "./PhpFileStructure.js";
 
 export type AuditFindingSeverity = "low" | "medium" | "high" | "critical";
 
-export type AuditFindingSource = "architecture" | "native";
+export type AuditFindingSource = "architecture" | "native" | "external";
+
+export type AuditScannerStatus = {
+  status: "ok" | "unavailable" | "skipped";
+  targetPhp?: string;
+  reason?: string;
+};
 
 export type AuditFinding = {
   category: string;
@@ -45,6 +51,7 @@ export type AuditSnapshotSummary = {
   findings_count: number;
   by_category: Record<string, number>;
   by_severity: Record<string, number>;
+  scanners?: { php_compatibility?: AuditScannerStatus };
 };
 
 export type AuditSnapshot = {

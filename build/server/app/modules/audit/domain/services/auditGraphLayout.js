@@ -12,6 +12,7 @@ const KNOWN_ACCENTS = [
     "testing",
     "dead_code",
     "coupling_low_level",
+    "php_compatibility",
 ];
 const TONE_BY_PRIORITY = [
     { severity: "critical", tone: "critical" },

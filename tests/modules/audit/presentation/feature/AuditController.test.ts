@@ -77,8 +77,8 @@ function fakeResponse() {
   return { status, json, response: { status } as unknown as Response };
 }
 
-describe("AuditController", () => {
-  it("responde 200 con el AuditSnapshot del target/module derivados del query", () => {
+describe("AuditController", async () => {
+  it("responde 200 con el AuditSnapshot del target/module derivados del query", async () => {
     const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
@@ -86,7 +86,7 @@ describe("AuditController", () => {
     const { status, json, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.show(
+    await controller.show(
       { query: { target: "react", module: "Billing" } } as unknown as Request,
       response,
       next as unknown as NextFunction,
@@ -99,14 +99,14 @@ describe("AuditController", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("con target react no escanea PHP: el snapshot no trae findings nativos", () => {
+  it("con target react no escanea PHP: el snapshot no trae findings nativos", async () => {
     const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { target: "react" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -116,14 +116,14 @@ describe("AuditController", () => {
     expect(snapshot.findings.some((finding) => finding.source === "native")).toBe(false);
   });
 
-  it("con target laravel escanea PHP usando modulesPath: el snapshot trae findings nativos", () => {
+  it("con target laravel escanea PHP usando modulesPath: el snapshot trae findings nativos", async () => {
     const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditController({ getConfig: buildConfig, reader, parser, check });
     const { json, response } = fakeResponse();
 
-    controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
     expect(check).toHaveBeenCalledWith(buildConfig(), reader, { target: "laravel", module: null });
     const snapshot = json.mock.calls[0][0] as { target: string; module: string | null; findings: Array<{ source: string; category: string }> };
@@ -131,14 +131,14 @@ describe("AuditController", () => {
     expect(snapshot.findings.some((finding) => finding.source === "native" && finding.category === "security")).toBe(true);
   });
 
-  it("trata un module vacio en el query como null", () => {
+  it("trata un module vacio en el query como null", async () => {
     const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
     const controller = new AuditController({ getConfig: buildConfig, reader, parser, check });
     const { response } = fakeResponse();
 
-    controller.show(
+    await controller.show(
       { query: { module: "" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -147,7 +147,7 @@ describe("AuditController", () => {
     expect(check).toHaveBeenCalledWith(buildConfig(), reader, { target: "laravel", module: null });
   });
 
-  it("delega el error a next sin responder cuando algo falla", () => {
+  it("delega el error a next sin responder cuando algo falla", async () => {
     const boom = new Error("config no registrada");
     const getConfig = () => {
       throw boom;
@@ -156,7 +156,7 @@ describe("AuditController", () => {
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
 
     expect(next).toHaveBeenCalledWith(boom);
     expect(status).not.toHaveBeenCalled();

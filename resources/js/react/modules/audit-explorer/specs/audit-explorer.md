@@ -31,7 +31,8 @@ calcula layout**: solo mapea el grafo a nodos/edges de React Flow y los renderiz
 - **Relleno** = `toneFill(node.tone)` (severidad dominante): critical/high rojos, medium ambar,
   low amarillo tenue, none gris.
 - **Borde** = `accentStroke(node.accent)` (categoria dominante): security rojo, database azul,
-  complexity morado, testing ambar, dead_code gris, coupling_low_level teal, mixed neutro.
+  complexity morado, testing ambar, dead_code gris, coupling_low_level teal,
+  php_compatibility verde lima, mixed neutro.
 - **Mini-barra apilada** dentro del nodo con `severityBarSegments(node.severityMix)` (high/medium/low).
 - **Badges** (`node.badges`) como etiquetas colgando del nodo.
 - **Metrica** visible: `findings` y `risk`.

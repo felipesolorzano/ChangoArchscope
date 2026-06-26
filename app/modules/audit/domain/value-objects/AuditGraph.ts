@@ -11,6 +11,7 @@ export type AuditGraphAccent =
   | "testing"
   | "dead_code"
   | "coupling_low_level"
+  | "php_compatibility"
   | "mixed";
 
 export type AuditGraphPosition = {
@@ -40,6 +41,9 @@ export type AuditGraphNode = {
   accent: AuditGraphAccent;
   severityMix: AuditGraphSeverityMix;
   metrics: { findings: number; risk: number };
+  // Conteo de hallazgos por categoria del nodo. Permite filtrar por una categoria mostrando
+  // todos los nodos que la TIENEN (no solo donde es dominante, que es lo que indica `accent`).
+  byCategory: Record<string, number>;
   badges: string[];
   drill: boolean;
   // Presente solo en nodos `rule` (vista file): muestra hasta `RULE_FINDINGS_LIMIT`

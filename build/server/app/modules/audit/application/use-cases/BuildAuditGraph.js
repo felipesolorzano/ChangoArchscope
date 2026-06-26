@@ -38,6 +38,7 @@ function buildOverview(snapshot, focus) {
         accent: dominantAccent(snapshot.summary.by_category),
         severityMix: foldSeverityMix(snapshot.summary.by_severity),
         metrics: { findings: snapshot.summary.findings_count, risk: snapshot.riskScore.value },
+        byCategory: snapshot.summary.by_category,
         badges: topCategoryBadges(snapshot.summary.by_category),
         drill: apps.length > 0,
     };
@@ -95,6 +96,7 @@ function entryNode(entry, id, type, label, position, size, drill) {
         accent: dominantAccent(entry.byCategory),
         severityMix: foldSeverityMix(entry.bySeverity),
         metrics: { findings: entry.findingsCount, risk: entry.value },
+        byCategory: entry.byCategory,
         badges: topCategoryBadges(entry.byCategory),
         drill,
     };

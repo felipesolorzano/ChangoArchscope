@@ -40,6 +40,9 @@ Audit clasifica severidad e impacto tecnico y produce `RiskScore` / `TechnicalDe
 | `security` | SQL concatenado, inputs sin sanitizar, `eval`, include dinamico | Analizador nativo (heuristicas sobre AST) | 5 |
 | `database` | SQL crudo disperso o duplicado, queries dentro de loops (N+1 heuristico) | Analizador nativo (heuristicas sobre AST) | 6 |
 | `testing` | Existencia de tests, proxy de cobertura, flujos criticos sin test | Analizador nativo | 7 |
+| `php_compatibility` | Incompatibilidades con una version objetivo de PHP (funciones removidas, deprecaciones, sintaxis) | Herramienta externa (`phpcs` + `PHPCompatibility` en Docker) | 8 |
+
+La Fase 8 introduce la primera fuente `external` de `AuditFinding`. A diferencia de las Fases 2-7, su deteccion no la hace el AST de `php-parser` en JS puro, sino `PHPCompatibility` (un estandar de `PHP_CodeSniffer`) corriendo dentro de un contenedor Docker aislado, con el repo montado en solo lectura. Sigue siendo analisis estatico (no levanta la app ni la base de datos), pero rompe la invariante "sin requerir PHP instalado" de "Parsing PHP": requiere Docker en la maquina que corre Archscope. La ruptura se justifica porque la compatibilidad de version se basa en reglas reales y exhaustivas del ecosistema PHP que no tiene sentido reimplementar como heuristicas, y se mitiga con degradacion elegante: si Docker no esta disponible, esta categoria se marca como no ejecutada y el resto del audit corre completo. Detalle en `app/modules/audit/specs/php-compatibility-analyzer.md`.
 
 ## Artefactos de dominio
 

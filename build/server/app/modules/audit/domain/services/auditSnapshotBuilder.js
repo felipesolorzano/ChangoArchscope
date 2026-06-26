@@ -13,6 +13,9 @@ export function buildAuditSnapshot(findings, context) {
             findings_count: findings.length,
             by_category: countBy(findings, (finding) => finding.category),
             by_severity: countBy(findings, (finding) => finding.severity),
+            ...(context.phpCompatibilityStatus !== undefined
+                ? { scanners: { php_compatibility: context.phpCompatibilityStatus } }
+                : {}),
         },
         findings,
         riskScore: buildRiskScore(findings),

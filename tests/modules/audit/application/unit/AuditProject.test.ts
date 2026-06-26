@@ -63,6 +63,28 @@ function fakeReader(files: string[]): SourceTreeReader {
 const fakeParser: PhpSourceParser = { parse: (file) => fileStructure(file) };
 
 describe("auditProject", () => {
+  it("usa el scanFiles inyectado (incremental) en vez de scanPhpFiles cuando se provee", () => {
+    const scanFiles = vi.fn((phpRoot: string, extensions: string[], ignoredPaths: string[]) => ({
+      files: [fileStructure("app/modules/Users/Domain/User.php")],
+      skipped: [],
+    }));
+    const walkFiles = vi.fn(() => ["no/deberia/usarse.php"]);
+
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: { listDirectories: () => [], walkFiles, readText: () => "<?php\n", isFile: () => true },
+      parser: fakeParser,
+      phpRoot: "app/modules",
+      phpExtensions: [".php", ".inc"],
+      ignoredPaths: ["**/vendor/**"],
+      scanFiles,
+    });
+
+    expect(scanFiles).toHaveBeenCalledWith("app/modules", [".php", ".inc"], ["**/vendor/**"]);
+    expect(walkFiles).not.toHaveBeenCalled(); // no cayo al scanPhpFiles por defecto
+    expect(snapshot.findings.some((finding) => finding.category === "security")).toBe(true);
+  });
+
   it("combina findings de arquitectura con los nativos de PHP cuando phpRoot esta presente", () => {
     const snapshot = auditProject({
       checkResult: buildCheckResult(),
@@ -190,6 +212,67 @@ describe("auditProject", () => {
 
     expect(snapshot.skippedFiles).toEqual([]);
     expect(snapshot.summary.files_skipped).toBe(0);
+  });
+
+  it("marca php_compatibility como skipped cuando no se provee compatibilityScan", () => {
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: fakeReader(["app/modules/Users/Domain/User.php"]),
+      parser: fakeParser,
+      phpRoot: "app/modules",
+      phpExtensions: [".php"],
+      ignoredPaths: [],
+    });
+
+    expect(snapshot.summary.scanners?.php_compatibility).toEqual({ status: "skipped" });
+    expect(snapshot.findings.some((finding) => finding.source === "external")).toBe(false);
+  });
+
+  it("agrega findings external y status ok cuando el compatibilityScan trae issues", () => {
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: fakeReader(["app/modules/Users/Domain/User.php"]),
+      parser: fakeParser,
+      phpRoot: "app/modules",
+      phpExtensions: [".php"],
+      ignoredPaths: [],
+      compatibilityScan: {
+        status: "ok",
+        targetPhp: "8.3",
+        issues: [
+          {
+            file: "app/modules/Users/Domain/User.php",
+            line: 10,
+            rule: "PHPCompatibility.FunctionUse.RemovedFunctions.eachFound",
+            severityRaw: "error",
+            message: "each() removed",
+          },
+        ],
+      },
+    });
+
+    expect(snapshot.summary.scanners?.php_compatibility).toEqual({ status: "ok", targetPhp: "8.3" });
+    const compat = snapshot.findings.filter((finding) => finding.category === "php_compatibility");
+    expect(compat).toHaveLength(1);
+    expect(compat[0].source).toBe("external");
+  });
+
+  it("propaga el motivo cuando el compatibilityScan esta unavailable y no agrega findings", () => {
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: fakeReader(["app/modules/Users/Domain/User.php"]),
+      parser: fakeParser,
+      phpRoot: "app/modules",
+      phpExtensions: [".php"],
+      ignoredPaths: [],
+      compatibilityScan: { status: "unavailable", reason: "Docker no esta disponible" },
+    });
+
+    expect(snapshot.summary.scanners?.php_compatibility).toEqual({
+      status: "unavailable",
+      reason: "Docker no esta disponible",
+    });
+    expect(snapshot.findings.some((finding) => finding.category === "php_compatibility")).toBe(false);
   });
 
   it("toma target, module y los conteos del summary desde el checkResult", () => {

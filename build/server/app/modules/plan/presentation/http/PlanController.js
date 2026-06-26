@@ -6,30 +6,30 @@ export class PlanController {
     constructor(deps) {
         this.deps = deps;
     }
-    show = (request, response, next) => {
+    show = async (request, response, next) => {
         try {
-            const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+            const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
             response.status(200).json(buildPlan(snapshot, this.deps.repository));
         }
         catch (error) {
             next(error);
         }
     };
-    update = (request, response, next) => {
+    update = async (request, response, next) => {
         try {
             // La ruta /plan/tasks/:key garantiza `key`; el estado se valida en updateTaskState.
             const state = typeof request.body?.state === "string" ? request.body.state : "";
             updateTaskState(this.deps.repository, String(request.params.key), state);
-            const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+            const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
             response.status(200).json(buildPlan(snapshot, this.deps.repository));
         }
         catch (error) {
             next(error);
         }
     };
-    findings = (request, response, next) => {
+    findings = async (request, response, next) => {
         try {
-            const snapshot = this.deps.snapshots.getSnapshot(targetFromRequest(request));
+            const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
             response.status(200).json(findingsForTask(snapshot, String(request.params.key)));
         }
         catch (error) {

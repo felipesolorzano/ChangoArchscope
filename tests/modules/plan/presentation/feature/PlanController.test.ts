@@ -21,7 +21,7 @@ function snapshot(): AuditSnapshot {
   };
 }
 
-const snapshots: AuditSnapshotProvider = { getSnapshot: () => snapshot() };
+const snapshots: AuditSnapshotProvider = { getSnapshot: async () => snapshot() };
 
 function fakeResponse() {
   const json = vi.fn();
@@ -33,13 +33,13 @@ function repository(): PlanTaskStateRepository {
   return { getStates: () => ({}), setState: vi.fn() };
 }
 
-describe("PlanController", () => {
-  it("show responde 200 con el grafo del plan y usa target laravel por defecto", () => {
-    const getSnapshot = vi.fn((_target: "laravel" | "react") => snapshot());
+describe("PlanController", async () => {
+  it("show responde 200 con el grafo del plan y usa target laravel por defecto", async () => {
+    const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
     const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
     const { status, json, response } = fakeResponse();
 
-    controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
     expect(getSnapshot).toHaveBeenCalledWith("laravel");
     expect(status).toHaveBeenCalledWith(200);
@@ -47,12 +47,12 @@ describe("PlanController", () => {
     expect(graph.nodes.some((node) => node.id === "close-sql-injections")).toBe(true);
   });
 
-  it("update persiste el estado y responde el plan actualizado", () => {
+  it("update persiste el estado y responde el plan actualizado", async () => {
     const repo = repository();
     const controller = new PlanController({ snapshots, repository: repo });
     const { status, response } = fakeResponse();
 
-    controller.update(
+    await controller.update(
       { params: { key: "close-sql-injections" }, body: { state: "done" }, query: {} } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -62,34 +62,34 @@ describe("PlanController", () => {
     expect(status).toHaveBeenCalledWith(200);
   });
 
-  it("show pasa el target del query al provider (react)", () => {
-    const getSnapshot = vi.fn((_target: "laravel" | "react") => snapshot());
+  it("show pasa el target del query al provider (react)", async () => {
+    const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
     const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
     const { response } = fakeResponse();
 
-    controller.show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+    await controller.show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
     expect(getSnapshot).toHaveBeenCalledWith("react");
   });
 
-  it("show delega a next si el provider lanza", () => {
+  it("show delega a next si el provider lanza", async () => {
     const boom = new Error("sin snapshot");
-    const controller = new PlanController({ snapshots: { getSnapshot: () => { throw boom; } }, repository: repository() });
+    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw boom; } }, repository: repository() });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
 
     expect(next).toHaveBeenCalledWith(boom);
     expect(status).not.toHaveBeenCalled();
   });
 
-  it("update usa el target del query (react) al reconstruir el plan", () => {
-    const getSnapshot = vi.fn((_target: "laravel" | "react") => snapshot());
+  it("update usa el target del query (react) al reconstruir el plan", async () => {
+    const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
     const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
     const { response } = fakeResponse();
 
-    controller.update(
+    await controller.update(
       { params: { key: "close-sql-injections" }, body: { state: "done" }, query: { target: "react" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -98,13 +98,13 @@ describe("PlanController", () => {
     expect(getSnapshot).toHaveBeenCalledWith("react");
   });
 
-  it("update sin state en el body delega a next sin persistir", () => {
+  it("update sin state en el body delega a next sin persistir", async () => {
     const repo = repository();
     const controller = new PlanController({ snapshots, repository: repo });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.update(
+    await controller.update(
       { params: { key: "close-sql-injections" }, body: {}, query: {} } as unknown as Request,
       response,
       next as unknown as NextFunction,
@@ -115,11 +115,11 @@ describe("PlanController", () => {
     expect(repo.setState).not.toHaveBeenCalled();
   });
 
-  it("findings responde 200 con los hallazgos concretos de la tarea", () => {
+  it("findings responde 200 con los hallazgos concretos de la tarea", async () => {
     const controller = new PlanController({ snapshots, repository: repository() });
     const { status, json, response } = fakeResponse();
 
-    controller.findings(
+    await controller.findings(
       { params: { key: "close-sql-injections" }, query: {} } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
@@ -131,24 +131,24 @@ describe("PlanController", () => {
     expect(payload.items[0]?.rule).toBe("sql-concatenation");
   });
 
-  it("findings delega a next si el provider lanza", () => {
-    const controller = new PlanController({ snapshots: { getSnapshot: () => { throw new Error("x"); } }, repository: repository() });
+  it("findings delega a next si el provider lanza", async () => {
+    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw new Error("x"); } }, repository: repository() });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.findings({ params: { key: "x" }, query: {} } as unknown as Request, response, next as unknown as NextFunction);
+    await controller.findings({ params: { key: "x" }, query: {} } as unknown as Request, response, next as unknown as NextFunction);
 
     expect(next).toHaveBeenCalled();
     expect(status).not.toHaveBeenCalled();
   });
 
-  it("update con estado invalido delega a next sin responder", () => {
+  it("update con estado invalido delega a next sin responder", async () => {
     const repo = repository();
     const controller = new PlanController({ snapshots, repository: repo });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
-    controller.update(
+    await controller.update(
       { params: { key: "x" }, body: { state: "nope" }, query: {} } as unknown as Request,
       response,
       next as unknown as NextFunction,

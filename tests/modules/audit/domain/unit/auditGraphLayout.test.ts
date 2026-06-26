@@ -35,6 +35,10 @@ describe("dominantAccent", () => {
     expect(dominantAccent({ architecture_violation: 9 })).toBe("mixed");
   });
 
+  it("reconoce php_compatibility como accent propio", () => {
+    expect(dominantAccent({ php_compatibility: 12, security: 3 })).toBe("php_compatibility");
+  });
+
   it("byCategory vacio es 'mixed'", () => {
     expect(dominantAccent({})).toBe("mixed");
   });

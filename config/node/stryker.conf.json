@@ -11,7 +11,12 @@
     "!app/modules/**/*.spec.ts",
     "!app/modules/**/presentation/cli/**/*.ts",
     "!bootstrap/server.ts",
-    "!app/modules/shared/infrastructure/persistence/sqlite/createDrizzleDatabase.ts"
+    "!app/modules/shared/infrastructure/persistence/sqlite/createDrizzleDatabase.ts",
+    "!app/modules/audit/infrastructure/compat/DockerPhpcsScanner.ts",
+    "!app/modules/audit/infrastructure/compat/IncrementalDockerPhpcsScanner.ts",
+    "!app/modules/audit/infrastructure/scan/IncrementalPhpFileScanner.ts",
+    "!app/modules/audit/infrastructure/cache/computeRepoFingerprint.ts",
+    "!app/modules/audit/presentation/http/createAuditDeps.ts"
   ],
   "coverageAnalysis": "perTest",
   "thresholds": {

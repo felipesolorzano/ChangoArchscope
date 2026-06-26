@@ -20,7 +20,11 @@ audit → report → plan → refactor → validación
 - La `validación` es re-correr el audit/check sobre el repo destino: el avance se **mide desde
   la realidad** y repinta el mapa de migración (loop cerrado).
 
-Idea central: **el tool es el cerebro; el playbook es el artefacto-contrato portable.**
+Idea central: **un agente de IA externo es el cerebro que DETECTA los bounded contexts;
+ChangoArchscope guarda, dibuja y valida ese mapa, y el playbook es el artefacto-contrato
+portable.** El tool NO detecta contextos con heurísticas (ese enfoque quedó descartado). El
+contrato del intercambio agente↔tool está en
+[`bounded-context-map-schema.md`](bounded-context-map-schema.md).
 
 ## 1. Principio de bounded context
 
@@ -30,15 +34,16 @@ Idea central: **el tool es el cerebro; el playbook es el artefacto-contrato port
   `AuditSnapshot`; igual que `audit` consume `ArchitectureCheckResult`). Nunca importa lógica
   de otro dominio.
 - Tiene su propia persistencia (tablas propias), su generador, sus endpoints y su mapa visual.
-- Reutiliza **infraestructura compartida**, no dominios: `PhpAstParser` (clases/métodos/
-  `referencedNames`/`sqlLiterals`), `SourceTreeReader`, persistencia sqlite/drizzle, el patrón
-  de drill de React Flow, y la config de reglas de `architecture` como reglas de destino.
+- Reutiliza **infraestructura compartida**, no dominios: `SourceTreeReader` (para enumerar los
+  archivos en alcance que el agente analizará), persistencia sqlite/drizzle, el patrón de drill
+  de React Flow, y la config de reglas de `architecture` como reglas de destino (validación
+  ejecutable del código nuevo).
 
 ## 2. Fases (entregar por capas, cada una con valor)
 
 | Fase | Entrega | Estado |
 |---|---|---|
-| **F1 Descubrimiento** | Detectar bounded contexts (señales + clustering) + inventario de clases desde el AST | a construir |
+| **F1 Descubrimiento** | Exponer la fuente (`/bounded-context-source.json`: qué archivos analizar) y persistir el mapa de bounded contexts que arma un **agente de IA externo** (`PUT /bounded-context-map`) | a construir |
 | **F2 Revisión** | Visualizar contextos con evidencia/confianza/flags + loop aprobar/ajustar con overrides persistentes | a construir |
 | **F3 Playbook** | Generar `MIGRATION.md` + `inventory.json` + specs por contexto + config de reglas ejecutables, y escribirlo en el repo destino | a construir |
 | **F4 Validación (loop cerrado)** | Re-importar el estado tras re-audit; medir progreso real y repintar | a construir |
@@ -48,60 +53,70 @@ Granularidad **v1 = clase**. Métodos (descomposición de God classes) = v2.
 
 ---
 
-## 3. F1 — Descubrimiento de bounded contexts
+## 3. F1 — Descubrimiento de bounded contexts (lo hace un agente de IA externo)
 
-### 3.1 Inventario (desde el AST)
-- Fuente: `scanPhpFiles(reader, parser, modulesPath, phpExtensions, ignoredPaths)` → `PhpFileStructure[]`
-  (ya existe en `audit`). De cada archivo se obtienen `classes[]` (con `methods[]`),
-  `referencedNames[]`, `sqlLiterals[]`.
-- Unidad de inventario v1: **clase** → `{ id, name, file, methodsCount, references: string[], tables: string[] }`.
-  - `tables`: extraídas de `sqlLiterals[].value` con un parser mínimo de SQL (FROM/JOIN/INTO/UPDATE).
+> **Decisión de diseño:** ChangoArchscope **no** detecta bounded contexts con heurísticas. La
+> detección la hace un **agente de IA externo** que lee el código y razona la partición (de
+> forma general, para cualquier proyecto). El tool solo: (a) le dice al agente qué archivos
+> analizar, (b) valida y persiste el mapa que arma, (c) lo dibuja en React Flow y (d) lo valida
+> con reglas ejecutables. El enfoque heurístico (señales de cohesión + clustering) quedó
+> **descartado**. El contrato exacto del intercambio está en
+> [`bounded-context-map-schema.md`](bounded-context-map-schema.md).
 
-### 3.2 Señales de cohesión (funciones puras, domain)
-Construir un grafo ponderado entre clases combinando:
-1. **Tokens de nombre**: tokenizar `MS<Dominio>...` (quitar prefijo `MS`, separar CamelCase) →
-   peso por sustantivos de dominio compartidos. *(Señal más fuerte en este repo.)*
-2. **Referencias directas**: arista si A referencia a B (`referencedNames`).
-3. **Tablas compartidas**: peso por tablas SQL en común.
-4. (Opcional v2) **Vocabulario de métodos** (book/cancel/refund…).
+### 3.1 Fuente para el agente (la expone el tool)
+`GET /bounded-context-source.json?target=laravel` devuelve dónde está el proyecto y qué archivos
+están en alcance, usando `SourceTreeReader` + la config (`modulesPath`, `phpExtensions`,
+`ignoredPaths`):
+- `root`: raíz del código a analizar.
+- `extensions`, `ignoredPaths`.
+- `files`: rutas absolutas de los archivos en alcance.
 
-### 3.3 Clustering (función pura, domain)
-- Detección de comunidades sobre el grafo (empezar simple: label propagation o componentes
-  conexos sobre aristas por encima de un umbral; documentar el algoritmo elegido).
-- Salida: **contextos candidatos**, cada uno con:
-  - `classes: string[]`
-  - `confidence: number` (0–1)
-  - `evidence: string[]` (p. ej. "comparten token *Tours*", "comparten tabla `tours_bookings`")
-  - `flags`: `spans_multiple` (God class que cruza fronteras → marcar para dividir),
-    `shared_kernel` (utilidades base tipo `MSBaseAPI`), `low_confidence`.
+El agente **lee el contenido de esos `files`** (tiene acceso al filesystem del repo) y razona
+los bounded contexts. No hace falta pasarle la ruta a mano: el tool ya la sabe de la config.
 
-### 3.4 Reglas de honestidad (no adivinar)
-- God classes que tocan muchos contextos → `spans_multiple`, NO forzar a uno.
-- Utilidades base → `shared_kernel`.
-- Baja confianza → `low_confidence` (revisar), no inventar.
+### 3.2 El agente arma el mapa y lo guarda
+El agente produce el JSON del esquema de `bounded-context-map-schema.md` (`modules[]` con `key`,
+`name`, `description?`, `validated`, y las 4 capas hexagonales con `{ path, note? }`) y lo guarda
+con `PUT /bounded-context-map?target=laravel`. El tool **valida la forma y lo persiste tal cual**
+(no reinterpreta ni recalcula la partición).
+
+Dos mapas, mismo esquema y endpoint, separados por `target`:
+- `target=laravel` → mapa de archivos legacy repartidos en módulos/capas (as-is). Pestaña "Migración".
+- `target=design` → clases hexagonales pequeñas propuestas (to-be), derivadas del de archivos. Pestaña "Diseño".
+
+### 3.3 Guía de honestidad (la aplica el agente, no el tool)
+- God classes que cruzan fronteras → no forzarlas a un solo contexto; anotarlo en `note` o
+  llevarlas a Shared Kernel.
+- Utilidades base → Shared Kernel.
+- Baja confianza → dejarlo explícito en `description`/`note` para que el humano lo revise; no inventar.
 
 ### Criterios de aceptación F1
-- Dado un set de `PhpFileStructure`, el detector produce ≥1 contexto candidato con
-  `classes`, `confidence`, `evidence`.
-- Una clase que comparte token + tabla con otras se agrupa con ellas.
-- Una God class con referencias a clases de varios clusters recibe `spans_multiple`.
-- Funciones de señales/clustering son puras y testeadas (mutation ≥ umbral del proyecto).
+- `GET /bounded-context-source.json` devuelve `root`, `extensions`, `ignoredPaths` y la lista
+  correcta de `files` en alcance según la config (respetando `ignoredPaths`).
+- `PUT /bounded-context-map` valida la forma (módulos con `key`/`name` y las 4 capas) y persiste
+  el mapa por `target`; `GET /bounded-context-map.json` lo devuelve normalizado.
+- El tool **no** contiene lógica de detección/clustering de contextos (lógica pura testeada =
+  validación/normalización del mapa y layout, no inferencia de la partición).
 
 ---
 
 ## 4. F2 — Revisión y aprobación (overrides persistentes)
 
 ### 4.1 Modelo de decisión
-- `proposed` (heurística) **+** `overrides` (humano). **Los overrides ganan y persisten.**
+- `proposed` (lo arma el **agente de IA**) **+** ediciones humanas. **Las ediciones humanas
+  ganan y persisten.**
 - Acciones humanas: aprobar, renombrar contexto, **fusionar**, **dividir**, **reasignar** una
-  clase, mover a Shared Kernel, marcar contexto como aprobado.
-- Al re-escanear: los overrides sobreviven; solo clases nuevas/sin clasificar se re-proponen.
+  clase de capa/contexto, mover a Shared Kernel, marcar `validated`.
+- Al re-generar: los `key` estables permiten conservar módulos ya validados; solo clases
+  nuevas/sin clasificar se re-proponen, sin pisar las ediciones humanas.
 
 ### 4.2 Persistencia (drizzle/sqlite — patrón de `plan`)
 Migración SQL nueva (`database/migrations/003_*.sql`) + schema drizzle:
-- `migration_contexts(key TEXT PK, name TEXT, approved INTEGER, updated_at TEXT)`
-- `migration_class_assignments(class_id TEXT PK, context_key TEXT, layer TEXT NULL, source TEXT /* 'proposed'|'override' */, updated_at TEXT)`
-- `migration_unit_states(unit_id TEXT PK, state TEXT, updated_at TEXT)` /* pending|in_progress|done|blocked */
+- El **mapa de bounded contexts** se guarda por `target` (lo que llega por `PUT
+  /bounded-context-map`), normalizado y validado. Las ediciones humanas en la UI se guardan con
+  el mismo `PUT` y son autoritativas.
+- `migration_unit_states(unit_id TEXT PK, state TEXT /* pending|in_progress|done|blocked */, updated_at TEXT)`
+  para el estado de migración por unidad (loop cerrado F4).
 Repositorios en `migration/infrastructure/persistence/` (mirror de `SqlitePlanTaskStateRepository`).
 
 ### 4.3 Visual (React Flow, patrón drill de `audit`)
@@ -113,9 +128,11 @@ Repositorios en `migration/infrastructure/persistence/` (mirror de `SqlitePlanTa
 - **Vista "antes → después"**: clase legacy (izq) → su(s) destino(s) hexagonal(es) (der).
 
 ### Criterios de aceptación F2
-- Un override (reasignar clase a otro contexto) persiste y sobrevive a un re-escaneo.
-- Una clase nueva (no vista antes) aparece como `proposed`/sin clasificar sin pisar overrides.
-- El endpoint devuelve `proposed + overrides` ya combinados.
+- Una edición humana (reasignar una clase de contexto/capa, renombrar, marcar `validated`) se
+  guarda con `PUT /bounded-context-map` y sobrevive como parte del mapa persistido.
+- Al re-generar el mapa, los `key` estables conservan los módulos ya validados; una clase nueva
+  aparece sin clasificar sin pisar ediciones humanas.
+- `GET /bounded-context-map.json` devuelve el mapa normalizado vigente.
 
 ---
 
@@ -187,12 +204,11 @@ Documentado para el agente que ejecuta:
 ```
 app/modules/migration/
   domain/
-    value-objects/        BoundedContext, MigrationUnit, MigrationInventory, MigrationGraph, Playbook
-    services/             contextSignals.ts (puro), clusterContexts.ts (puro), migrationLayout.ts (puro), sqlTables.ts (puro)
+    value-objects/        BoundedContextMap, BoundedContext (key/name/layers), MigrationUnit, MigrationGraph, Playbook
+    services/             migrationLayout.ts (puro), boundedContextMap.ts (puro: validación/normalización del mapa)
   application/
-    contracts/            InventoryProvider (consume AST/audit por tipo), ContextRepository, UnitStateRepository, PlaybookWriter
-    services/             auditToInventory.ts (adaptador: PhpFileStructure[]/AuditSnapshot → MigrationInventory)
-    use-cases/            detectContexts.ts, buildMigrationGraph.ts, approveContext.ts/reassignClass.ts, generatePlaybook.ts, importProgress.ts
+    contracts/            SourceFileLister (enumera archivos en alcance), ContextMapRepository, UnitStateRepository, PlaybookWriter
+    use-cases/            getBoundedContextSource.ts (qué archivos analizar), saveBoundedContextMap.ts (valida+persiste el mapa del agente), buildMigrationGraph.ts (mapa→React Flow), generatePlaybook.ts, importProgress.ts
   infrastructure/
     persistence/          schema (drizzle) + Sqlite*Repository
     playbook/             FsPlaybookWriter.ts (escribe en el repo destino)
@@ -208,9 +224,10 @@ testeados, vistas pesadas fuera del mutation). Tab nuevo **"Migración"** en
 `app/presentation/App.tsx`.
 
 ## 9. Endpoints (montados en raíz, como los demás)
-- `GET /migration.json?target=` → grafo de migración (contextos/clases/estado, ya con overrides).
-- `POST /migration/contexts/:key` → aprobar/renombrar.
-- `POST /migration/classes/:id` → reasignar contexto/capa (override).
+- `GET /bounded-context-source.json?target=` → root, extensiones, ignoredPaths y archivos en alcance (para el agente).
+- `GET /bounded-context-map.json?target=` → mapa vigente (contextos/clases/capas, ya con ediciones humanas).
+- `PUT /bounded-context-map?target=` → guarda/reemplaza el mapa que arma el agente o que edita el humano.
+- `GET /migration.json?target=` → grafo de migración para React Flow (deriva del mapa + estados de unidad).
 - `POST /migration/playbook` → genera y escribe el playbook en el repo destino; responde resumen.
 - `GET /migration/import` o re-uso de re-audit → F4.
 
@@ -220,8 +237,8 @@ testeados, vistas pesadas fuera del mutation). Tab nuevo **"Migración"** en
 
 ## 11. Reglas de calidad (obligatorias, de `docs/development-rules.md`)
 - **SDD**: spec por caso de uso antes de tests/código.
-- **TDD**: tests rojos antes de implementar; lógica pura (señales, clustering, layout, sqlTables,
-  generación de playbook, adaptadores) con cobertura fuerte.
+- **TDD**: tests rojos antes de implementar; lógica pura (validación/normalización del mapa,
+  layout, generación de playbook, adaptadores) con cobertura fuerte.
 - **Mutation dirigido** ≥ umbral del proyecto en los archivos de lógica nueva (node 80 / react 70).
   Vistas pesadas de React Flow fuera del mutation general.
 - **DDD/hexagonal**: domain puro sin `node:fs`/HTTP/DB; infra detrás de contratos; `migration`
@@ -230,16 +247,19 @@ testeados, vistas pesadas fuera del mutation). Tab nuevo **"Migración"** en
 
 ## 12. Decisiones tomadas (defaults) y abiertas
 Tomadas:
-- Detección automática de **todos** los contextos + revisión manual humana con overrides
-  **persistentes y autoritativos**.
+- La detección de contextos la hace un **agente de IA externo** (no heurística en el tool); el
+  tool expone la fuente, valida/persiste el mapa, lo dibuja y lo valida. Enfoque heurístico
+  (señales + clustering) **descartado**.
+- Revisión/edición humana **persistente y autoritativa** sobre el mapa.
 - Playbook como artefacto `.md` + `inventory.json` + reglas ejecutables, escrito en el repo destino.
 - Validación por **re-audit** (loop cerrado); marcado manual complementario.
 - Granularidad **v1 = clase**; métodos en v2.
-- `migration` = bounded context separado; consume audit/AST por tipo.
+- `migration` = bounded context separado; consume audit por tipo y expone los archivos en alcance
+  para que el agente los lea.
 
 Abiertas (confirmar al construir):
 - Ruta destino exacta del playbook (default `docs/migration/`).
-- Algoritmo de clustering concreto (default: aristas ponderadas + componentes/label propagation).
+- Estrategia de merge al re-generar el mapa para preservar ediciones humanas (basada en `key` estable).
 - Cómo se referencia el repo destino (¿`config.laravel.modulesPath` es el root del proyecto o
   un subdir? El playbook va al root del repo destino).
 

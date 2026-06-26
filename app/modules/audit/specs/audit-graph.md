@@ -64,7 +64,7 @@ Niveles:
 ```text
 AuditGraphNodeType = "root" | "app" | "module" | "file" | "rule"
 AuditGraphTone     = "critical" | "high" | "medium" | "low" | "none"
-AuditGraphAccent   = "security" | "database" | "complexity" | "testing" | "dead_code" | "coupling_low_level" | "mixed"
+AuditGraphAccent   = "security" | "database" | "complexity" | "testing" | "dead_code" | "coupling_low_level" | "php_compatibility" | "mixed"
 
 AuditGraphNode {
   id: string

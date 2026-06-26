@@ -1,17 +1,19 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import "@xyflow/react/dist/style.css";
 import type { NodeMouseHandler } from "@xyflow/react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, RefreshCw } from "lucide-react";
 
 import type { AuditExplorerDependencies } from "../../infrastructure/factory/createAuditExplorerDependencies";
 import type { AuditGraphNode } from "../../domain/value-objects/AuditGraph";
 import { toFlowEdges, toFlowNodes } from "../../infrastructure/react-flow/auditFlowAdapter";
 import { AuditCanvas } from "../components/AuditCanvas";
 import { AuditDetailDrawer } from "../components/AuditDetailDrawer";
+import { AuditFilters } from "../components/AuditFilters";
 import { AuditLegend } from "../components/AuditLegend";
 import { useAuditGraphController } from "../hooks/useAuditGraphController";
 import { useAuditExplorerStore } from "../store/auditExplorerStore";
 import { breadcrumbFor, drillTargetFor } from "../utils/auditNavigation";
+import { filterGraphByCategory, type CategoryFilter } from "../utils/auditNodeFilter";
 
 import "./auditExplorer.css";
 
@@ -22,13 +24,18 @@ interface AuditExplorerProps {
 const UNIT_BY_VIEW = { overview: "apps", heatmap: "archivos", app: "archivos", file: "reglas" } as const;
 
 export default function AuditExplorer({ dependencies }: AuditExplorerProps) {
-  const { graph, view, focus, loading, error, goTo } = useAuditGraphController(dependencies);
+  const { graph, view, focus, phpVersion, loading, error, goTo, setPhpVersion } = useAuditGraphController(dependencies);
   const focusedNodeId = useAuditExplorerStore((state) => state.focusedNodeId);
   const setFocusedNodeId = useAuditExplorerStore((state) => state.setFocusedNodeId);
   const clearFocus = useAuditExplorerStore((state) => state.clearFocus);
+  const [category, setCategory] = useState<CategoryFilter>("all");
 
-  const flowNodes = useMemo(() => toFlowNodes(graph?.nodes ?? []), [graph]);
-  const flowEdges = useMemo(() => toFlowEdges(graph?.edges ?? []), [graph]);
+  const filtered = useMemo(
+    () => filterGraphByCategory(graph?.nodes ?? [], graph?.edges ?? [], category),
+    [graph, category],
+  );
+  const flowNodes = useMemo(() => toFlowNodes(filtered.nodes), [filtered]);
+  const flowEdges = useMemo(() => toFlowEdges(filtered.edges), [filtered]);
   const crumbs = breadcrumbFor(view, focus);
 
   const handleNodeClick: NodeMouseHandler = (_event, node) => {
@@ -77,6 +84,22 @@ export default function AuditExplorer({ dependencies }: AuditExplorerProps) {
         </div>
 
         <div className="audit-explorer__right">
+          <button
+            type="button"
+            className="audit-refresh"
+            onClick={() => goTo(view, focus)}
+            disabled={loading}
+            title="Re-escanea el repo y recarga la vista actual (refleja tus ediciones)"
+          >
+            <RefreshCw size={14} className={loading ? "audit-refresh__icon audit-refresh__icon--spin" : "audit-refresh__icon"} />
+            {loading ? "Escaneando…" : "Refrescar"}
+          </button>
+          <AuditFilters
+            phpVersion={phpVersion}
+            onPhpVersionChange={setPhpVersion}
+            category={category}
+            onCategoryChange={setCategory}
+          />
           {(view === "overview" || view === "heatmap") && (
             <div className="audit-viewtoggle">
               <button

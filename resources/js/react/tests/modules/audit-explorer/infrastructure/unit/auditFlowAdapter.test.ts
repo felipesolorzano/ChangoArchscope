@@ -14,6 +14,7 @@ function node(overrides: Partial<AuditGraphNode> = {}): AuditGraphNode {
     accent: "database",
     severityMix: { high: 5, medium: 2, low: 1 },
     metrics: { findings: 8, risk: 1000 },
+    byCategory: { database: 8 },
     badges: ["database"],
     drill: true,
     ...overrides,
