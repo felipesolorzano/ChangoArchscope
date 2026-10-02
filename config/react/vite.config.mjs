@@ -27,6 +27,7 @@ export default defineConfig({
       "/audit.json": "http://localhost:4590",
       "/audit-graph.json": "http://localhost:4590",
       "/audit-health.json": "http://localhost:4590",
+      "/dependencies.json": "http://localhost:4590",
     },
   },
 });
