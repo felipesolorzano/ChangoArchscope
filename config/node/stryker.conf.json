@@ -16,7 +16,8 @@
     "!app/modules/audit/infrastructure/compat/IncrementalDockerPhpcsScanner.ts",
     "!app/modules/audit/infrastructure/scan/IncrementalPhpFileScanner.ts",
     "!app/modules/audit/infrastructure/cache/computeRepoFingerprint.ts",
-    "!app/modules/audit/presentation/http/createAuditDeps.ts"
+    "!app/modules/audit/presentation/http/createAuditDeps.ts",
+    "!app/modules/dependencies/infrastructure/registry/fetchJson.ts"
   ],
   "coverageAnalysis": "perTest",
   "thresholds": {

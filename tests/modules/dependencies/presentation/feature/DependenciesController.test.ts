@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ArchitectureConfig } from "../../../../../app/modules/architecture/domain/value-objects/ArchitectureConfig.js";
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
-import { DependenciesController } from "../../../../../app/modules/dependencies/presentation/http/DependenciesController.js";
+import type { PackageInfoCache } from "../../../../../app/modules/dependencies/application/contracts/PackageInfoCache.js";
+import type { PackageRegistry } from "../../../../../app/modules/dependencies/application/contracts/PackageRegistry.js";
+import type { PackageInfo } from "../../../../../app/modules/dependencies/domain/value-objects/Dependency.js";
+import { DependenciesController, type DependenciesControllerDeps } from "../../../../../app/modules/dependencies/presentation/http/DependenciesController.js";
 
 const coupling = { enabled: false, message: "x", suggestion: "x", defaultAssessment: "x", defaultRecommendation: "x", defaultAction: "x" };
 const config = {
@@ -28,41 +31,105 @@ const reader: SourceTreeReader = {
   isFile: (file) => file in files,
 };
 
-function respond(target: unknown) {
+const NOW = new Date("2026-10-02T12:00:00.000Z");
+
+function controllerWith(overrides: Partial<DependenciesControllerDeps> = {}) {
+  const registry: PackageRegistry = {
+    fetch: vi.fn(async (ecosystem, name) => ({
+      ecosystem,
+      name,
+      abandoned: null,
+      releases: [
+        { version: "1.0.0", deprecated: null, requires: {}, publishedAt: null },
+        { version: "18.0.0", deprecated: null, requires: { node: ">=20" }, publishedAt: null },
+      ],
+    })),
+  };
+  const rows = new Map<string, { info: PackageInfo | null; fetchedAt: string }>();
+  const cache: PackageInfoCache = { get: (e, n) => rows.get(`${e}:${n}`) ?? null, set: (e, n, info, fetchedAt) => void rows.set(`${e}:${n}`, { info, fetchedAt }) };
+  const deps: DependenciesControllerDeps = { getConfig: () => config, reader, probe: { versionOf: () => "16.0.0" }, registry, cache, now: () => NOW, ...overrides };
+
+  return { controller: new DependenciesController(deps), registry };
+}
+
+async function respond(controller: DependenciesController, query: Record<string, unknown>) {
   const json = vi.fn();
   const response = { status: vi.fn(() => ({ json })) } as unknown as Response;
   const next = vi.fn() as NextFunction;
-  const controller = new DependenciesController({ getConfig: () => config, reader, probe: { versionOf: () => null } });
 
-  controller.show({ query: { target } } as unknown as Request, response, next);
+  await controller.show({ query } as unknown as Request, response, next);
 
-  return { json, response, next };
+  return { json, response, next, body: json.mock.calls[0]?.[0] };
 }
 
 describe("DependenciesController", () => {
-  it("inventaria el stack laravel con su raiz e ignoredPaths", () => {
-    const { json, response } = respond("laravel");
+  it("reporta el stack laravel con su raiz e ignoredPaths", async () => {
+    const { controller } = controllerWith();
+    const { response, body } = await respond(controller, { target: "laravel" });
 
     expect(response.status).toHaveBeenCalledWith(200);
-    expect(json.mock.calls[0][0]).toMatchObject({ root: "/php", manifests: ["/php/composer.json"], dependencies: [{ name: "a/b" }] });
+    expect(body).toMatchObject({ root: "/php", manifests: ["/php/composer.json"], dependencies: [{ name: "a/b", latest: "18.0.0" }] });
+    expect(body.generatedAt).toBe(NOW.toISOString());
   });
 
-  it("react usa su raiz; un target desconocido cae a laravel", () => {
-    expect(respond("react").json.mock.calls[0][0]).toMatchObject({ root: "/js", dependencies: [{ name: "react" }] });
-    expect(respond("vue").json.mock.calls[0][0]).toMatchObject({ root: "/php" });
+  it("react usa su raiz; un target desconocido cae a laravel", async () => {
+    const { controller } = controllerWith();
+
+    expect((await respond(controller, { target: "react" })).body).toMatchObject({ root: "/js", dependencies: [{ name: "react" }] });
+    expect((await respond(controller, { target: "vue" })).body).toMatchObject({ root: "/php" });
   });
 
-  it("un error inesperado va a next", () => {
-    const next = vi.fn() as NextFunction;
-    const broken = new DependenciesController({
+  it("pasa node/npm/php pedidos al reporte", async () => {
+    const { controller } = controllerWith();
+
+    const detected = (await respond(controller, { target: "react" })).body;
+    const chosen = (await respond(controller, { target: "react", node: "20.1.0", npm: "10.0.0", php: "8.2" })).body;
+
+    expect(detected.dependencies[0]).toMatchObject({ recommended: "1.0.0", limitedByRuntime: true });
+    expect(chosen.runtimes.map((runtime: { selected: string }) => runtime.selected)).toEqual(["20.1.0", "10.0.0"]);
+    expect(chosen.dependencies[0]).toMatchObject({ recommended: "18.0.0", limitedByRuntime: false });
+  });
+
+  it("php pedido aplica en laravel; un parametro repetido (array) se ignora", async () => {
+    const { controller } = controllerWith();
+
+    expect((await respond(controller, { target: "laravel", php: "7.4" })).body.runtimes[0]).toMatchObject({ kind: "php", selected: "7.4.0" });
+    expect((await respond(controller, { target: "react", node: ["20.0.0", "21.0.0"] })).body.runtimes[0]).toMatchObject({ kind: "node", selected: "16.0.0" });
+  });
+
+  it("usa la cache entre llamadas y refresh=1 vuelve a consultar", async () => {
+    const { controller, registry } = controllerWith();
+
+    await respond(controller, { target: "react" });
+    await respond(controller, { target: "react", refresh: "0" });
+    expect(registry.fetch).toHaveBeenCalledTimes(1);
+
+    await respond(controller, { target: "react", refresh: "1" });
+    expect(registry.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("la cache vence a las 24 h", async () => {
+    let now = NOW;
+    const { controller, registry } = controllerWith({ now: () => now });
+
+    await respond(controller, { target: "react" });
+    now = new Date(NOW.getTime() + 24 * 60 * 60 * 1000 - 1);
+    await respond(controller, { target: "react" });
+    expect(registry.fetch).toHaveBeenCalledTimes(1);
+
+    now = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
+    await respond(controller, { target: "react" });
+    expect(registry.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("un error inesperado va a next", async () => {
+    const { controller } = controllerWith({
       getConfig: () => {
         throw new Error("boom");
       },
-      reader,
-      probe: { versionOf: () => null },
     });
 
-    broken.show({ query: {} } as unknown as Request, { status: vi.fn() } as unknown as Response, next);
+    const { next } = await respond(controller, {});
 
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: "boom" }));
   });

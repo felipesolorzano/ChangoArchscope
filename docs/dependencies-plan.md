@@ -37,7 +37,7 @@ Casos reales que guian el trabajo:
 | Fase | Entrega | Estado |
 |---|---|---|
 | **F1 Deteccion** | Manifiestos (`package.json`/lock v1-3, `composer.json`/lock) abajo de la raiz del stack y el mas cercano hacia arriba (hasta la raiz git); runtimes declarados (o locales); helpers de versiones (npm y composer); clasificacion pura de un paquete contra sus releases y el runtime elegido; `GET /dependencies.json` (inventario). Spec: `app/modules/dependencies/specs/dependency-detection.md` | Completa |
-| **F2 Registros** | Puerto `PackageRegistry` + adaptadores npm (`registry.npmjs.org`) y Packagist (`repo.packagist.org/p2`); cache SQLite con TTL; `/dependencies.json?php=&node=&npm=&refresh=1` con el reporte clasificado | Pendiente |
+| **F2 Registros** | Puerto `PackageRegistry` + adaptadores npm (`registry.npmjs.org`) y Packagist (`repo.packagist.org/p2`); cache SQLite con TTL; `/dependencies.json?php=&node=&npm=&refresh=1` con el reporte clasificado. Spec: `app/modules/dependencies/specs/package-registries.md` | Completa |
 | **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar | Pendiente |
 | **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`) | Pendiente |
 | **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors) | Pendiente |
@@ -52,6 +52,17 @@ Casos reales que guian el trabajo:
   Node y npm locales. ~300 ms.
 - ChangoArchscope (`resources/js/react/modules`): sube 3 niveles al `package.json` de la raiz, 23
   paquetes; Node 18.18.0 desde `engines.node`.
+
+### F2 — validacion contra los registros reales
+
+- ChangoArchscope (23 paquetes): ~6.6 s la primera vez, ~0.15 s desde cache. Con Node 18.18
+  (`engines.node`) `vite` se recomienda en 6.4.3 aunque la ultima es 8.x (pide Node 20+).
+- mc (36 paquetes npm, gulp 3 y compania): ~3.3 s; 23 majors y 2 deprecated (`gulp-foreach`...).
+- brandsites (93 paquetes): ~4.7 s. 59 majors, 7 deprecated (`node-sass`, `request`,
+  `babel-eslint`, `eslint-loader`, `rimraf`, `bootstrap` 4, `eslint` 6). Con Node 14 hay 27 paquetes
+  limitados por runtime (p. ej. `jest` → 29.7.0, `@testing-library/react` → 14.3.1); con Node 22,
+  solo 4. `eslint` no tiene version no deprecated compatible con Node 22.0.0 (la 10 pide `^22.13`):
+  la UI (F3) debe explicar "requiere un runtime mas nuevo".
 
 ## 3. Decisiones
 
