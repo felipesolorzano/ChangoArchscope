@@ -8,5 +8,5 @@ import { auditSnapshotToSignals } from "../services/auditSnapshotToSignals.js";
 export function buildPlan(snapshot: AuditSnapshot, repository: PlanTaskStateRepository): PlanGraph {
   const tasks = generatePlan(auditSnapshotToSignals(snapshot));
 
-  return buildPlanGraph(tasks, repository.getStates(), new Date().toISOString());
+  return buildPlanGraph(tasks, repository.getStates(snapshot.target), new Date().toISOString());
 }

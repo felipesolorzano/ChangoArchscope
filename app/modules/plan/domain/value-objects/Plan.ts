@@ -5,7 +5,8 @@ export const PLAN_TASK_STATES: PlanTaskState[] = ["pending", "in_progress", "don
 // Señales que el generador necesita del audit. El modulo `plan` no depende del dominio de
 // `audit`: un adaptador en la capa de aplicacion traduce el AuditSnapshot a estas señales.
 export type PlanSignals = {
-  ruleCounts: Record<string, number>;
+  /** Hallazgos por regla y severidad: `{ "untested-component": { high: 75, medium: 90 } }`. */
+  findingCounts: Record<string, Record<string, number>>;
   categoryCounts: Record<string, number>;
   duplicatePairs: number;
   skippedFiles: number;

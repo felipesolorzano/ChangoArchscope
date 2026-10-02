@@ -26,7 +26,8 @@ describe("planLayout", () => {
 
     expect(positions.a.x).toBe(0);
     expect(positions.b.x).toBe(0);
-    expect(positions.a.y).not.toBe(positions.b.y);
+    expect(positions.a.y).toBe(0);
+    expect(positions.b.y).toBe(250);
   });
 
   it("sin tareas devuelve mapas vacios", () => {

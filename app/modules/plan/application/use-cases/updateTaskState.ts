@@ -1,7 +1,12 @@
 import { PLAN_TASK_STATES, type PlanTaskState } from "../../domain/value-objects/Plan.js";
 import type { PlanTaskStateRepository } from "../contracts/PlanTaskStateRepository.js";
 
-export function updateTaskState(repository: PlanTaskStateRepository, taskKey: string, state: string): PlanTaskState {
+export function updateTaskState(
+  repository: PlanTaskStateRepository,
+  target: string,
+  taskKey: string,
+  state: string,
+): PlanTaskState {
   if (!isPlanTaskState(state)) {
     throw new Error(`Invalid task state "${state}". Use one of: ${PLAN_TASK_STATES.join(", ")}.`);
   }
@@ -10,7 +15,7 @@ export function updateTaskState(repository: PlanTaskStateRepository, taskKey: st
     throw new Error("taskKey is required.");
   }
 
-  repository.setState(taskKey, state);
+  repository.setState(target, taskKey, state);
 
   return state;
 }

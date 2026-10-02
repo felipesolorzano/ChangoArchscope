@@ -58,7 +58,7 @@ describe("PlanController", async () => {
       vi.fn() as unknown as NextFunction,
     );
 
-    expect(repo.setState).toHaveBeenCalledWith("close-sql-injections", "done");
+    expect(repo.setState).toHaveBeenCalledWith("laravel", "close-sql-injections", "done");
     expect(status).toHaveBeenCalledWith(200);
   });
 
@@ -84,9 +84,10 @@ describe("PlanController", async () => {
     expect(status).not.toHaveBeenCalled();
   });
 
-  it("update usa el target del query (react) al reconstruir el plan", async () => {
+  it("update usa el target del query (react) al persistir y al reconstruir el plan", async () => {
     const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
-    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
+    const repo = repository();
+    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repo });
     const { response } = fakeResponse();
 
     await controller.update(
@@ -96,6 +97,7 @@ describe("PlanController", async () => {
     );
 
     expect(getSnapshot).toHaveBeenCalledWith("react");
+    expect(repo.setState).toHaveBeenCalledWith("react", "close-sql-injections", "done");
   });
 
   it("update sin state en el body delega a next sin persistir", async () => {

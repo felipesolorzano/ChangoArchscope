@@ -67,6 +67,54 @@ describe("findingsForTask", () => {
     ]);
   });
 
+  it("respeta el filtro por severidad del selector (add-component-tests: solo high)", () => {
+    const base = snapshot();
+    const result = findingsForTask(
+      {
+        ...base,
+        findings: [
+          finding({ rule: "untested-component", severity: "high", file: "/r/A.js", line: 3, message: "A" }),
+          finding({ rule: "untested-component", severity: "medium", file: "/r/B.js", line: 4, message: "B" }),
+        ],
+      },
+      "add-component-tests",
+    );
+
+    expect(result).toEqual({
+      taskKey: "add-component-tests",
+      total: 1,
+      items: [{ file: "/r/A.js", line: 3, rule: "untested-component", severity: "high", message: "A" }],
+    });
+  });
+
+  it("una tarea React con varias reglas devuelve las de todas, en el orden del snapshot", () => {
+    const base = snapshot();
+    const result = findingsForTask(
+      {
+        ...base,
+        findings: [
+          finding({ rule: "jquery-usage", file: "/r/A.js" }),
+          finding({ rule: "http-in-component", file: "/r/B.js" }),
+          finding({ rule: "direct-dom-access", file: "/r/C.js" }),
+        ],
+      },
+      "remove-jquery",
+    );
+
+    expect(result.items.map((item) => item.file)).toEqual(["/r/A.js", "/r/C.js"]);
+  });
+
+  it("limita a 100 items pero total cuenta todos", () => {
+    const base = snapshot();
+    const findings = Array.from({ length: 120 }, (_, index) => finding({ rule: "jquery-usage", line: index }));
+
+    const result = findingsForTask({ ...base, findings }, "remove-jquery");
+
+    expect(result.total).toBe(120);
+    expect(result.items).toHaveLength(100);
+    expect(result.items[99].line).toBe(99);
+  });
+
   it("una tarea sin fuente de hallazgos devuelve lista vacia", () => {
     expect(findingsForTask(snapshot(), "validate-risk-reduction")).toEqual({ taskKey: "validate-risk-reduction", total: 0, items: [] });
   });

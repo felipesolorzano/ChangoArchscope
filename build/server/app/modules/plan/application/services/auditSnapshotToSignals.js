@@ -1,12 +1,13 @@
 // Adaptador entre bounded contexts: traduce el AuditSnapshot (del que solo conocemos el tipo)
 // a las señales que necesita el generador del plan. Asi el dominio de `plan` no depende de `audit`.
 export function auditSnapshotToSignals(snapshot) {
-    const ruleCounts = {};
+    const findingCounts = {};
     for (const finding of snapshot.findings) {
-        ruleCounts[finding.rule] = (ruleCounts[finding.rule] ?? 0) + 1;
+        const bySeverity = (findingCounts[finding.rule] ??= {});
+        bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1;
     }
     return {
-        ruleCounts,
+        findingCounts,
         categoryCounts: snapshot.summary.by_category,
         duplicatePairs: countDuplicatePairs(snapshot.riskBreakdown.byFile.map((entry) => entry.key)),
         skippedFiles: snapshot.skippedFiles.length,

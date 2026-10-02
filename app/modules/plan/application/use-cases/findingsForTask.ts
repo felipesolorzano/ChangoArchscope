@@ -1,6 +1,6 @@
 import type { AuditSnapshot } from "../../../audit/domain/value-objects/AuditSnapshot.js";
 import type { PlanFinding, PlanTaskFindings } from "../../domain/value-objects/Plan.js";
-import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES } from "../../domain/services/planTaskRules.js";
+import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, matchesSelectors } from "../../domain/services/planTaskRules.js";
 
 const ITEMS_LIMIT = 100;
 
@@ -11,11 +11,11 @@ export function findingsForTask(snapshot: AuditSnapshot, taskKey: string): PlanT
 }
 
 function collectItems(snapshot: AuditSnapshot, taskKey: string): PlanFinding[] {
-  const rules = TASK_RULES[taskKey];
+  const selectors = TASK_RULES[taskKey];
 
-  if (rules !== undefined) {
+  if (selectors !== undefined) {
     return snapshot.findings
-      .filter((finding) => rules.includes(finding.rule))
+      .filter((finding) => matchesSelectors(selectors, finding.rule, finding.severity))
       .map((finding) => ({
         file: finding.file,
         line: finding.line,

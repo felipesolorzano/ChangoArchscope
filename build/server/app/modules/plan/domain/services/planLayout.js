@@ -1,5 +1,5 @@
 export const STAGE_X = 320;
-export const ROW_Y = 170;
+export const ROW_Y = 250;
 export function planLayout(tasks) {
     const byKey = new Map(tasks.map((task) => [task.key, task]));
     const stages = {};

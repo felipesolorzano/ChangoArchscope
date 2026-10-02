@@ -11,23 +11,23 @@ describe("updateTaskState", () => {
   it("persiste un estado valido y lo devuelve", () => {
     const repository = fakeRepository();
 
-    const result = updateTaskState(repository, "close-sql-injections", "in_progress");
+    const result = updateTaskState(repository, "react", "close-sql-injections", "in_progress");
 
     expect(result).toBe("in_progress");
-    expect(repository.setState).toHaveBeenCalledWith("close-sql-injections", "in_progress");
+    expect(repository.setState).toHaveBeenCalledWith("react", "close-sql-injections", "in_progress");
   });
 
   it("rechaza un estado invalido sin tocar el repositorio", () => {
     const repository = fakeRepository();
 
-    expect(() => updateTaskState(repository, "x", "almost-done")).toThrow(/Invalid task state/);
+    expect(() => updateTaskState(repository, "laravel", "x", "almost-done")).toThrow(/Invalid task state/);
     expect(repository.setState).not.toHaveBeenCalled();
   });
 
   it("rechaza un taskKey vacio", () => {
     const repository = fakeRepository();
 
-    expect(() => updateTaskState(repository, "", "done")).toThrow(/taskKey/);
+    expect(() => updateTaskState(repository, "laravel", "", "done")).toThrow(/taskKey/);
     expect(repository.setState).not.toHaveBeenCalled();
   });
 });

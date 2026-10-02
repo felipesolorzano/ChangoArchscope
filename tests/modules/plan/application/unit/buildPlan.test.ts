@@ -52,7 +52,7 @@ describe("auditSnapshotToSignals", () => {
   it("cuenta reglas, copia categorias, detecta pares _new y cuenta skipped", () => {
     const signals = auditSnapshotToSignals(snapshot());
 
-    expect(signals.ruleCounts).toEqual({ "sql-concatenation": 1, "n-plus-one-query": 1 });
+    expect(signals.findingCounts).toEqual({ "sql-concatenation": { high: 1 }, "n-plus-one-query": { high: 1 } });
     expect(signals.categoryCounts).toEqual({ security: 1, database: 3 });
     expect(signals.duplicatePairs).toBe(1);
     expect(signals.skippedFiles).toBe(2);
@@ -61,7 +61,21 @@ describe("auditSnapshotToSignals", () => {
   it("acumula el conteo cuando una regla aparece varias veces", () => {
     const signals = auditSnapshotToSignals(snapshotWith({ ruleOf: ["dup", "dup", "other"] }));
 
-    expect(signals.ruleCounts).toEqual({ dup: 2, other: 1 });
+    expect(signals.findingCounts).toEqual({ dup: { high: 2 }, other: { high: 1 } });
+  });
+
+  it("separa el conteo de una regla por severidad", () => {
+    const base = snapshot();
+    const signals = auditSnapshotToSignals({
+      ...base,
+      findings: [
+        { ...base.findings[0], rule: "untested-component", severity: "high" },
+        { ...base.findings[0], rule: "untested-component", severity: "medium" },
+        { ...base.findings[0], rule: "untested-component", severity: "medium" },
+      ],
+    });
+
+    expect(signals.findingCounts).toEqual({ "untested-component": { high: 1, medium: 2 } });
   });
 
   it("cuenta 0 pares cuando solo existe el _new (sin original) o la extension no coincide", () => {
@@ -87,6 +101,7 @@ describe("buildPlan", () => {
 
     const graph = buildPlan(snapshot(), repository);
 
+    expect(repository.getStates).toHaveBeenCalledWith("laravel");
     expect(graph.nodes.find((node) => node.id === "close-sql-injections")?.state).toBe("done");
     // hay tareas derivadas (sql, n+1, third-party, validate)
     expect(graph.nodes.length).toBeGreaterThan(0);

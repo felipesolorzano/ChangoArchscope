@@ -1,14 +1,14 @@
-import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES } from "../../domain/services/planTaskRules.js";
+import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, matchesSelectors } from "../../domain/services/planTaskRules.js";
 const ITEMS_LIMIT = 100;
 export function findingsForTask(snapshot, taskKey) {
     const items = collectItems(snapshot, taskKey);
     return { taskKey, total: items.length, items: items.slice(0, ITEMS_LIMIT) };
 }
 function collectItems(snapshot, taskKey) {
-    const rules = TASK_RULES[taskKey];
-    if (rules !== undefined) {
+    const selectors = TASK_RULES[taskKey];
+    if (selectors !== undefined) {
         return snapshot.findings
-            .filter((finding) => rules.includes(finding.rule))
+            .filter((finding) => matchesSelectors(selectors, finding.rule, finding.severity))
             .map((finding) => ({
             file: finding.file,
             line: finding.line,

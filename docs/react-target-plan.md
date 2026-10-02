@@ -35,7 +35,7 @@ via `react.modulesPath` absoluto en `chango-archscope.config.mjs`. Rasgos del pr
 | **F2 Parser JS** | Puerto `JsSourceParser` + adaptador `BabelJsParser` (`@babel/parser`, JSX/TS) + `scanJsFiles`. Spec: `app/modules/audit/specs/js-source-parser.md` | Completa |
 | **F3 Analizadores React** | 6 analizadores JS + integracion en `auditProject`, HTTP y CLI. Spec: `app/modules/audit/specs/react-analyzers.md` | Completa |
 | **F4 Auditoria generalizada** | `phpRoot` → `sourceRoot` en snapshot/grafo (drill app/file/heatmap para React); acento `api_access` + categorias por stack en filtro/leyenda (`auditCategoriesFor`); snapshot cache + fingerprint para React. Specs: `audit-graph.md`, `audit-snapshot-cache.md`, `audit-explorer.md` | Completa |
-| **F5 Plan React** | Tareas del plan derivadas de reglas React | Pendiente |
+| **F5 Plan React** | 8 tareas nuevas derivadas de reglas React; selectores `{ rule, severities? }` como fuente unica de metrica y hallazgos; estado del plan por target (migracion 005). Spec: `app/modules/plan/specs/plan-tasks.md` | Completa |
 | **F6 Arquitectura legacy** | Mapeo carpeta→rol para arboles sin capas, para que el check de capas/acoplamiento de señal | Pendiente |
 
 Decisiones tomadas:
@@ -99,6 +99,16 @@ aparece el selector "PHP objetivo".
 Pendiente conocido (previo a este plan): `auditRequest.ts`, `BuildAuditGraph.ts` y
 `auditGraphLayout.ts` tienen mutantes sobrevivientes en codigo que no cambio (validacion de la
 version PHP, cache por module/version, limites `slice`, tonos/acentos existentes).
+
+### F5 — validacion contra el proyecto real
+
+`/plan.json?target=react`: 10 tareas en 4 etapas — cerrar XSS (113), eliminar copias manuales (18)
+→ archivos sin uso (39), tests en componentes complejos (75 high) → romper clases (2), aislar HTTP
+(137), sacar jQuery (120), partir componentes (102) → reemplazar la herencia de `Global` (155, depende
+de aislar HTTP) → validar. El plan de Laravel sigue igual (8 tareas) y conserva su avance: la
+migracion 005 copio los 7 estados existentes como `laravel`. Marcar una tarea en React no la marca en
+Laravel. Se subio el espaciado entre filas del grafo (170 → 250) porque con 5 tareas por etapa las
+tarjetas se pisaban.
 
 ## 4. Definicion de hecho (global)
 

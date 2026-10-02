@@ -1,7 +1,7 @@
 import type { PlanTask } from "../value-objects/Plan.js";
 
 export const STAGE_X = 320;
-export const ROW_Y = 170;
+export const ROW_Y = 250;
 
 export type PlanLayout = {
   stages: Record<string, number>;

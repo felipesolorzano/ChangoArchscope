@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 import type { PlanTaskStateRepository } from "../../application/contracts/PlanTaskStateRepository.js";
@@ -7,8 +8,8 @@ import { planTaskStates } from "./planTaskStatesSchema.js";
 export class SqlitePlanTaskStateRepository implements PlanTaskStateRepository {
   constructor(private readonly db: BetterSQLite3Database) {}
 
-  getStates(): Record<string, PlanTaskState> {
-    const rows = this.db.select().from(planTaskStates).all();
+  getStates(target: string): Record<string, PlanTaskState> {
+    const rows = this.db.select().from(planTaskStates).where(eq(planTaskStates.target, target)).all();
     const states: Record<string, PlanTaskState> = {};
 
     for (const row of rows) {
@@ -18,13 +19,13 @@ export class SqlitePlanTaskStateRepository implements PlanTaskStateRepository {
     return states;
   }
 
-  setState(taskKey: string, state: PlanTaskState): void {
+  setState(target: string, taskKey: string, state: PlanTaskState): void {
     const updatedAt = new Date().toISOString();
 
     this.db
       .insert(planTaskStates)
-      .values({ taskKey, state, updatedAt })
-      .onConflictDoUpdate({ target: planTaskStates.taskKey, set: { state, updatedAt } })
+      .values({ target, taskKey, state, updatedAt })
+      .onConflictDoUpdate({ target: [planTaskStates.target, planTaskStates.taskKey], set: { state, updatedAt } })
       .run();
   }
 }
