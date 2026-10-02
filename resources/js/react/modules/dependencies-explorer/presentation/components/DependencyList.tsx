@@ -48,6 +48,7 @@ function DependencyRow({ dependency, now }: { dependency: DependencyEntry; now: 
         <span className="deps-row__name">{dependency.name}</span>
         {dependency.dev && <span className="deps-tag">dev</span>}
         <span className="deps-tag deps-tag--eco">{dependency.ecosystem}</span>
+        {dependency.vendored && <span className="deps-tag deps-tag--vendored">copiada</span>}
         {badge && (
           <span className="deps-badge" style={{ background: severityColor(dependency.security.maxSeverity as Severity) }}>
             {badge}

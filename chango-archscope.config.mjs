@@ -12,7 +12,8 @@ export default {
     ignoreHidden: true,
   },
   react: {
-    modulesPath: "resources/js/react/modules",
+   // modulesPath: "resources/js/react/modules",
+    modulesPath: "/home/felipe/Desktop/MSRepos/src/brandsites/react_/src",
     alias: "@modules",
     // Carpetas/archivos React a excluir dentro de modulesPath (patrones glob).
     ignoredPaths: ["**/__tests__/**", "**/*.test.*"],

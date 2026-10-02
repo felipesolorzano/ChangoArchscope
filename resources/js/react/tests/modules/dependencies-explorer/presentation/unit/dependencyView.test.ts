@@ -6,6 +6,7 @@ import {
   dependencyKey,
   filterDependencies,
   groupByStatus,
+  filesLabel,
   groupMates,
   usageLabel,
   manifestLabel,
@@ -129,7 +130,13 @@ describe("upgradeHint", () => {
     expect(upgradeHint(entry({ status: "major", recommended: "6.4.3", security: security(false) }))).toBe("Vulnerable (Alta): actualizar a 6.4.3");
     expect(upgradeHint(entry({ status: "patch", recommended: "3.2.7", security: security(true) }))).toBe("Vulnerable (Alta): ninguna version compatible corrige todo");
     expect(upgradeHint(entry({ status: "abandoned", recommended: null, replacement: "x/y", security: security(false) }))).toBe("Vulnerable (Alta): Abandonado: reemplazar por x/y");
+    expect(upgradeHint(entry({ status: "abandoned", recommended: "1.8.1", replacement: "phpoffice/phpspreadsheet", security: security(true) }))).toBe(
+      "Vulnerable (Alta): Abandonado: reemplazar por phpoffice/phpspreadsheet",
+    );
     expect(upgradeHint(entry({ status: "unknown", lookupError: "timeout", security: security(false) }))).toBe("Sin datos del registro: timeout");
+    expect(upgradeHint(entry({ status: "deprecated", deprecation: "Package no longer supported", recommended: null, security: security(false) }))).toBe(
+      "Vulnerable (Alta): Deprecated: Package no longer supported",
+    );
   });
 
   it("prioriza falta de datos, abandonado y falta de version compatible", () => {
@@ -218,6 +225,10 @@ describe("uso y grupos", () => {
     expect(usageLabel(usage(12, false))).toBe("12 archivos");
     expect(usageLabel(usage(3, true))).toBe("3 archivos + manifiesto");
     expect(usageLabel(usage(0, true))).toBe("en el manifiesto");
+  });
+
+  it("filesLabel singular y plural", () => {
+    expect([filesLabel(1), filesLabel(2), filesLabel(0)]).toEqual(["1 archivo", "2 archivos", "0 archivos"]);
   });
 
   it("groupMates: los otros del mismo grupo, por nombre", () => {

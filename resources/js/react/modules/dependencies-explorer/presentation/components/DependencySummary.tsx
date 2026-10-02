@@ -42,6 +42,7 @@ export function DependencySummary({ summary }: { summary: DependencySummaryData 
           </button>
         ))}
         {summary.limitedByRuntime > 0 && <span className="deps-summary__note">{summary.limitedByRuntime} limitados por el runtime</span>}
+        {summary.vendored > 0 && <span className="deps-summary__note">{summary.vendored} copiadas a mano</span>}
         {summary.unused > 0 && <span className="deps-summary__note">{summary.unused} sin uso</span>}
         {summary.endOfLife > 0 && <span className="deps-summary__note">{summary.endOfLife} fuera de soporte</span>}
         {summary.lookupErrors > 0 && <span className="deps-summary__note">{summary.lookupErrors} sin datos del registro</span>}

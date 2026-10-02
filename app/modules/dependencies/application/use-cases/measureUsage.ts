@@ -17,7 +17,7 @@ export function usageKey(dependency: Pick<DeclaredDependency, "ecosystem" | "nam
 // Cuanto se usa cada paquete npm en las fuentes de la carpeta de su manifiesto (Composer no se mide).
 export function measureUsage({ dependencies, reader }: MeasureUsageInput): Map<string, Usage> {
   const usage = new Map<string, Usage>();
-  const npm = dependencies.filter((dependency) => dependency.ecosystem === "npm");
+  const npm = dependencies.filter((dependency) => dependency.ecosystem === "npm" && dependency.vendored === undefined);
 
   for (const manifest of new Set(npm.map((dependency) => dependency.manifest))) {
     const context = manifestContext(manifest, reader);

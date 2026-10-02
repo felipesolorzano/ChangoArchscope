@@ -158,4 +158,48 @@ describe("detectDependencies", () => {
     expect(detectDependencies({ target: "react", root: "/w/app/src", ignoredPaths: [], reader, probe }).manifests).toEqual(["/w/package.json"]);
     expect(detectDependencies({ target: "react", root: "/w/app", ignoredPaths: [], reader: memoryReader({ "/w/.git": "", "/package.json": "{}" }), probe }).manifests).toEqual([]);
   });
+
+  it("un manifiesto anidado que es copia de libreria no aporta dependencias ni runtime; las copias a mano se agregan al final", () => {
+    const reader = memoryReader({
+      "/mc/.git/HEAD": "",
+      "/mc/admin/reports-src/package.json": pkg({ chart: "^2.0.0" }, { private: true }),
+      "/mc/admin/kendoui/src/package.json": pkg({ gulp: "^3.9.1" }, { repository: { url: "https://github.com/telerik/kendo-ui-core.git" } }),
+      "/mc/web/fat/composer.json": JSON.stringify({ name: "bcosca/fatfree", homepage: "http://fatfreeframework.com/", require: { php: ">=5.3" } }),
+      "/mc/admin/js/jquery.min.js": "/*! jQuery v1.7.1 */",
+    });
+
+    const inventory = detectDependencies({ target: "laravel", root: "/mc", ignoredPaths: [], reader, probe });
+
+    expect(inventory.manifests).toEqual(["/mc/admin/reports-src/package.json"]);
+    expect(inventory.vendoredManifests).toEqual(["/mc/admin/kendoui/src/package.json", "/mc/web/fat/composer.json"]);
+    expect(inventory.dependencies.map((dependency) => [dependency.name, dependency.vendored?.files ?? 0])).toEqual([
+      ["chart", 0],
+      ["jquery", 1],
+    ]);
+    expect(inventory.runtimes.map((runtime) => runtime.kind)).toEqual(["php", "node", "npm"]);
+  });
+
+  it("el manifiesto principal nunca es copia aunque declare repository", () => {
+    const reader = memoryReader({
+      "/c/.git/HEAD": "",
+      "/c/package.json": pkg({ react: "^18.0.0" }, { repository: "x/y" }),
+      "/c/composer.json": JSON.stringify({ homepage: "https://acme.dev", require: { "monolog/monolog": "^2.0" } }),
+    });
+
+    const inventory = detectDependencies({ target: "react", root: "/c", ignoredPaths: [], reader, probe });
+
+    expect(inventory.manifests).toEqual(["/c/composer.json", "/c/package.json"]);
+    expect(inventory.vendoredManifests).toEqual([]);
+    expect(inventory.dependencies.map((dependency) => dependency.name)).toEqual(["monolog/monolog", "react"]);
+  });
+
+  it("un manifiesto anidado con JSON invalido no es copia: queda en manifests y en skipped", () => {
+    const reader = memoryReader({ "/r/.git/HEAD": "", "/r/package.json": pkg({ a: "1.0.0" }), "/r/sub/package.json": "{nope" });
+
+    const inventory = detectDependencies({ target: "react", root: "/r", ignoredPaths: [], reader, probe });
+
+    expect(inventory.manifests).toEqual(["/r/package.json", "/r/sub/package.json"]);
+    expect(inventory.vendoredManifests).toEqual([]);
+    expect(inventory.skipped.map((entry) => entry.manifest)).toEqual(["/r/sub/package.json"]);
+  });
 });

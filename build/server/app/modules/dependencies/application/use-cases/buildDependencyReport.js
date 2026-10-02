@@ -72,6 +72,7 @@ function summarize(dependencies) {
         bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, count((entry) => entry.security.maxSeverity === severity)])),
         endOfLife: count((entry) => entry.support?.isEol === true),
         unused: count((entry) => entry.usage?.unused === true),
+        vendored: count((entry) => entry.vendored !== undefined),
     };
 }
 function selectedVersion(raw) {

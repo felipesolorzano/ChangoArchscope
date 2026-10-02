@@ -50,6 +50,7 @@ export type DependencyReportResult = {
     bySeverity: Record<Severity, number>;
     endOfLife: number;
     unused: number;
+    vendored: number;
   };
 };
 
@@ -142,6 +143,7 @@ function summarize(dependencies: DependencyReportEntry[]): DependencyReportResul
     bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, count((entry) => entry.security.maxSeverity === severity)])) as Record<Severity, number>,
     endOfLife: count((entry) => entry.support?.isEol === true),
     unused: count((entry) => entry.usage?.unused === true),
+    vendored: count((entry) => entry.vendored !== undefined),
   };
 }
 

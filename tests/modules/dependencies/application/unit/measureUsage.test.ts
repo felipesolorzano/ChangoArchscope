@@ -65,6 +65,12 @@ describe("measureUsage", () => {
     expect(usage.get(usageKey(dep("write")))).toEqual({ files: 0, inManifest: false, unused: false });
   });
 
+  it("las librerias copiadas a mano no se miden", () => {
+    const usage = measureUsage({ dependencies: [{ ...dep("react"), vendored: { files: 2 } }], reader: reader() });
+
+    expect(usage.size).toBe(0);
+  });
+
   it("composer y manifiestos ilegibles quedan sin medir", () => {
     const usage = measureUsage({ dependencies: [dep("a/b", "/p/composer.json", "composer"), dep("x", "/q/package.json")], reader: reader() });
 

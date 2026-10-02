@@ -137,6 +137,14 @@ describe("classifyDependency", () => {
     expect(report).toMatchObject({ status: "deprecated", deprecation: "ya no se mantiene", recommended: "1.3.0" });
   });
 
+  it("paquete entero deprecated: la actual no publicada tambien queda deprecated con el mensaje de la ultima", () => {
+    const releases = [release("1.4.1", { deprecated: "Package no longer supported" }), release("1.5.0-alpha.1", { deprecated: "otro" })];
+
+    expect(classifyDependency(dep({ installed: "1.1.1" }), info(releases), {})).toMatchObject({ status: "deprecated", deprecation: "Package no longer supported", recommended: null });
+    expect(classifyDependency(dep({ installed: "1.1.1" }), info([release("1.0.0", { deprecated: "viejo" }), release("1.2.0")]), {})).toMatchObject({ status: "minor", deprecation: null });
+    expect(classifyDependency(dep({ installed: "1.1.1" }), info([release("1.0.0"), release("1.2.0", { deprecated: "roto" })]), {})).toMatchObject({ deprecation: null, recommended: "1.0.0" });
+  });
+
   it("abandonado gana a todo y expone el reemplazo si es string", () => {
     const releases = [release("1.2.0", { deprecated: "x" }), release("1.3.0")];
 

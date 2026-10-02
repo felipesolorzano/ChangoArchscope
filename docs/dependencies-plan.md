@@ -41,7 +41,7 @@ Casos reales que guian el trabajo:
 | **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar. Spec: `resources/js/react/modules/dependencies-explorer/specs/dependencies-explorer.md` | Completa |
 | **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`). Specs: `app/modules/dependencies/specs/security-and-support.md` y la seccion F4 de `dependencies-explorer.md` | Completa |
 | **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors). Specs: `app/modules/dependencies/specs/usage-and-plan.md`, `app/modules/plan/specs/plan-tasks.md` (tareas de dependencias) | Completa |
-| **F6 Librerias copiadas** | Reconocer librerias vendorizadas sin manifiesto por nombre de archivo y cabecera (`/*! jQuery v1.7.1`), y manifiestos anidados que son copias de una libreria | Pendiente |
+| **F6 Librerias copiadas** | Reconocer librerias vendorizadas sin manifiesto por nombre de archivo y cabecera (`/*! jQuery v1.7.1`), y manifiestos anidados que son copias de una libreria. Spec: `app/modules/dependencies/specs/vendored-libraries.md` | Completa |
 
 ### F1 — validacion contra los proyectos reales
 
@@ -92,6 +92,21 @@ Casos reales que guian el trabajo:
 - Plan: ChangoArchscope (sin hallazgos de auditoria) pasa a tener 4 tareas de dependencias
   encadenadas (vulnerables, runtime → patch/minor → majors) con sus items; mc suma 6 a las de la
   auditoria. El Plan lee el reporte sin red (solo cache): ~0.2–0.5 s con cache caliente.
+
+### F6 — validacion con mc
+
+- `admin/public_html/kendoui/src/package.json` (repository de Telerik) y
+  `web/public_html/fatfreedemo/composer.json` (homepage/repositories) se reconocen como copias: salen
+  del inventario los ~30 paquetes de gulp de Kendo que no son de mc.
+- 34 librerias copiadas a mano (~1 s de deteccion): jQuery 1.1.2 a 1.12.4 (6 versiones), jQuery UI
+  1.8.7 a 1.12.1, jQuery Mobile, jQuery Validation, Bootstrap 3.3.x, Font Awesome, FullCalendar,
+  Swiper, Modernizr, Kendo UI 2019.3.1023 (1110 archivos), PHPExcel 1.7.8 (abandonado, 23 vulns →
+  reemplazar por PhpSpreadsheet), PHPMailer 6.6.0 y fatfree 3.5.1 (1 vuln critica).
+- Plugins de Keith Wood ("Time entry for jQuery v1.5.1") daban falsos jQuery: la firma ignora
+  "for jQuery".
+- Un paquete entero deprecated (`jquery-mobile`: su unica estable publicada lo esta y las copias de mc
+  ni estan publicadas) ahora sale deprecated, no "al dia".
+- Resumen mc: 23 vulnerables (2 criticas), 16 sin soporte; el Plan suma esas tareas.
 
 ## 3. Decisiones
 

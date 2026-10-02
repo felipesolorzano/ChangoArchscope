@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { DependencyEntry, DependencyReport } from "../../domain/value-objects/DependencyReport";
 import { DependencyVulnerabilities } from "./DependencyVulnerabilities";
 import { useDependenciesExplorerStore } from "../store/dependenciesExplorerStore";
-import { ageLabel, dependencyKey, groupMates, manifestLabel, statusColor, statusLabel, supportLabel, upgradeHint, usageLabel } from "../utils/dependencyView";
+import { ageLabel, dependencyKey, filesLabel, groupMates, manifestLabel, statusColor, statusLabel, supportLabel, upgradeHint, usageLabel } from "../utils/dependencyView";
 
 function registryUrl(dependency: DependencyEntry): string {
   return dependency.ecosystem === "npm" ? `https://www.npmjs.com/package/${dependency.name}` : `https://packagist.org/packages/${dependency.name}`;
@@ -54,7 +54,8 @@ function DependencyFacts({ dependency, root, now, mates }: FactsProps) {
   const withAge = (version: string | null, publishedAt: string | null) => [version ?? "—", ageLabel(publishedAt, now)].filter(Boolean).join(" · ");
   const rows: Array<[string, string]> = [
     ["Ecosistema", dependency.ecosystem],
-    ["Manifiesto", manifestLabel(dependency.manifest, root)],
+    [dependency.vendored ? "Copia en" : "Manifiesto", manifestLabel(dependency.manifest, root)],
+    ["Copias", dependency.vendored ? filesLabel(dependency.vendored.files) : ""],
     ["Constraint", dependency.constraint],
     ["Instalada", dependency.installed ?? "—"],
     ["Actual", withAge(dependency.current, dependency.currentPublishedAt)],

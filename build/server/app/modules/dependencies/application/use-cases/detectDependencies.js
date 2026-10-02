@@ -1,6 +1,8 @@
 import path from "node:path";
 import { detectRuntimes } from "../../domain/services/detectRuntimes.js";
+import { isLibraryCopy } from "../../domain/services/libraryCopies.js";
 import { parseComposerManifest, parsePackageManifest, } from "../../domain/services/parseManifests.js";
+import { detectVendoredLibraries } from "./detectVendoredLibraries.js";
 const MANIFESTS = {
     npm: { file: "package.json", lock: "package-lock.json" },
     composer: { file: "composer.json", lock: "composer.lock" },
@@ -16,7 +18,11 @@ export function detectDependencies({ target, root, ignoredPaths, reader, probe }
         npm: mainManifest(root, MANIFESTS.npm.file, reader),
         composer: mainManifest(root, MANIFESTS.composer.file, reader),
     };
-    const manifests = [...new Set([...below, ...[main.npm, main.composer].filter((file) => file !== null)])].sort();
+    const found = [...new Set([...below, ...[main.npm, main.composer].filter((file) => file !== null)])].sort();
+    // Un anidado que es copia de libreria trae las dependencias de esa libreria, no las del proyecto.
+    const isCopy = (manifest) => manifest !== main.npm && manifest !== main.composer && copiedLibraryManifest(manifest, reader);
+    const manifests = found.filter((manifest) => !isCopy(manifest));
+    const vendoredManifests = found.filter(isCopy);
     // Llave null = "no hay principal" de ese tipo: get(null) no encuentra nada.
     const parsed = new Map();
     const skipped = [];
@@ -36,10 +42,24 @@ export function detectDependencies({ target, root, ignoredPaths, reader, probe }
     return {
         root,
         manifests,
+        vendoredManifests,
         runtimes: detectRuntimes(declarations, runtimeKinds(target, manifests), (kind) => probe.versionOf(kind)),
-        dependencies: [...parsed.values()].flatMap((manifest) => manifest.dependencies),
+        dependencies: [...[...parsed.values()].flatMap((manifest) => manifest.dependencies), ...detectVendoredLibraries({ root, ignoredPaths, reader })],
         skipped,
     };
+}
+// Un manifiesto ilegible no es copia: sigue su camino y termina en skipped.
+function copiedLibraryManifest(manifest, reader) {
+    const json = readJson(manifest, reader);
+    return json !== null && isLibraryCopy(path.basename(manifest), json);
+}
+function readJson(file, reader) {
+    try {
+        return JSON.parse(reader.readText(file));
+    }
+    catch {
+        return null;
+    }
 }
 function isManifestName(name) {
     return name === MANIFESTS.npm.file || name === MANIFESTS.composer.file;

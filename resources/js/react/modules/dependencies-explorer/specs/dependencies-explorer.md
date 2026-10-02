@@ -120,8 +120,9 @@ resumen `vulnerable`, `bySeverity` y `endOfLife`
 - `supportLabel(support)`: `""` si `null`; vencido: `"sin soporte desde <eol>"` (eol fecha) o
   `"sin soporte"`; vigente: `"soporte hasta <eol>"` (fecha) o `"con soporte"`.
 - `upgradeHint`: despues de "Sin datos del registro" y antes de todo lo demas, si hay
-  vulnerabilidades: `"Vulnerable (<severidad max>): ninguna version compatible corrige todo"` si
-  `recommendedAffected`; si no, `"Vulnerable (<severidad max>): actualizar a <recommended>"` (o
+  vulnerabilidades: si esta abandonado, `"Vulnerable (<severidad max>): <pista de abandonado>"` (la
+  salida es el reemplazo); si no, `"Vulnerable (<severidad max>): ninguna version compatible corrige
+  todo"` si `recommendedAffected`; si no, `"Vulnerable (<severidad max>): actualizar a <recommended>"` (o
   `"Vulnerable (<severidad max>): <siguiente paso>"` si no hay `recommended`, con el texto que
   daria el resto de las reglas).
 - `runtimeOptions(runtime)`: si `runtime.cycles` no esta vacio, despues de la detectada van hasta 12
@@ -158,3 +159,14 @@ resumen trae `unused`.
 - Fila: etiqueta `"sin uso"` (clase `deps-tag--unused`) si `usage.unused`.
 - Drawer: filas "Uso" (`usageLabel`, si no es vacio) y "Actualizar junto con" (`groupMates` unidos por
   `", "`, si hay alguno).
+
+## F6: librerias copiadas a mano (UI)
+
+Cada paquete puede traer `vendored: { files }` (copiada a mano, sin manifiesto) y el resumen trae
+`vendored` (ver `app/modules/dependencies/specs/vendored-libraries.md`).
+
+- `filesLabel(n)` (helper): `"1 archivo"` / `"<n> archivos"` (lo usan "Copias" y `usageLabel`).
+- Fila: etiqueta `"copiada"` (`deps-tag--vendored`) si `vendored`.
+- Drawer: para las copiadas, la fila del manifiesto se llama "Copia en" y se agrega
+  "Copias" = `"<n> archivo"` / `"<n> archivos"`.
+- Resumen: nota `"<n> copiadas a mano"` si `vendored > 0`.

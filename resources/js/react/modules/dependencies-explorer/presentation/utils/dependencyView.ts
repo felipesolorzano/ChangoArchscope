@@ -145,6 +145,10 @@ export function upgradeHint(dependency: DependencyEntry): string {
 function securityHint(dependency: DependencyEntry, next: string): string {
   const prefix = `Vulnerable (${severityLabel(dependency.security.maxSeverity as Severity)})`;
 
+  // Abandonado: la salida es el reemplazo, no otra version del mismo paquete.
+  if (dependency.status === "abandoned") {
+    return `${prefix}: ${next}`;
+  }
   if (dependency.security.recommendedAffected) {
     return `${prefix}: ninguna version compatible corrige todo`;
   }
@@ -174,6 +178,10 @@ function updateHint(dependency: DependencyEntry): string {
   return VERSION_GAPS.has(dependency.status) ? `Actualizar a ${recommended}` : "Al dia";
 }
 
+export function filesLabel(count: number): string {
+  return `${count} ${count === 1 ? "archivo" : "archivos"}`;
+}
+
 export function usageLabel(dependency: DependencyEntry): string {
   const { usage } = dependency;
 
@@ -186,7 +194,7 @@ export function usageLabel(dependency: DependencyEntry): string {
   if (usage.files === 0) {
     return "en el manifiesto";
   }
-  return `${usage.files} ${usage.files === 1 ? "archivo" : "archivos"}${usage.inManifest ? " + manifiesto" : ""}`;
+  return `${filesLabel(usage.files)}${usage.inManifest ? " + manifiesto" : ""}`;
 }
 
 // Los otros paquetes del mismo grupo (se actualizan juntos), por nombre.

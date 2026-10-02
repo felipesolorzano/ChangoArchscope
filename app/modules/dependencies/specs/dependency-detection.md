@@ -129,7 +129,9 @@ currentPublishedAt, latestPublishedAt }`:
 - `gap`: `versionGap(current, recommended)`; `none` si alguno es `null`.
 - `status`: sin `info` o sin releases estables → `unknown`; `abandoned` no nulo → `abandoned`; la
   release igual a `current` esta deprecated → `deprecated`; si no, `gap` (`none` → `up_to_date`).
-- `deprecation`: mensaje de la release `current` (o `null`). `replacement`: `abandoned` si es string.
+- `deprecation`: mensaje de la release `current`; si `current` no esta entre las releases y todas las
+  estables estan deprecated (el paquete entero dejo de mantenerse, p. ej. `jquery-mobile`), el de la
+  ultima; si no, `null`. `replacement`: `abandoned` si es string.
 - `currentPublishedAt` / `latestPublishedAt`: `publishedAt` de la release estable igual a `current` /
   `latest` (`null` si no esta o no tiene fecha). Sirven para mostrar la antiguedad (F3).
 

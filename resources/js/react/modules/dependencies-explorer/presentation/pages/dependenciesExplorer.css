@@ -114,3 +114,6 @@
 
 /* F5: uso */
 .deps-tag--unused { background: #3f3f46; color: #e4e4e7; font-style: italic; }
+
+/* F6: copiadas a mano */
+.deps-tag--vendored { background: #78350f; color: #fde68a; }

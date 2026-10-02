@@ -9,8 +9,10 @@ export type DeclaredDependency = {
   constraint: string;
   installed: string | null;
   dev: boolean;
-  /** Ruta absoluta del package.json / composer.json que lo declara. */
+  /** Ruta absoluta del package.json / composer.json que lo declara (o de la primera copia). */
   manifest: string;
+  /** Solo en librerias copiadas a mano: cuantas copias de esa version hay. */
+  vendored?: { files: number };
 };
 
 export type DetectedRuntime = {
@@ -22,6 +24,8 @@ export type DetectedRuntime = {
 export type DependencyInventory = {
   root: string;
   manifests: string[];
+  /** Manifiestos anidados que son de una libreria copiada (sus dependencias no son del proyecto). */
+  vendoredManifests: string[];
   runtimes: DetectedRuntime[];
   dependencies: DeclaredDependency[];
   skipped: Array<{ manifest: string; reason: string }>;

@@ -67,6 +67,8 @@ export interface DependencyEntry {
   support: SupportStatus | null;
   usage: { files: number; inManifest: boolean; unused: boolean } | null;
   group: string | null;
+  /** Solo en librerias copiadas a mano (sin manifiesto). */
+  vendored?: { files: number };
 }
 
 export interface DependencySummaryData {
@@ -78,6 +80,7 @@ export interface DependencySummaryData {
   bySeverity: Record<Severity, number>;
   endOfLife: number;
   unused: number;
+  vendored: number;
 }
 
 /** Respuesta de /dependencies.json (ver app/modules/dependencies/specs/package-registries.md). */

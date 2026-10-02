@@ -44,7 +44,7 @@ const report: DependencyReport = {
     }),
     entry({ name: "jest", dev: true, status: "major", current: "24.9.0", recommended: "29.7.0", latest: "30.5.2", limitedByRuntime: true }),
     entry({ name: "request", status: "deprecated", deprecation: "request has been deprecated", recommended: null, latest: "2.88.2", current: "2.88.2" }),
-    entry({ ecosystem: "composer", name: "phpoffice/phpexcel", manifest: "/p/composer.json", status: "abandoned", replacement: "phpoffice/phpspreadsheet" }),
+    entry({ ecosystem: "composer", name: "phpoffice/phpexcel", manifest: "/p/src/xls/Classes/PHPExcel.php", status: "abandoned", replacement: "phpoffice/phpspreadsheet", vendored: { files: 2 } }),
     entry({ name: "lodash", group: "react", usage: { files: 0, inManifest: false, unused: true } }),
   ],
   summary: {
@@ -56,6 +56,7 @@ const report: DependencyReport = {
     bySeverity: { critical: 0, high: 1, moderate: 0, low: 0, unknown: 0 },
     endOfLife: 1,
     unused: 1,
+    vendored: 1,
   },
 };
 
@@ -99,13 +100,16 @@ describe("DependencySummary", () => {
     expect(markup).toContain("1 limitados por el runtime");
     expect(markup).toContain("1 fuera de soporte");
     expect(markup).toContain("1 sin uso");
+    expect(markup).toContain("1 copiadas a mano");
     expect(markup.indexOf("Vulnerables 1")).toBeLessThan(markup.indexOf("Abandonado 1"));
     expect(markup).not.toContain("sin datos del registro");
     expect(markup).toMatch(/deps-summary__segment[^>]*background:#ea580c;width:40%/);
   });
 
   it("sin vulnerables ni paquetes vencidos no hay chip ni nota", () => {
-    const markup = html(<DependencySummary summary={{ ...report.summary, vulnerable: 0, endOfLife: 0, unused: 0 }} />);
+    const markup = html(<DependencySummary summary={{ ...report.summary, vulnerable: 0, endOfLife: 0, unused: 0, vendored: 0 }} />);
+
+    expect(markup).not.toContain("copiadas a mano");
 
     expect(markup).not.toContain("sin uso");
 
@@ -137,6 +141,8 @@ describe("DependencyList", () => {
     expect(markup).toContain('<span class="deps-tag deps-tag--eol">sin soporte</span>');
     expect(markup).toMatch(/lodash<\/span><span class="deps-tag deps-tag--eco">npm<\/span><span class="deps-tag deps-tag--unused">sin uso<\/span>/);
     expect(markup.match(/deps-tag--unused/g)).toHaveLength(1);
+    expect(markup).toMatch(/phpoffice\/phpexcel<\/span><span class="deps-tag deps-tag--eco">composer<\/span><span class="deps-tag deps-tag--vendored">copiada<\/span>/);
+    expect(markup.match(/deps-tag--vendored/g)).toHaveLength(1);
     expect(markup).toContain("Vulnerable (Alta): actualizar a 19.3.0");
     expect(markup).toContain("hace 5 años");
     expect(markup).toContain("Actualizar a 29.7.0 (la 30.5.2 requiere un runtime mas nuevo)");
@@ -166,12 +172,16 @@ describe("DependencyDrawer", () => {
     const markup = html(<DependencyDrawer report={report} now={NOW} />);
 
     expect(markup).toContain("phpoffice/phpexcel");
-    expect(markup).toContain("../composer.json");
+    expect(markup).toContain("<dt>Copia en</dt><dd>xls/Classes/PHPExcel.php</dd>");
+    expect(markup).toContain("<dt>Copias</dt><dd>2 archivos</dd>");
+    expect(markup).not.toContain("<dt>Manifiesto</dt>");
     expect(markup).toContain('href="https://packagist.org/packages/phpoffice/phpexcel"');
 
     useDependenciesExplorerStore.setState({ selected: "npm:react" });
     const react = html(<DependencyDrawer report={report} now={NOW} />);
     expect(react).toContain('href="https://www.npmjs.com/package/react"');
+    expect(react).toContain("<dt>Manifiesto</dt>");
+    expect(react).not.toContain("<dt>Copias</dt>");
     expect(react).toContain("hace 5 años");
     expect(react).toContain("react 16 · sin soporte");
     expect(react).toContain("CVE-9");

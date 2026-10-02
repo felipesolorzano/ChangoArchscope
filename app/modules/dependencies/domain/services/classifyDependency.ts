@@ -24,7 +24,8 @@ export function classifyDependency(dependency: DeclaredDependency, info: Package
   const recommended = compatible.at(-1)?.version ?? null;
   const gap = current !== null && recommended !== null ? versionGap(current, recommended) : "none";
   const currentRelease = stable.find((release) => release.version === current);
-  const deprecation = currentRelease?.deprecated ?? null;
+  // Sin release actual publicada, el paquete entero deprecated (ninguna estable vigente) tambien cuenta.
+  const deprecation = currentRelease ? currentRelease.deprecated : usable.length === 0 ? (latestRelease?.deprecated ?? null) : null;
 
   return {
     ...dependency,

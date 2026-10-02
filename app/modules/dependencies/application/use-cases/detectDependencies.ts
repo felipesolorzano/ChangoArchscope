@@ -2,6 +2,7 @@ import path from "node:path";
 
 import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 import { detectRuntimes, type RuntimeDeclarations } from "../../domain/services/detectRuntimes.js";
+import { isLibraryCopy } from "../../domain/services/libraryCopies.js";
 import {
   type ComposerRuntimeDeclaration,
   type NpmRuntimeDeclaration,
@@ -10,6 +11,7 @@ import {
 } from "../../domain/services/parseManifests.js";
 import type { DeclaredDependency, DependencyInventory, RuntimeKind } from "../../domain/value-objects/Dependency.js";
 import type { RuntimeProbe } from "../contracts/RuntimeProbe.js";
+import { detectVendoredLibraries } from "./detectVendoredLibraries.js";
 
 export type DetectDependenciesInput = {
   target: string;
@@ -36,7 +38,11 @@ export function detectDependencies({ target, root, ignoredPaths, reader, probe }
     npm: mainManifest(root, MANIFESTS.npm.file, reader),
     composer: mainManifest(root, MANIFESTS.composer.file, reader),
   };
-  const manifests = [...new Set([...below, ...[main.npm, main.composer].filter((file): file is string => file !== null)])].sort();
+  const found = [...new Set([...below, ...[main.npm, main.composer].filter((file): file is string => file !== null)])].sort();
+  // Un anidado que es copia de libreria trae las dependencias de esa libreria, no las del proyecto.
+  const isCopy = (manifest: string) => manifest !== main.npm && manifest !== main.composer && copiedLibraryManifest(manifest, reader);
+  const manifests = found.filter((manifest) => !isCopy(manifest));
+  const vendoredManifests = found.filter(isCopy);
 
   // Llave null = "no hay principal" de ese tipo: get(null) no encuentra nada.
   const parsed = new Map<string | null, ParsedManifest>();
@@ -59,10 +65,25 @@ export function detectDependencies({ target, root, ignoredPaths, reader, probe }
   return {
     root,
     manifests,
+    vendoredManifests,
     runtimes: detectRuntimes(declarations, runtimeKinds(target, manifests), (kind) => probe.versionOf(kind)),
-    dependencies: [...parsed.values()].flatMap((manifest) => manifest.dependencies),
+    dependencies: [...[...parsed.values()].flatMap((manifest) => manifest.dependencies), ...detectVendoredLibraries({ root, ignoredPaths, reader })],
     skipped,
   };
+}
+
+// Un manifiesto ilegible no es copia: sigue su camino y termina en skipped.
+function copiedLibraryManifest(manifest: string, reader: SourceTreeReader): boolean {
+  const json = readJson(manifest, reader);
+  return json !== null && isLibraryCopy(path.basename(manifest), json);
+}
+
+function readJson(file: string, reader: SourceTreeReader): Record<string, unknown> | null {
+  try {
+    return JSON.parse(reader.readText(file));
+  } catch {
+    return null;
+  }
 }
 
 function isManifestName(name: string): boolean {

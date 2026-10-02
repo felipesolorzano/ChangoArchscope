@@ -90,7 +90,17 @@ describe("buildDependencyReport", () => {
       bySeverity: { critical: 0, high: 0, moderate: 0, low: 0, unknown: 0 },
       endOfLife: 0,
       unused: 0,
+      vendored: 0,
     });
+  });
+
+  it("las copiadas a mano llevan vendored y se cuentan en el resumen", () => {
+    const vendoredInventory = { ...inventory, dependencies: [{ ...dep("jquery", "1.7.1"), vendored: { files: 4 } }, dep("lib", "1.0.0")] };
+    const report = buildDependencyReport({ inventory: vendoredInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars: noCalendars, today: "", usage: noUsage });
+
+    expect(report.dependencies[0].vendored).toEqual({ files: 4 });
+    expect(report.dependencies[1].vendored).toBeUndefined();
+    expect(report.summary.vendored).toBe(1);
   });
 
   it("agrega uso (null si no se midio), grupo y cuenta los sin uso", () => {
