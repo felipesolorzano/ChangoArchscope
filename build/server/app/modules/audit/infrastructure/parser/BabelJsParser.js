@@ -36,6 +36,7 @@ export class BabelJsParser {
             linesCount: source.split("\n").length,
             classes: body.flatMap(topLevelClasses),
             functions: body.flatMap(topLevelFunctions),
+            exports: body.flatMap(exportsOf),
             ...facts,
         };
     }
@@ -211,6 +212,29 @@ function collectFileFacts(node, facts, scope) {
     const globalKind = globalAccessOf(node);
     if (globalKind !== null)
         facts.globalAccesses.push({ kind: globalKind, line: lineOf(node) });
+}
+// ---------- Exports (XRay X2) ----------
+function exportsOf(statement) {
+    const line = statement.loc.start.line;
+    const named = (names) => names.map((name) => ({ name, line }));
+    if (statement.type === "ExportDefaultDeclaration") {
+        return named(["default"]);
+    }
+    // `export * from "m"` no nombra nada (`export * as ns` llega como ExportNamedDeclaration).
+    // Solo valores: `export type …` / `export interface …` / `export type { X }` son contrato de tipos.
+    if (statement.type !== "ExportNamedDeclaration" || statement.exportKind === "type") {
+        return [];
+    }
+    const values = statement.specifiers.filter((specifier) => specifier.exportKind !== "type");
+    return named([...declaredNames(statement.declaration), ...values.map((specifier) => keyName(specifier.exported))]);
+}
+// Nombres que declara `export <declaracion>` (una desestructuracion no cuenta).
+function declaredNames(declaration) {
+    if (!isNode(declaration)) {
+        return [];
+    }
+    const ids = declaration.type === "VariableDeclaration" ? declaration.declarations.map((declarator) => declarator.id) : [declaration.id];
+    return ids.map(identifierName).filter((name) => name !== null);
 }
 function importOf(node) {
     if (node.type === "ImportDeclaration") {

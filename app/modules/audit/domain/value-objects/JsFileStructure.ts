@@ -25,6 +25,12 @@ export type JsImport = {
   line: number;
 };
 
+/** Nombre que el archivo exporta (XRay X2), con la linea de su sentencia. */
+export type JsExport = {
+  name: string;
+  line: number;
+};
+
 export type JsSecurityIssue = {
   rule: "dangerously-set-inner-html" | "eval-usage" | "new-function" | "inner-html-assignment";
   line: number;
@@ -47,6 +53,7 @@ export type JsFileStructure = {
   classes: JsClassStructure[];
   functions: JsFunctionStructure[];
   imports: JsImport[];
+  exports: JsExport[];
   securityIssues: JsSecurityIssue[];
   httpCalls: JsHttpCall[];
   globalAccesses: JsGlobalAccess[];

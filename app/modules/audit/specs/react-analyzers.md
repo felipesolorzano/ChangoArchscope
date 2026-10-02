@@ -99,7 +99,19 @@ Por clase:
 | `manual-copy-file` | nombre (sin la extension) que TERMINA con una marca de copia manual: ` - copia`, ` - copy`, ` copy`, ` copy N`, `_copia`, `_copy`, `_old`, `.devel`, `.bak` (con o sin ` (N)`); sin distinguir mayusculas | low |
 
 `line: 1`, `class: null`, `details: { name: basename }`. Un archivo que se importa a si mismo no
-cuenta como importado. Mensajes con "Verificar antes de eliminar" (heuristico: no ve imports por
+cuenta como importado.
+
+`jsDeadCodeAnalyzer(files, testFiles = [])`; `testFiles` solo cuenta como uso de exports (no evita
+`possibly-unused-file`, igual que antes).
+
+`unused-export` (XRay X2, low): un export (`exports`) que ningun OTRO archivo escaneado usa, en un
+archivo que si se importa (si nadie lo importa ya sale `possibly-unused-file`) y que no es entry
+point. Un export se usa si otro archivo (o un archivo de test de `testRoots`: un helper exportado
+para testearlo esta en uso) tiene un import que resuelve a este archivo
+(`resolveJsImport`) con ese nombre en `names`, con `"*"` (namespace o `export *`), o con `names`
+vacio (`require`, `import()` o import de efecto: no se sabe que nombres usa). `line` = la del export,
+`details: { name: basename, export: <nombre> }`, mensaje
+`"<nombre>" se exporta pero ningun archivo lo importa. Verificar antes de eliminar.` Mensajes con "Verificar antes de eliminar" (heuristico: no ve imports por
 alias, rutas dinamicas ni archivos fuera del escaneo).
 
 ## `security` — `jsSecurityAnalyzer(files)`

@@ -11,6 +11,7 @@ export function jsFile(file: string, overrides: Partial<JsFileStructure> = {}): 
     classes: [],
     functions: [],
     imports: [],
+    exports: [],
     securityIssues: [],
     httpCalls: [],
     globalAccesses: [],

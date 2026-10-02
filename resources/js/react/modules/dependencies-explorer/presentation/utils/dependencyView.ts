@@ -218,7 +218,7 @@ export function versionText(dependency: DependencyEntry): string {
 }
 
 // Ultima version conocida de cada linea (para elegir un runtime sin teclearlo).
-export const RUNTIME_LINES: Record<RuntimeKind, string[]> = {
+const RUNTIME_LINES: Record<RuntimeKind, string[]> = {
   php: ["5.6.40", "7.0.33", "7.1.33", "7.2.34", "7.3.33", "7.4.33", "8.0.30", "8.1.33", "8.2.29", "8.3.26", "8.4.13"],
   node: ["12.22.12", "14.21.3", "16.20.2", "18.20.8", "20.19.5", "22.20.0", "24.9.0"],
   npm: ["6.14.18", "7.24.2", "8.19.4", "9.9.4", "10.9.3", "11.6.1"],

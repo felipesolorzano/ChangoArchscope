@@ -12,6 +12,22 @@ function counts(byRule: Record<string, number>, severity = "high"): PlanSignals[
   return Object.fromEntries(Object.entries(byRule).map(([rule, count]) => [rule, { [severity]: count }]));
 }
 
+describe("generatePlan: exports sin uso (XRay X2)", () => {
+  it("remove-unused-exports cuenta unused-export, va despues de remove-unused-files y depende de ella", () => {
+    const plan = generatePlan(signals({ findingCounts: counts({ "unused-export": 40, "possibly-unused-file": 2 }) }));
+    const keys = plan.map((task) => task.key);
+
+    expect(keys.indexOf("remove-unused-exports")).toBe(keys.indexOf("remove-unused-files") + 1);
+    expect(plan.find((task) => task.key === "remove-unused-exports")).toMatchObject({
+      title: "Eliminar exports sin uso",
+      category: "debt",
+      metric: 40,
+      dependsOn: ["remove-unused-files"],
+    });
+    expect(plan.find((task) => task.key === "remove-unused-exports")?.description).not.toBe("");
+  });
+});
+
 describe("generatePlan: ciclos de dependencias (XRay X1)", () => {
   it("break-import-cycles cuenta import-cycle, va despues de remove-unused-files y espera a los tests", () => {
     const plan = generatePlan(signals({ findingCounts: counts({ "import-cycle": 3, "possibly-unused-file": 1, "untested-component": 2, "untested-complex-method": 1 }) }));

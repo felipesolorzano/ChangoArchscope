@@ -16,7 +16,7 @@ estado), Migracion/Diseño (bounded contexts).
 |---|---|---|
 | **X1 Ciclos y salud de arquitectura** | Ciclos de imports (SCC) y KPIs del grafo (imports entre modulos, pares de modulos, archivos mas importados / que mas importan) en `/graph.json`; ciclos en el check → hallazgos `import-cycle` en Auditoria → tarea `break-import-cycles` en Plan; panel "Salud" en Arquitectura. Spec: `app/modules/architecture/specs/architecture-health.md` | Completa |
 | **X1b Grafo de includes PHP** | Resolver `include`/`require` del PHP legacy (rutas literales, relativas y con constantes declaradas en la config: `_PRIVATE_DIR`, `_COMPUMATIC_DIR`...) para que mc tenga grafo, ciclos y hubs. Spec: `app/modules/architecture/specs/php-includes.md` | Completa |
-| **X2 Exports muertos** | Exports que nadie importa (estilo Knip) | Pendiente |
+| **X2 Exports muertos** | Exports que nadie importa (estilo Knip) en JS/TS: el parser registra `exports`, regla `unused-export` en Auditoria (dead_code), tarea `remove-unused-exports` en Plan. Specs: `js-source-parser.md`, `react-analyzers.md`, `plan-tasks.md` | Completa |
 | **X3 Linea base de proteccion** | Leer reportes que el proyecto ya genera (coverage, Stryker, Playwright) → KPI "Legacy Protection" | Pendiente |
 | **X4 Objetivos de caracterizacion** | Ranking de componentes/flujos a proteger (riesgo × sin tests × uso) + esqueletos MSW/RTL/Playwright descargables | Pendiente |
 | **X5 Candidatos a codemod** | Patrones AST (lifecycles deprecated, imports de librerias deprecated, jQuery) con archivos afectados y tests que los cubren | Pendiente |
@@ -48,4 +48,16 @@ estado), Migracion/Diseño (bounded contexts).
   `_global/lib/main.lib.inc` (19), `_global/services/_config.lib.inc` (17), `menu.php` duplicado en
   admin y provider. 20 includes entre apps (4 pares).
 - Rendimiento: el lexer salta entre cambios de estado (archivos de >1 MB); grafo de mc ~2 s.
+
+### X2 — validacion
+
+- Criterio (como Knip): los tests cuentan como uso de un export (un helper exportado para testearlo
+  esta en uso) pero no salvan un archivo; solo valores (tipos/interfaces son contrato).
+- Front de ChangoArchscope: sin esos dos criterios daba 39 falsos positivos; con ellos, 2 reales que
+  se corrigieron (`RUNTIME_LINES` exportado sin uso; `export type { X }` que el parser tomaba como
+  valor). Auto-auditoria en 0.
+- brandsites: 2 exports muertos reales en `component.form.validator.js` (un `export default` vacio y
+  `validateOtherField`); el legacy usa sobre todo `export default` de componentes que si se importan.
+  Plan: `remove-unused-exports` despues de `remove-unused-files` (39).
+- Solo JS/TS: el PHP legacy no exporta (funciones/clases sin uso es otra regla).
 

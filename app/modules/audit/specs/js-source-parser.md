@@ -31,6 +31,7 @@ nivel, codigo muerto, seguridad, datos/API, testing). Es el equivalente de `PhpS
   classes: JsClassStructure[];        // clases de nivel superior (incluye export / export default)
   functions: JsFunctionStructure[];   // funciones de nivel superior (ver abajo)
   imports: JsImport[];
+  exports: JsExport[];                // XRay X2
   securityIssues: JsSecurityIssue[];
   httpCalls: JsHttpCall[];
   globalAccesses: JsGlobalAccess[];
@@ -72,6 +73,18 @@ nivel, codigo muerto, seguridad, datos/API, testing). Es el equivalente de `PhpS
   en el lugar de cada expresion (`"./config.${}"`), `names: []`: un import dinamico que los
   analizadores resuelven como patron. Cualquier otro argumento no cuenta.
 - `export … from "m"` tambien cuenta como import de `m` (`names` = nombres reexportados).
+
+### Exports (`JsExport`, XRay X2)
+
+`{ name, line }`, un elemento por nombre que el archivo exporta, con la linea de la sentencia:
+
+- `export default …` → `"default"`.
+- `export function f`, `export class C`, `export const a = 1, b = 2` (solo identificadores; una
+  desestructuracion no cuenta) y en TS `export enum E`. Solo valores: `export type`,
+  `export interface`, `export type { X }` y los especificadores `export { type X }` no cuentan (son
+  contrato de tipos).
+- `export { a, b as c }` → `"a"`, `"c"` (el nombre exportado); `export { x as y } from "m"` → `"y"`;
+  `export * as ns from "m"` → `"ns"`. `export * from "m"` no agrega nombres.
 
 ### Seguridad (`JsSecurityIssue`)
 

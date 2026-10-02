@@ -81,6 +81,13 @@ const TEMPLATES = [
         dependsOn: ["remove-manual-copies"],
     }),
     ruleTemplate({
+        key: "remove-unused-exports",
+        title: "Eliminar exports sin uso",
+        description: "Quitar funciones, componentes y constantes exportadas que ningun archivo importa.",
+        category: "debt",
+        dependsOn: ["remove-unused-files"],
+    }),
+    ruleTemplate({
         key: "break-import-cycles",
         title: "Romper ciclos de dependencias",
         description: "Cortar cada ciclo de imports extrayendo lo compartido o invirtiendo la dependencia con un contrato.",

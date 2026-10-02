@@ -7,6 +7,7 @@ export const TASK_RULES = {
     "remove-manual-copies": [{ rule: "manual-copy-file" }],
     "remove-unused-files": [{ rule: "possibly-unused-file" }],
     "break-import-cycles": [{ rule: "import-cycle" }],
+    "remove-unused-exports": [{ rule: "unused-export" }],
     "add-characterization-tests": [{ rule: "untested-complex-method" }],
     "add-component-tests": [{ rule: "untested-component", severities: ["high"] }],
     "reduce-n-plus-one": [{ rule: "n-plus-one-query" }],

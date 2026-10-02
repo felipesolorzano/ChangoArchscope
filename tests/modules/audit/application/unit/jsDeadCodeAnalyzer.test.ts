@@ -109,4 +109,48 @@ describe("jsDeadCodeAnalyzer — manual-copy-file", () => {
 
     expect(findings.map((finding) => finding.rule)).toEqual(["possibly-unused-file", "manual-copy-file"]);
   });
+
+  it("unused-export: exports que ningun otro archivo usa, en archivos importados que no son entry point", () => {
+    const named = (source: string, ...names: string[]) => ({ source, names, line: 1 });
+    const exports = (...names: string[]) => names.map((name, index) => ({ name, line: index + 10 }));
+    const files = [
+      jsFile("/src/index.js", { imports: [named("./a", "default", "used"), named("./b", "*"), named("./c"), named("./d", "x")], exports: exports("boot") }),
+      jsFile("/src/a.js", { exports: exports("default", "used", "orphan"), imports: [named("./a", "orphan")] }),
+      jsFile("/src/b.js", { exports: exports("anything") }),
+      jsFile("/src/c.js", { exports: exports("viaRequire") }),
+      jsFile("/src/d.js", { exports: exports("x", "y") }),
+      jsFile("/src/lonely.js", { exports: exports("nobody") }),
+    ];
+
+    const findings = jsDeadCodeAnalyzer(files).filter((finding) => finding.rule === "unused-export");
+
+    expect(findings).toEqual([
+      {
+        category: "dead_code",
+        rule: "unused-export",
+        severity: "low",
+        source: "native",
+        module: "",
+        class: null,
+        file: "/src/a.js",
+        line: 12,
+        message: '"orphan" se exporta pero ningun archivo lo importa. Verificar antes de eliminar.',
+        details: { name: "a.js", export: "orphan" },
+      },
+      expect.objectContaining({ file: "/src/d.js", line: 11, details: { name: "d.js", export: "y" } }),
+    ]);
+  });
+
+  it("unused-export: un test que importa el export lo cuenta como usado, pero no salva un archivo sin uso", () => {
+    const named = (source: string, ...names: string[]) => ({ source, names, line: 1 });
+    const files = [
+      jsFile("/src/index.js", { imports: [named("./a", "default")] }),
+      jsFile("/src/a.js", { exports: [{ name: "default", line: 1 }, { name: "forTests", line: 2 }] }),
+      jsFile("/src/orphan.js", { exports: [{ name: "x", line: 1 }] }),
+    ];
+    const tests = [jsFile("/tests/a.test.js", { imports: [named("../src/a", "forTests"), named("../src/orphan", "x")] })];
+
+    expect(jsDeadCodeAnalyzer(files, tests).map((finding) => `${finding.rule}:${finding.file}`)).toEqual(["possibly-unused-file:/src/orphan.js"]);
+    expect(jsDeadCodeAnalyzer(files).map((finding) => `${finding.rule}:${finding.file}`)).toEqual(["unused-export:/src/a.js", "possibly-unused-file:/src/orphan.js"]);
+  });
 });

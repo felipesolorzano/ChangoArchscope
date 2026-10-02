@@ -35,7 +35,7 @@ export function auditProject(input) {
     const jsFindings = [
         ...jsComplexityAnalyzer(jsScan.files),
         ...jsCouplingAnalyzer(jsScan.files),
-        ...jsDeadCodeAnalyzer(jsScan.files),
+        ...jsDeadCodeAnalyzer(jsScan.files, testFiles),
         ...jsSecurityAnalyzer(jsScan.files),
         ...jsApiAnalyzer(jsScan.files),
         ...jsTestingAnalyzer([...jsScan.files, ...testFiles]).filter((finding) => !testFiles.some((file) => file.file === finding.file)),

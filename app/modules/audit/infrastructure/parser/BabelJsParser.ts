@@ -5,6 +5,7 @@ import { parse, type ParserPlugin } from "@babel/parser";
 import type { JsSourceParser } from "../../domain/repositories/JsSourceParser.js";
 import type {
   JsClassStructure,
+  JsExport,
   JsFileStructure,
   JsFunctionKind,
   JsFunctionStructure,
@@ -66,6 +67,7 @@ export class BabelJsParser implements JsSourceParser {
       linesCount: source.split("\n").length,
       classes: body.flatMap(topLevelClasses),
       functions: body.flatMap(topLevelFunctions),
+      exports: body.flatMap(exportsOf),
       ...facts,
     };
   }
@@ -268,6 +270,33 @@ function collectFileFacts(node: AstNode, facts: FileFacts, scope: AstNode): void
 
   const globalKind = globalAccessOf(node);
   if (globalKind !== null) facts.globalAccesses.push({ kind: globalKind, line: lineOf(node) });
+}
+
+// ---------- Exports (XRay X2) ----------
+
+function exportsOf(statement: AstNode): JsExport[] {
+  const line = statement.loc.start.line;
+  const named = (names: string[]) => names.map((name) => ({ name, line }));
+
+  if (statement.type === "ExportDefaultDeclaration") {
+    return named(["default"]);
+  }
+  // `export * from "m"` no nombra nada (`export * as ns` llega como ExportNamedDeclaration).
+  // Solo valores: `export type …` / `export interface …` / `export type { X }` son contrato de tipos.
+  if (statement.type !== "ExportNamedDeclaration" || statement.exportKind === "type") {
+    return [];
+  }
+  const values = (statement.specifiers as AstNode[]).filter((specifier) => specifier.exportKind !== "type");
+  return named([...declaredNames(statement.declaration), ...values.map((specifier) => keyName(specifier.exported as AstNode))]);
+}
+
+// Nombres que declara `export <declaracion>` (una desestructuracion no cuenta).
+function declaredNames(declaration: unknown): string[] {
+  if (!isNode(declaration)) {
+    return [];
+  }
+  const ids = declaration.type === "VariableDeclaration" ? (declaration.declarations as AstNode[]).map((declarator) => declarator.id) : [declaration.id];
+  return ids.map(identifierName).filter((name): name is string => name !== null);
 }
 
 function importOf(node: AstNode): JsImport | null {

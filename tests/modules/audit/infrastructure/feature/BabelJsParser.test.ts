@@ -20,10 +20,57 @@ describe("BabelJsParser — archivo", () => {
       classes: [],
       functions: [],
       imports: [],
+      exports: [],
       securityIssues: [],
       httpCalls: [],
       globalAccesses: [],
     });
+  });
+
+  it("registra los nombres exportados con la linea de su sentencia (XRay X2)", () => {
+    const source = `export default function App() {}
+export function helper() {}
+export class Store {}
+export const a = 1, b = 2;
+export const { c } = obj;
+const d = 3, e = 4;
+export { d, e as renamed };
+export { x as y } from "./m";
+export * as ns from "./n";
+export * from "./o";
+export let f;
+`;
+
+    expect(parse(source).exports).toEqual([
+      { name: "default", line: 1 },
+      { name: "helper", line: 2 },
+      { name: "Store", line: 3 },
+      { name: "a", line: 4 },
+      { name: "b", line: 4 },
+      { name: "d", line: 7 },
+      { name: "renamed", line: 7 },
+      { name: "y", line: 8 },
+      { name: "ns", line: 9 },
+      { name: "f", line: 11 },
+    ]);
+  });
+
+  it("en TypeScript solo valores: enums si, tipos e interfaces no; export default de expresion es default", () => {
+    const source = `export type Id = string;
+export interface User { id: Id }
+export enum Kind { A }
+export default 42;
+type Local = number;
+const v = 1;
+export { type Local, v };
+export type { Local as Alias };
+`;
+
+    expect(parse(source, "/src/a.ts").exports).toEqual([
+      { name: "Kind", line: 3 },
+      { name: "default", line: 4 },
+      { name: "v", line: 7 },
+    ]);
   });
 
   it("lanza ante un error de sintaxis", () => {
