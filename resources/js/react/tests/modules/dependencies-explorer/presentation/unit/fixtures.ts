@@ -1,4 +1,13 @@
-import type { DependencyEntry } from "../../../../../modules/dependencies-explorer/domain/value-objects/DependencyReport";
+import type { DependencyEntry, Vulnerability } from "../../../../../modules/dependencies-explorer/domain/value-objects/DependencyReport";
+
+export const vuln = (overrides: Partial<Vulnerability> = {}): Vulnerability => ({
+  id: "GHSA-1",
+  cve: "CVE-2020-1",
+  summary: "XSS",
+  severity: "high",
+  fixedIn: "2.0.0",
+  ...overrides,
+});
 
 export const entry = (overrides: Partial<DependencyEntry> = {}): DependencyEntry => ({
   ecosystem: "npm",
@@ -20,5 +29,8 @@ export const entry = (overrides: Partial<DependencyEntry> = {}): DependencyEntry
   fetchedAt: "2026-10-02T00:00:00.000Z",
   lookupError: null,
   stale: false,
+  security: { vulnerabilities: [], maxSeverity: null, recommendedAffected: false },
+  advisoryError: null,
+  support: null,
   ...overrides,
 });

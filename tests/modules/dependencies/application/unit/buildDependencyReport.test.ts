@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildDependencyReport } from "../../../../../app/modules/dependencies/application/use-cases/buildDependencyReport.js";
 import type { PackageLookup } from "../../../../../app/modules/dependencies/application/use-cases/resolvePackageInfos.js";
+import type { Lookup } from "../../../../../app/modules/dependencies/application/use-cases/resolveCachedLookups.js";
+import type { Advisory, SupportCycle } from "../../../../../app/modules/dependencies/domain/value-objects/Security.js";
 import type { DeclaredDependency, DependencyInventory, PackageInfo } from "../../../../../app/modules/dependencies/domain/value-objects/Dependency.js";
 
 const dep = (name: string, installed: string): DeclaredDependency => ({ ecosystem: "npm", name, constraint: "^1.0.0", installed, dev: false, manifest: "/p/package.json" });
@@ -34,7 +36,13 @@ const lookups = new Map<string, PackageLookup>([
   ["npm:broken", { info: lib, fetchedAt: "2026-09-01T00:00:00.000Z", error: "timeout", stale: true }],
 ]);
 
-const build = (requested = {}) => buildDependencyReport({ inventory, lookups, requested, generatedAt: "2026-10-02T12:00:00.000Z" });
+const noAdvisories = new Map<string, Lookup<Advisory[]>>();
+const noCalendars = new Map<string, Lookup<SupportCycle[] | null>>();
+
+const build = (requested = {}, advisories = noAdvisories, calendars = noCalendars) =>
+  buildDependencyReport({ inventory, lookups, requested, generatedAt: "2026-10-02T12:00:00.000Z", advisories, calendars, today: "2026-10-02" });
+
+const lookup = <T,>(value: T, error: string | null = null): Lookup<T> => ({ value, fetchedAt: "2026-10-02T00:00:00.000Z", error, stale: false });
 
 describe("buildDependencyReport", () => {
   it("usa el runtime detectado por default y clasifica con el", () => {
@@ -42,8 +50,8 @@ describe("buildDependencyReport", () => {
 
     expect(report).toMatchObject({ generatedAt: "2026-10-02T12:00:00.000Z", root: "/p/src", manifests: ["/p/package.json"], skipped: inventory.skipped });
     expect(report.runtimes).toEqual([
-      { kind: "node", version: "16.0.0", source: "local", selected: "16.0.0" },
-      { kind: "npm", version: null, source: "desconocido", selected: null },
+      { kind: "node", version: "16.0.0", source: "local", selected: "16.0.0", support: null, cycles: [] },
+      { kind: "npm", version: null, source: "desconocido", selected: null, support: null, cycles: [] },
     ]);
     expect(report.dependencies[0]).toMatchObject({ name: "lib", recommended: "2.0.0", status: "major", limitedByRuntime: true, fetchedAt: "2026-10-02T00:00:00.000Z", lookupError: null, stale: false });
   });
@@ -74,6 +82,66 @@ describe("buildDependencyReport", () => {
       byStatus: { up_to_date: 0, patch: 0, minor: 0, major: 2, deprecated: 0, abandoned: 0, unknown: 2 },
       limitedByRuntime: 2,
       lookupErrors: 3,
+      vulnerable: 0,
+      bySeverity: { critical: 0, high: 0, moderate: 0, low: 0, unknown: 0 },
+      endOfLife: 0,
     });
+  });
+
+  it("agrega vulnerabilidades por paquete, el error de la consulta y el resumen por severidad", () => {
+    const advisories = new Map([
+      ["npm:lib", lookup<Advisory[]>([{ id: "GHSA-1", aliases: ["CVE-1"], summary: "x", severity: "high", ranges: [{ introduced: "0.0.0", fixed: "1.5.0", lastAffected: null }], versions: [] }])],
+      ["npm:broken", lookup<Advisory[]>([{ id: "GHSA-2", aliases: [], summary: "y", severity: "critical", ranges: [{ introduced: "0.0.0", fixed: null, lastAffected: null }], versions: [] }], "osv caido")],
+      ["npm:ghost", lookup<Advisory[]>(null as unknown as Advisory[], "timeout")],
+    ]);
+
+    const report = build({}, advisories);
+    const [lib, ghost, broken, unlisted] = report.dependencies;
+
+    expect(lib.security).toEqual({ vulnerabilities: [{ id: "GHSA-1", cve: "CVE-1", summary: "x", severity: "high", fixedIn: "1.5.0" }], maxSeverity: "high", recommendedAffected: false });
+    expect(lib.advisoryError).toBeNull();
+    expect(broken.security).toMatchObject({ maxSeverity: "critical", recommendedAffected: true });
+    expect(broken.advisoryError).toBe("osv caido");
+    expect(ghost.security).toEqual({ vulnerabilities: [], maxSeverity: null, recommendedAffected: false });
+    expect(ghost.advisoryError).toBe("timeout");
+    expect(unlisted.security.vulnerabilities).toEqual([]);
+    expect(unlisted.advisoryError).toBeNull();
+    expect(report.summary).toMatchObject({ vulnerable: 2, bySeverity: { critical: 1, high: 1, moderate: 0, low: 0, unknown: 0 } });
+  });
+
+  it("soporte de paquetes reconocidos y de runtimes, con sus ciclos", () => {
+    const reactInventory: DependencyInventory = {
+      ...inventory,
+      runtimes: [
+        { kind: "node", version: "16.0.0", source: "local" },
+        { kind: "npm", version: "10.0.0", source: "local" },
+      ],
+      dependencies: [{ ...dep("react", "16.14.0"), name: "react" }, dep("lib", "1.0.0")],
+    };
+    const calendars = new Map<string, Lookup<SupportCycle[] | null>>([
+      ["nodejs", lookup<SupportCycle[] | null>([
+        { cycle: "22", latest: "22.20.0", releaseDate: null, eol: "2027-04-30", support: null },
+        { cycle: "16", latest: "16.20.2", releaseDate: null, eol: "2023-09-11", support: null },
+      ])],
+      ["react", lookup<SupportCycle[] | null>([{ cycle: "16", latest: "16.14.0", releaseDate: null, eol: true, support: null }])],
+    ]);
+
+    const report = buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars, today: "2026-10-02" });
+
+    expect(report.runtimes[0]).toMatchObject({
+      kind: "node",
+      support: { product: "nodejs", cycle: "16", eol: "2023-09-11", isEol: true, latestInCycle: "16.20.2" },
+      cycles: [
+        { cycle: "22", latest: "22.20.0", eol: "2027-04-30", isEol: false },
+        { cycle: "16", latest: "16.20.2", eol: "2023-09-11", isEol: true },
+      ],
+    });
+    expect(report.runtimes[1]).toMatchObject({ kind: "npm", support: null, cycles: [] });
+    expect(report.dependencies[0].support).toEqual({ product: "react", cycle: "16", eol: true, isEol: true, latestInCycle: "16.14.0" });
+    expect(report.dependencies[1].support).toBeNull();
+    expect(report.summary.endOfLife).toBe(1);
+
+    const unknownCalendar = new Map([["nodejs", lookup<SupportCycle[] | null>(null)]]);
+    expect(buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars: unknownCalendar, today: "2026-10-02" }).runtimes[0]).toMatchObject({ support: null, cycles: [] });
   });
 });

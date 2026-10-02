@@ -101,3 +101,45 @@ deprecated o abandonado y que tan viejo es lo instalado. Plan: `docs/dependencie
   el status.
 - Componentes renderizados (SSR): selector con opciones y valor, resumen con porcentaje/chips, lista
   agrupada con hint y antiguedad, drawer con link al registro, estados de carga/error.
+
+## F4: seguridad y soporte (UI)
+
+El reporte trae por paquete `security` (`vulnerabilities[{ id, cve, summary, severity, fixedIn }]`,
+`maxSeverity`, `recommendedAffected`), `advisoryError` y `support` (`{ product, cycle, eol, isEol,
+latestInCycle }` o `null`); por runtime `support` y `cycles[{ cycle, latest, eol, isEol }]`; y en el
+resumen `vulnerable`, `bySeverity` y `endOfLife`
+(ver `app/modules/dependencies/specs/security-and-support.md`).
+
+### Helpers (`dependencyView.ts`)
+
+- `severityLabel(severity)`: Critica, Alta, Moderada, Baja, Desconocida.
+  `severityColor`: critical `#991b1b`, high `#dc2626`, moderate `#ea580c`, low `#ca8a04`,
+  unknown `#64748b`.
+- `securityBadge(dep)`: `""` sin vulnerabilidades; si no `"<n> vuln · <severidad max>"` (`"vulns"` si
+  `n > 1`).
+- `supportLabel(support)`: `""` si `null`; vencido: `"sin soporte desde <eol>"` (eol fecha) o
+  `"sin soporte"`; vigente: `"soporte hasta <eol>"` (fecha) o `"con soporte"`.
+- `upgradeHint`: despues de "Sin datos del registro" y antes de todo lo demas, si hay
+  vulnerabilidades: `"Vulnerable (<severidad max>): ninguna version compatible corrige todo"` si
+  `recommendedAffected`; si no, `"Vulnerable (<severidad max>): actualizar a <recommended>"` (o
+  `"Vulnerable (<severidad max>): <siguiente paso>"` si no hay `recommended`, con el texto que
+  daria el resto de las reglas).
+- `runtimeOptions(runtime)`: si `runtime.cycles` no esta vacio, despues de la detectada van hasta 12
+  ciclos (en el orden recibido, del mas nuevo al mas viejo) con `latest`, sin repetir la detectada:
+  `{ value: latest, label: "<Kind> <cycle> (<latest>) · <supportLabel del ciclo>" }`; si no hay
+  ciclos, las lineas fijas de siempre (`RUNTIME_LINES`).
+- `filterDependencies` acepta `onlyVulnerable`: deja solo los que tienen vulnerabilidades.
+
+### Vista
+
+- Store: `onlyVulnerable` (default `false`) y `toggleVulnerable()`.
+- Resumen: si `vulnerable > 0`, chip "Vulnerables <n>" (activo con `onlyVulnerable`) antes de los de
+  estado; nota `"<n> fuera de soporte"` si `endOfLife > 0`.
+- Selector de runtime: debajo de cada select, `"<Kind> <cycle>: <supportLabel>"` del `support` del
+  runtime (clase de alerta si `isEol`); nada si no hay `support`.
+- Fila: badge `securityBadge` con el color de la severidad maxima y etiqueta `"sin soporte"` si
+  `support.isEol`.
+- Drawer: fila "Soporte" (`"<product> <cycle> · <supportLabel>"`) si hay `support`; seccion
+  "Vulnerabilidades" con una entrada por vulnerabilidad (`cve` o `id`, severidad, `summary`,
+  `"corregida en <fixedIn>"` o `"sin version corregida"`, link `https://osv.dev/vulnerability/<id>`);
+  `advisoryError` como `"OSV: <error>"`.

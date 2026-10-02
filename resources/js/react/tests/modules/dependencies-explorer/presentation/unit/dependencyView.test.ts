@@ -8,6 +8,10 @@ import {
   groupByStatus,
   manifestLabel,
   runtimeKindLabel,
+  securityBadge,
+  severityColor,
+  severityLabel,
+  supportLabel,
   runtimeOptions,
   statusColor,
   statusLabel,
@@ -15,7 +19,7 @@ import {
   upgradeHint,
   versionText,
 } from "../../../../../modules/dependencies-explorer/presentation/utils/dependencyView";
-import { entry } from "./fixtures";
+import { entry, vuln } from "./fixtures";
 
 describe("estados", () => {
   it("orden de lo mas urgente a lo sano, con etiqueta y color", () => {
@@ -31,7 +35,7 @@ describe("estados", () => {
 
 describe("filterDependencies", () => {
   const deps = [entry({ name: "React", status: "major" }), entry({ name: "jest", dev: true, status: "major" }), entry({ name: "lodash" })];
-  const all = { status: "all" as const, query: "", hideDev: false };
+  const all = { status: "all" as const, query: "", hideDev: false, onlyVulnerable: false };
 
   it("sin filtros devuelve todo", () => {
     expect(filterDependencies(deps, all)).toEqual(deps);
@@ -41,6 +45,12 @@ describe("filterDependencies", () => {
     expect(filterDependencies(deps, { ...all, status: "major" }).map((d) => d.name)).toEqual(["React", "jest"]);
     expect(filterDependencies(deps, { ...all, query: "  reAC " }).map((d) => d.name)).toEqual(["React"]);
     expect(filterDependencies(deps, { ...all, hideDev: true }).map((d) => d.name)).toEqual(["React", "lodash"]);
+  });
+
+  it("onlyVulnerable deja solo los que tienen vulnerabilidades", () => {
+    const vulnerable = entry({ name: "vite", security: { vulnerabilities: [vuln()], maxSeverity: "high", recommendedAffected: false } });
+
+    expect(filterDependencies([...deps, vulnerable], { ...all, onlyVulnerable: true }).map((d) => d.name)).toEqual(["vite"]);
   });
 });
 
@@ -85,7 +95,41 @@ describe("ageLabel", () => {
   });
 });
 
+describe("seguridad y soporte", () => {
+  it("etiqueta y color por severidad", () => {
+    const severities = ["critical", "high", "moderate", "low", "unknown"] as const;
+
+    expect(severities.map(severityLabel)).toEqual(["Critica", "Alta", "Moderada", "Baja", "Desconocida"]);
+    expect(severities.map(severityColor)).toEqual(["#991b1b", "#dc2626", "#ea580c", "#ca8a04", "#64748b"]);
+  });
+
+  it("securityBadge cuenta vulnerabilidades con la severidad maxima", () => {
+    expect(securityBadge(entry())).toBe("");
+    expect(securityBadge(entry({ security: { vulnerabilities: [vuln()], maxSeverity: "high", recommendedAffected: false } }))).toBe("1 vuln · Alta");
+    expect(securityBadge(entry({ security: { vulnerabilities: [vuln(), vuln()], maxSeverity: "critical", recommendedAffected: false } }))).toBe("2 vulns · Critica");
+  });
+
+  it("supportLabel: vencido o vigente, con fecha o booleano", () => {
+    const support = (eol: string | boolean, isEol: boolean) => ({ product: "php", cycle: "8.3", eol, isEol, latestInCycle: null });
+
+    expect(supportLabel(null)).toBe("");
+    expect(supportLabel(support("2025-04-30", true))).toBe("sin soporte desde 2025-04-30");
+    expect(supportLabel(support(true, true))).toBe("sin soporte");
+    expect(supportLabel(support("2027-12-31", false))).toBe("soporte hasta 2027-12-31");
+    expect(supportLabel(support(false, false))).toBe("con soporte");
+  });
+});
+
 describe("upgradeHint", () => {
+  it("las vulnerabilidades van primero (despues de la falta de datos)", () => {
+    const security = (recommendedAffected: boolean) => ({ vulnerabilities: [vuln()], maxSeverity: "high" as const, recommendedAffected });
+
+    expect(upgradeHint(entry({ status: "major", recommended: "6.4.3", security: security(false) }))).toBe("Vulnerable (Alta): actualizar a 6.4.3");
+    expect(upgradeHint(entry({ status: "patch", recommended: "3.2.7", security: security(true) }))).toBe("Vulnerable (Alta): ninguna version compatible corrige todo");
+    expect(upgradeHint(entry({ status: "abandoned", recommended: null, replacement: "x/y", security: security(false) }))).toBe("Vulnerable (Alta): Abandonado: reemplazar por x/y");
+    expect(upgradeHint(entry({ status: "unknown", lookupError: "timeout", security: security(false) }))).toBe("Sin datos del registro: timeout");
+  });
+
   it("prioriza falta de datos, abandonado y falta de version compatible", () => {
     expect(upgradeHint(entry({ status: "unknown", lookupError: "timeout" }))).toBe("Sin datos del registro: timeout");
     expect(upgradeHint(entry({ status: "abandoned", replacement: "phpoffice/phpspreadsheet" }))).toBe("Abandonado: reemplazar por phpoffice/phpspreadsheet");
@@ -116,9 +160,23 @@ describe("runtimeKindLabel", () => {
   });
 });
 
+describe("runtimeOptions con ciclos de endoflife.date", () => {
+  const cycles = Array.from({ length: 14 }, (_, index) => ({ cycle: String(26 - index), latest: `${26 - index}.1.0`, eol: index < 2 ? false : "2025-01-01", isEol: index >= 2 }));
+
+  it("detectada primero y hasta 12 ciclos con su soporte, sin repetir la detectada ni ciclos sin latest", () => {
+    const options = runtimeOptions({ kind: "node", version: "25.1.0", source: "local", selected: "25.1.0", support: null, cycles: [...cycles.slice(0, 1), { cycle: "99", latest: null, eol: false, isEol: false }, ...cycles.slice(1)] });
+
+    expect(options[0]).toEqual({ value: "25.1.0", label: "25.1.0 (detectado: local)" });
+    expect(options[1]).toEqual({ value: "26.1.0", label: "Node 26 (26.1.0) · con soporte" });
+    expect(options[2]).toEqual({ value: "24.1.0", label: "Node 24 (24.1.0) · sin soporte desde 2025-01-01" });
+    expect(options).toHaveLength(13);
+    expect(options.at(-1)?.value).toBe("14.1.0");
+  });
+});
+
 describe("runtimeOptions", () => {
   it("la detectada primero y despues las lineas conocidas sin repetirla", () => {
-    const options = runtimeOptions({ kind: "node", version: "20.19.5", source: "local", selected: "20.19.5" });
+    const options = runtimeOptions({ kind: "node", version: "20.19.5", source: "local", selected: "20.19.5", support: null, cycles: [] });
 
     expect(options[0]).toEqual({ value: "20.19.5", label: "20.19.5 (detectado: local)" });
     expect(options.slice(1).map((option) => option.label)).toEqual([
@@ -132,11 +190,11 @@ describe("runtimeOptions", () => {
   });
 
   it("php usa mayor.menor; sin detectada solo las lineas", () => {
-    const php = runtimeOptions({ kind: "php", version: null, source: "desconocido", selected: null });
+    const php = runtimeOptions({ kind: "php", version: null, source: "desconocido", selected: null, support: null, cycles: [] });
 
     expect(php[0]).toEqual({ value: "5.6.40", label: "PHP 5.6 (5.6.40)" });
     expect(php.map((option) => option.value)).toEqual(["5.6.40", "7.0.33", "7.1.33", "7.2.34", "7.3.33", "7.4.33", "8.0.30", "8.1.33", "8.2.29", "8.3.26", "8.4.13"]);
-    expect(runtimeOptions({ kind: "npm", version: "10.9.2", source: "local", selected: null }).map((option) => option.label)).toEqual([
+    expect(runtimeOptions({ kind: "npm", version: "10.9.2", source: "local", selected: null, support: null, cycles: [] }).map((option) => option.label)).toEqual([
       "10.9.2 (detectado: local)",
       "npm 6 (6.14.18)",
       "npm 7 (7.24.2)",
@@ -164,6 +222,9 @@ describe("upToDatePercent", () => {
       byStatus: { up_to_date: upToDate, patch: 0, minor: 0, major: 0, deprecated: 0, abandoned: 0, unknown: 0 },
       limitedByRuntime: 0,
       lookupErrors: 0,
+      vulnerable: 0,
+      bySeverity: { critical: 0, high: 0, moderate: 0, low: 0, unknown: 0 },
+      endOfLife: 0,
     });
 
     expect(upToDatePercent(summary(1, 3))).toBe(33);

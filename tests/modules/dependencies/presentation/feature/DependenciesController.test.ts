@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ArchitectureConfig } from "../../../../../app/modules/architecture/domain/value-objects/ArchitectureConfig.js";
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
+import type { AdvisoryDatabase } from "../../../../../app/modules/dependencies/application/contracts/AdvisoryDatabase.js";
+import type { LookupCache } from "../../../../../app/modules/dependencies/application/contracts/LookupCache.js";
+import type { SupportCalendar } from "../../../../../app/modules/dependencies/application/contracts/SupportCalendar.js";
 import type { PackageInfoCache } from "../../../../../app/modules/dependencies/application/contracts/PackageInfoCache.js";
 import type { PackageRegistry } from "../../../../../app/modules/dependencies/application/contracts/PackageRegistry.js";
 import type { PackageInfo } from "../../../../../app/modules/dependencies/domain/value-objects/Dependency.js";
@@ -33,6 +36,11 @@ const reader: SourceTreeReader = {
 
 const NOW = new Date("2026-10-02T12:00:00.000Z");
 
+function memoryLookupCache<T>(): LookupCache<T> {
+  const rows = new Map<string, { value: T; fetchedAt: string }>();
+  return { get: (key) => rows.get(key) ?? null, set: (key, value, fetchedAt) => void rows.set(key, { value, fetchedAt }) };
+}
+
 function controllerWith(overrides: Partial<DependenciesControllerDeps> = {}) {
   const registry: PackageRegistry = {
     fetch: vi.fn(async (ecosystem, name) => ({
@@ -45,11 +53,31 @@ function controllerWith(overrides: Partial<DependenciesControllerDeps> = {}) {
       ],
     })),
   };
+  const advisories: AdvisoryDatabase = {
+    fetch: vi.fn(async (_ecosystem, name) =>
+      name === "react" ? [{ id: "GHSA-r", aliases: ["CVE-9"], summary: "xss", severity: "high" as const, ranges: [{ introduced: "0.0.0", fixed: "18.5.0", lastAffected: null }], versions: [] }] : [],
+    ),
+  };
+  const calendar: SupportCalendar = {
+    fetch: vi.fn(async (product) => (product === "nodejs" ? [{ cycle: "16", latest: "16.20.2", releaseDate: null, eol: "2023-09-11", support: null }] : null)),
+  };
   const rows = new Map<string, { info: PackageInfo | null; fetchedAt: string }>();
   const cache: PackageInfoCache = { get: (e, n) => rows.get(`${e}:${n}`) ?? null, set: (e, n, info, fetchedAt) => void rows.set(`${e}:${n}`, { info, fetchedAt }) };
-  const deps: DependenciesControllerDeps = { getConfig: () => config, reader, probe: { versionOf: () => "16.0.0" }, registry, cache, now: () => NOW, ...overrides };
+  const deps: DependenciesControllerDeps = {
+    getConfig: () => config,
+    reader,
+    probe: { versionOf: () => "16.0.0" },
+    registry,
+    cache,
+    advisories,
+    advisoryCache: memoryLookupCache(),
+    calendar,
+    calendarCache: memoryLookupCache(),
+    now: () => NOW,
+    ...overrides,
+  };
 
-  return { controller: new DependenciesController(deps), registry };
+  return { controller: new DependenciesController(deps), registry, advisories, calendar };
 }
 
 async function respond(controller: DependenciesController, query: Record<string, unknown>) {
@@ -97,15 +125,31 @@ describe("DependenciesController", () => {
     expect((await respond(controller, { target: "react", node: ["20.0.0", "21.0.0"] })).body.runtimes[0]).toMatchObject({ kind: "node", selected: "16.0.0" });
   });
 
-  it("usa la cache entre llamadas y refresh=1 vuelve a consultar", async () => {
-    const { controller, registry } = controllerWith();
+  it("usa la cache entre llamadas y refresh=1 vuelve a consultar registro, OSV y calendario", async () => {
+    const { controller, registry, advisories, calendar } = controllerWith();
 
     await respond(controller, { target: "react" });
     await respond(controller, { target: "react", refresh: "0" });
     expect(registry.fetch).toHaveBeenCalledTimes(1);
+    expect(advisories.fetch).toHaveBeenCalledTimes(1);
+    expect(calendar.fetch).toHaveBeenCalledTimes(2);
 
     await respond(controller, { target: "react", refresh: "1" });
     expect(registry.fetch).toHaveBeenCalledTimes(2);
+    expect(advisories.fetch).toHaveBeenCalledTimes(2);
+    expect(calendar.fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("agrega vulnerabilidades y soporte: calendarios de runtimes y de paquetes reconocidos", async () => {
+    const { controller, calendar } = controllerWith();
+
+    const body = (await respond(controller, { target: "react" })).body;
+
+    expect(calendar.fetch).toHaveBeenCalledWith("nodejs");
+    expect(calendar.fetch).toHaveBeenCalledWith("react");
+    expect(body.dependencies[0].security).toMatchObject({ maxSeverity: "high", vulnerabilities: [{ id: "GHSA-r", cve: "CVE-9", fixedIn: "18.5.0" }] });
+    expect(body.runtimes[0]).toMatchObject({ kind: "node", support: { cycle: "16", isEol: true } });
+    expect(body.summary).toMatchObject({ vulnerable: 1, endOfLife: 0 });
   });
 
   it("la cache vence a las 24 h", async () => {

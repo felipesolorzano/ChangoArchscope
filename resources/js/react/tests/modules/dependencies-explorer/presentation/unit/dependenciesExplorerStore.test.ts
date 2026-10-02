@@ -10,7 +10,7 @@ beforeEach(() => {
 
 describe("dependenciesExplorerStore", () => {
   it("arranca sin runtime elegido, sin filtros y sin seleccion", () => {
-    expect(initialDependenciesExplorerState()).toEqual({ runtimes: {}, status: "all", query: "", hideDev: false, selected: null });
+    expect(initialDependenciesExplorerState()).toEqual({ runtimes: {}, status: "all", query: "", hideDev: false, onlyVulnerable: false, selected: null });
     expect(state()).toMatchObject(initialDependenciesExplorerState());
   });
 
@@ -31,6 +31,14 @@ describe("dependenciesExplorerStore", () => {
 
     state().toggleStatus("deprecated");
     expect(state().status).toBe("all");
+  });
+
+  it("toggleVulnerable prende y apaga el filtro de vulnerables", () => {
+    state().toggleVulnerable();
+    expect(state().onlyVulnerable).toBe(true);
+
+    state().toggleVulnerable();
+    expect(state().onlyVulnerable).toBe(false);
   });
 
   it("query, hideDev y select", () => {

@@ -1,6 +1,6 @@
 import type { SelectedRuntime } from "../../domain/value-objects/DependencyReport";
 import { useDependenciesExplorerStore } from "../store/dependenciesExplorerStore";
-import { runtimeKindLabel, runtimeOptions } from "../utils/dependencyView";
+import { runtimeKindLabel, runtimeOptions, supportLabel } from "../utils/dependencyView";
 
 // Version de PHP / Node / npm con la que se calcula la recomendada (default: la detectada).
 export function RuntimeSelector({ runtimes }: { runtimes: SelectedRuntime[] }) {
@@ -25,6 +25,11 @@ export function RuntimeSelector({ runtimes }: { runtimes: SelectedRuntime[] }) {
               </option>
             ))}
           </select>
+          {runtime.support && (
+            <span className={`deps-runtime__support${runtime.support.isEol ? " deps-runtime__support--eol" : ""}`}>
+              {`${runtimeKindLabel(runtime.kind)} ${runtime.support.cycle}: ${supportLabel(runtime.support)}`}
+            </span>
+          )}
         </label>
       ))}
     </div>

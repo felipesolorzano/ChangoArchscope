@@ -24,9 +24,10 @@
 .deps-explorer__actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 .deps-explorer__body { padding: 18px 24px 40px; display: flex; flex-direction: column; gap: 16px; }
 
-.deps-runtimes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
-.deps-runtimes__title { font-size: 13px; font-weight: 700; color: #cbd5e1; padding-bottom: 7px; }
-.deps-runtime { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+.deps-runtimes { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.deps-runtimes__title { font-size: 13px; font-weight: 700; color: #cbd5e1; padding-top: 26px; }
+.deps-runtime { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; }
+.deps-runtime__label { text-transform: uppercase; letter-spacing: 0.04em; }
 .deps-runtime__select, .deps-filters__search {
   background: #0f172a; color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px;
   padding: 6px 10px; font-size: 13px;
@@ -95,3 +96,18 @@
 .deps-drawer__fact dd { margin: 0; font-family: ui-monospace, monospace; text-align: right; word-break: break-all; }
 .deps-drawer__error { margin: 0; color: #fca5a5; font-size: 12px; }
 .deps-drawer__link { color: #93c5fd; font-size: 13px; }
+
+/* F4: seguridad y soporte */
+.deps-runtime__support { font-size: 11px; color: #86efac; }
+.deps-runtime__support--eol { color: #fca5a5; }
+.deps-chip--danger { border-color: #dc2626; color: #fecaca; }
+.deps-badge { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 999px; color: #fff; white-space: nowrap; }
+.deps-tag--eol { background: #7f1d1d; color: #fecaca; }
+.deps-vulns { display: flex; flex-direction: column; gap: 8px; }
+.deps-vulns__title { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #fca5a5; }
+.deps-vuln { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(127, 29, 29, 0.18); color: #e2e8f0; text-decoration: none; font-size: 12px; }
+.deps-vuln:hover { background: rgba(127, 29, 29, 0.32); }
+.deps-vuln__head { display: flex; justify-content: space-between; gap: 8px; }
+.deps-vuln__severity { font-weight: 800; }
+.deps-vuln__summary { color: #cbd5e1; }
+.deps-vuln__fix { color: #94a3b8; }

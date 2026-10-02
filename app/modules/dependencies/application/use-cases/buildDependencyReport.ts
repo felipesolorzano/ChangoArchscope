@@ -1,6 +1,10 @@
+import { assessSecurity } from "../../domain/services/advisoryMatching.js";
 import { classifyDependency } from "../../domain/services/classifyDependency.js";
+import { runtimeProduct, supportProductFor } from "../../domain/services/supportProducts.js";
+import { isPast, supportStatus } from "../../domain/services/supportStatus.js";
 import { normalizeVersion } from "../../domain/services/versioning.js";
 import type {
+  DeclaredDependency,
   DependencyInventory,
   DependencyReport,
   DependencyStatus,
@@ -8,11 +12,22 @@ import type {
   RuntimeKind,
   RuntimeSelection,
 } from "../../domain/value-objects/Dependency.js";
+import type { Advisory, SecurityAssessment, Severity, SupportCycle, SupportStatus } from "../../domain/value-objects/Security.js";
+import type { Lookup } from "./resolveCachedLookups.js";
 import { lookupKey, type PackageLookup } from "./resolvePackageInfos.js";
 
-export type SelectedRuntime = DetectedRuntime & { selected: string | null };
+export type RuntimeCycle = { cycle: string; latest: string | null; eol: string | boolean; isEol: boolean };
 
-export type DependencyReportEntry = DependencyReport & { fetchedAt: string | null; lookupError: string | null; stale: boolean };
+export type SelectedRuntime = DetectedRuntime & { selected: string | null; support: SupportStatus | null; cycles: RuntimeCycle[] };
+
+export type DependencyReportEntry = DependencyReport & {
+  fetchedAt: string | null;
+  lookupError: string | null;
+  stale: boolean;
+  security: SecurityAssessment;
+  advisoryError: string | null;
+  support: SupportStatus | null;
+};
 
 export type DependencyReportResult = {
   generatedAt: string;
@@ -21,7 +36,15 @@ export type DependencyReportResult = {
   skipped: DependencyInventory["skipped"];
   runtimes: SelectedRuntime[];
   dependencies: DependencyReportEntry[];
-  summary: { total: number; byStatus: Record<DependencyStatus, number>; limitedByRuntime: number; lookupErrors: number };
+  summary: {
+    total: number;
+    byStatus: Record<DependencyStatus, number>;
+    limitedByRuntime: number;
+    lookupErrors: number;
+    vulnerable: number;
+    bySeverity: Record<Severity, number>;
+    endOfLife: number;
+  };
 };
 
 export type BuildDependencyReportInput = {
@@ -29,41 +52,86 @@ export type BuildDependencyReportInput = {
   lookups: Map<string, PackageLookup>;
   requested: Partial<Record<RuntimeKind, string>>;
   generatedAt: string;
+  advisories: Map<string, Lookup<Advisory[]>>;
+  calendars: Map<string, Lookup<SupportCycle[] | null>>;
+  /** Fecha de hoy (YYYY-MM-DD) para decidir si un ciclo ya vencio. */
+  today: string;
 };
 
 const STATUSES: DependencyStatus[] = ["up_to_date", "patch", "minor", "major", "deprecated", "abandoned", "unknown"];
+const SEVERITIES: Severity[] = ["critical", "high", "moderate", "low", "unknown"];
 const NOT_FOUND = "no encontrado en el registro";
+const NO_LOOKUP = { info: null, fetchedAt: null, error: null, stale: false };
 
-// Reporte clasificado con el runtime elegido (o el detectado si no se pidio uno valido).
-export function buildDependencyReport({ inventory, lookups, requested, generatedAt }: BuildDependencyReportInput): DependencyReportResult {
-  const runtimes = inventory.runtimes.map((runtime) => ({ ...runtime, selected: selectedVersion(requested[runtime.kind]) ?? runtime.version }));
+// Reporte clasificado con el runtime elegido (o el detectado si no se pidio uno valido), con sus
+// vulnerabilidades y el soporte de runtimes y frameworks reconocidos.
+export function buildDependencyReport(input: BuildDependencyReportInput): DependencyReportResult {
+  const runtimes = input.inventory.runtimes.map((runtime) => selectedRuntime(runtime, input));
   const selection: RuntimeSelection = Object.fromEntries(
     runtimes.filter((runtime) => runtime.selected !== null).map((runtime) => [runtime.kind, runtime.selected]),
   );
-
-  const dependencies = inventory.dependencies.map((dependency): DependencyReportEntry => {
-    const lookup = lookups.get(lookupKey(dependency.ecosystem, dependency.name)) ?? { info: null, fetchedAt: null, error: null, stale: false };
-    return {
-      ...classifyDependency(dependency, lookup.info, selection),
-      fetchedAt: lookup.fetchedAt,
-      lookupError: lookup.error ?? (lookup.info === null ? NOT_FOUND : null),
-      stale: lookup.stale,
-    };
-  });
+  const dependencies = input.inventory.dependencies.map((dependency) => reportEntry(dependency, selection, input));
 
   return {
-    generatedAt,
-    root: inventory.root,
-    manifests: inventory.manifests,
-    skipped: inventory.skipped,
+    generatedAt: input.generatedAt,
+    root: input.inventory.root,
+    manifests: input.inventory.manifests,
+    skipped: input.inventory.skipped,
     runtimes,
     dependencies,
-    summary: {
-      total: dependencies.length,
-      byStatus: Object.fromEntries(STATUSES.map((status) => [status, dependencies.filter((entry) => entry.status === status).length])) as Record<DependencyStatus, number>,
-      limitedByRuntime: dependencies.filter((entry) => entry.limitedByRuntime).length,
-      lookupErrors: dependencies.filter((entry) => entry.lookupError !== null).length,
-    },
+    summary: summarize(dependencies),
+  };
+}
+
+function selectedRuntime(runtime: DetectedRuntime, { requested, calendars, today }: BuildDependencyReportInput): SelectedRuntime {
+  const selected = selectedVersion(requested[runtime.kind]) ?? runtime.version;
+  const product = runtimeProduct(runtime.kind);
+  const cycles = cyclesOf(product, calendars);
+
+  return {
+    ...runtime,
+    selected,
+    // Stryker disable next-line ConditionalExpression: sin producto no hay ciclos y supportStatus da null, mutante equivalente.
+    support: product === null ? null : supportStatus(product, selected, cycles, today),
+    cycles: cycles.map((cycle) => ({ cycle: cycle.cycle, latest: cycle.latest, eol: cycle.eol, isEol: isPast(cycle.eol, today) })),
+  };
+}
+
+function reportEntry(dependency: DeclaredDependency, selection: RuntimeSelection, { lookups, advisories, calendars, today }: BuildDependencyReportInput): DependencyReportEntry {
+  const key = lookupKey(dependency.ecosystem, dependency.name);
+  const lookup = lookups.get(key) ?? NO_LOOKUP;
+  const report = classifyDependency(dependency, lookup.info, selection);
+  const advisory = advisories.get(key);
+  const product = supportProductFor(dependency.ecosystem, dependency.name);
+
+  return {
+    ...report,
+    fetchedAt: lookup.fetchedAt,
+    lookupError: lookup.error ?? (lookup.info === null ? NOT_FOUND : null),
+    stale: lookup.stale,
+    security: assessSecurity(report.current, report.recommended, advisory?.value ?? []),
+    advisoryError: advisory?.error ?? null,
+    // Stryker disable next-line ConditionalExpression: sin producto no hay ciclos y supportStatus da null, mutante equivalente.
+    support: product === null ? null : supportStatus(product, report.current, cyclesOf(product, calendars), today),
+  };
+}
+
+function cyclesOf(product: string | null, calendars: BuildDependencyReportInput["calendars"]): SupportCycle[] {
+  // Stryker disable next-line ConditionalExpression: un producto null no esta en el mapa de calendarios, mutante equivalente.
+  return (product === null ? null : calendars.get(product)?.value) ?? [];
+}
+
+function summarize(dependencies: DependencyReportEntry[]): DependencyReportResult["summary"] {
+  const count = (predicate: (entry: DependencyReportEntry) => boolean) => dependencies.filter(predicate).length;
+
+  return {
+    total: dependencies.length,
+    byStatus: Object.fromEntries(STATUSES.map((status) => [status, count((entry) => entry.status === status)])) as Record<DependencyStatus, number>,
+    limitedByRuntime: count((entry) => entry.limitedByRuntime),
+    lookupErrors: count((entry) => entry.lookupError !== null),
+    vulnerable: count((entry) => entry.security.vulnerabilities.length > 0),
+    bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, count((entry) => entry.security.maxSeverity === severity)])) as Record<Severity, number>,
+    endOfLife: count((entry) => entry.support?.isEol === true),
   };
 }
 

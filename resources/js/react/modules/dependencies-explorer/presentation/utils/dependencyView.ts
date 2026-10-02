@@ -4,6 +4,8 @@ import type {
   DependencySummaryData,
   RuntimeKind,
   SelectedRuntime,
+  Severity,
+  SupportStatus,
 } from "../../domain/value-objects/DependencyReport";
 
 export const STATUS_ORDER: DependencyStatus[] = ["abandoned", "deprecated", "major", "minor", "patch", "unknown", "up_to_date"];
@@ -40,17 +42,50 @@ export function dependencyKey(dependency: Pick<DependencyEntry, "ecosystem" | "n
   return `${dependency.ecosystem}:${dependency.name}`;
 }
 
-export type DependencyFiltersState = { status: DependencyStatus | "all"; query: string; hideDev: boolean };
+export type DependencyFiltersState = { status: DependencyStatus | "all"; query: string; hideDev: boolean; onlyVulnerable: boolean };
 
-export function filterDependencies(dependencies: DependencyEntry[], { status, query, hideDev }: DependencyFiltersState): DependencyEntry[] {
+export function filterDependencies(dependencies: DependencyEntry[], { status, query, hideDev, onlyVulnerable }: DependencyFiltersState): DependencyEntry[] {
   const needle = query.trim().toLowerCase();
 
   return dependencies.filter(
     (dependency) =>
       (status === "all" || dependency.status === status) &&
       dependency.name.toLowerCase().includes(needle) &&
-      !(hideDev && dependency.dev),
+      !(hideDev && dependency.dev) &&
+      !(onlyVulnerable && dependency.security.vulnerabilities.length === 0),
   );
+}
+
+const SEVERITY_LABELS: Record<Severity, string> = { critical: "Critica", high: "Alta", moderate: "Moderada", low: "Baja", unknown: "Desconocida" };
+const SEVERITY_COLORS: Record<Severity, string> = { critical: "#991b1b", high: "#dc2626", moderate: "#ea580c", low: "#ca8a04", unknown: "#64748b" };
+
+export function severityLabel(severity: Severity): string {
+  return SEVERITY_LABELS[severity];
+}
+
+export function severityColor(severity: Severity): string {
+  return SEVERITY_COLORS[severity];
+}
+
+export function securityBadge(dependency: DependencyEntry): string {
+  const { vulnerabilities, maxSeverity } = dependency.security;
+
+  if (vulnerabilities.length === 0) {
+    return "";
+  }
+  return `${vulnerabilities.length} ${vulnerabilities.length === 1 ? "vuln" : "vulns"} · ${severityLabel(maxSeverity as Severity)}`;
+}
+
+export function supportLabel(support: Pick<SupportStatus, "eol" | "isEol"> | null): string {
+  if (support === null) {
+    return "";
+  }
+
+  const date = typeof support.eol === "string";
+  if (support.isEol) {
+    return date ? `sin soporte desde ${support.eol}` : "sin soporte";
+  }
+  return date ? `soporte hasta ${support.eol}` : "con soporte";
 }
 
 export function groupByStatus(dependencies: DependencyEntry[]): Array<{ status: DependencyStatus; items: DependencyEntry[] }> {
@@ -96,16 +131,28 @@ function plural(count: number, one: string, many: string): string {
 
 const VERSION_GAPS = new Set<DependencyStatus>(["patch", "minor", "major"]);
 
-// Siguiente paso concreto para el paquete, de lo mas bloqueante a lo mas simple.
+// Siguiente paso concreto para el paquete: sin datos, vulnerable y despues de lo mas bloqueante a lo
+// mas simple.
 export function upgradeHint(dependency: DependencyEntry): string {
-  return blockingHint(dependency) ?? updateHint(dependency);
-}
-
-// Lo que impide actualizar sin mas: sin datos, abandonado o sin version compatible con el runtime.
-function blockingHint(dependency: DependencyEntry): string | null {
   if (dependency.lookupError !== null && dependency.status === "unknown") {
     return `Sin datos del registro: ${dependency.lookupError}`;
   }
+
+  const next = blockingHint(dependency) ?? updateHint(dependency);
+  return dependency.security.vulnerabilities.length === 0 ? next : securityHint(dependency, next);
+}
+
+function securityHint(dependency: DependencyEntry, next: string): string {
+  const prefix = `Vulnerable (${severityLabel(dependency.security.maxSeverity as Severity)})`;
+
+  if (dependency.security.recommendedAffected) {
+    return `${prefix}: ninguna version compatible corrige todo`;
+  }
+  return dependency.recommended ? `${prefix}: actualizar a ${dependency.recommended}` : `${prefix}: ${next}`;
+}
+
+// Lo que impide actualizar sin mas: abandonado o sin version compatible con el runtime.
+function blockingHint(dependency: DependencyEntry): string | null {
   if (dependency.status === "abandoned") {
     return dependency.replacement ? `Abandonado: reemplazar por ${dependency.replacement}` : "Abandonado: buscar reemplazo";
   }
@@ -149,13 +196,27 @@ export function runtimeKindLabel(kind: RuntimeKind): string {
   return KIND_LABELS[kind];
 }
 
+const MAX_CYCLE_OPTIONS = 12;
+
+// La detectada y despues los ciclos publicados (endoflife.date) o, si no hay, las lineas fijas.
 export function runtimeOptions(runtime: SelectedRuntime): Array<{ value: string; label: string }> {
   const detected = runtime.version === null ? [] : [{ value: runtime.version, label: `${runtime.version} (detectado: ${runtime.source})` }];
-  const lines = RUNTIME_LINES[runtime.kind]
+  const others = runtime.cycles.length > 0 ? cycleOptions(runtime) : lineOptions(runtime);
+
+  return [...detected, ...others];
+}
+
+function cycleOptions(runtime: SelectedRuntime): Array<{ value: string; label: string }> {
+  return runtime.cycles
+    .filter((cycle) => cycle.latest !== null && cycle.latest !== runtime.version)
+    .slice(0, MAX_CYCLE_OPTIONS)
+    .map((cycle) => ({ value: cycle.latest as string, label: `${KIND_LABELS[runtime.kind]} ${cycle.cycle} (${cycle.latest}) · ${supportLabel(cycle)}` }));
+}
+
+function lineOptions(runtime: SelectedRuntime): Array<{ value: string; label: string }> {
+  return RUNTIME_LINES[runtime.kind]
     .filter((version) => version !== runtime.version)
     .map((version) => ({ value: version, label: `${KIND_LABELS[runtime.kind]} ${lineOf(runtime.kind, version)} (${version})` }));
-
-  return [...detected, ...lines];
 }
 
 function lineOf(kind: RuntimeKind, version: string): string {

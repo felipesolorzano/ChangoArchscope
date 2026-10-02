@@ -1,8 +1,9 @@
 import { X } from "lucide-react";
 
 import type { DependencyEntry, DependencyReport } from "../../domain/value-objects/DependencyReport";
+import { DependencyVulnerabilities } from "./DependencyVulnerabilities";
 import { useDependenciesExplorerStore } from "../store/dependenciesExplorerStore";
-import { ageLabel, dependencyKey, manifestLabel, statusColor, statusLabel, upgradeHint } from "../utils/dependencyView";
+import { ageLabel, dependencyKey, manifestLabel, statusColor, statusLabel, supportLabel, upgradeHint } from "../utils/dependencyView";
 
 function registryUrl(dependency: DependencyEntry): string {
   return dependency.ecosystem === "npm" ? `https://www.npmjs.com/package/${dependency.name}` : `https://packagist.org/packages/${dependency.name}`;
@@ -33,6 +34,7 @@ export function DependencyDrawer({ report, now }: { report: DependencyReport; no
       </header>
       <p className="deps-drawer__hint">{upgradeHint(dependency)}</p>
       <DependencyFacts dependency={dependency} root={report.root} now={now} />
+      <DependencyVulnerabilities security={dependency.security} advisoryError={dependency.advisoryError} />
       {dependency.lookupError && (
         <p className="deps-drawer__error">
           {dependency.lookupError}
@@ -56,6 +58,7 @@ function DependencyFacts({ dependency, root, now }: { dependency: DependencyEntr
     ["Actual", withAge(dependency.current, dependency.currentPublishedAt)],
     ["Recomendada", dependency.recommended ?? "—"],
     ["Ultima", withAge(dependency.latest, dependency.latestPublishedAt)],
+    ...(dependency.support ? [["Soporte", `${dependency.support.product} ${dependency.support.cycle} · ${supportLabel(dependency.support)}`] as [string, string]] : []),
   ];
 
   return (

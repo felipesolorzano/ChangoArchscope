@@ -39,7 +39,7 @@ Casos reales que guian el trabajo:
 | **F1 Deteccion** | Manifiestos (`package.json`/lock v1-3, `composer.json`/lock) abajo de la raiz del stack y el mas cercano hacia arriba (hasta la raiz git); runtimes declarados (o locales); helpers de versiones (npm y composer); clasificacion pura de un paquete contra sus releases y el runtime elegido; `GET /dependencies.json` (inventario). Spec: `app/modules/dependencies/specs/dependency-detection.md` | Completa |
 | **F2 Registros** | Puerto `PackageRegistry` + adaptadores npm (`registry.npmjs.org`) y Packagist (`repo.packagist.org/p2`); cache SQLite con TTL; `/dependencies.json?php=&node=&npm=&refresh=1` con el reporte clasificado. Spec: `app/modules/dependencies/specs/package-registries.md` | Completa |
 | **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar. Spec: `resources/js/react/modules/dependencies-explorer/specs/dependencies-explorer.md` | Completa |
-| **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`) | Pendiente |
+| **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`). Specs: `app/modules/dependencies/specs/security-and-support.md` y la seccion F4 de `dependencies-explorer.md` | Completa |
 | **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors) | Pendiente |
 | **F6 Librerias copiadas** | Reconocer librerias vendorizadas sin manifiesto por nombre de archivo y cabecera (`/*! jQuery v1.7.1`), y manifiestos anidados que son copias de una libreria | Pendiente |
 
@@ -70,6 +70,16 @@ Casos reales que guian el trabajo:
   en vez de 7). Chips filtran, el drawer muestra versiones con antiguedad y el link al registro.
 - Laravel (mc): 14% al dia, 2 deprecated (`gulp-foreach`, `gulp-util`) con su mensaje. Sin errores
   de consola. El reporte trae ahora `currentPublishedAt`/`latestPublishedAt` (backend, F3).
+
+### F4 — validacion con OSV y endoflife.date reales
+
+- ChangoArchscope: `vite` 5.4.21 con 3 vulnerabilidades (alta) corregidas en 6.4.3 (la
+  recomendada); `vitest` 3.2.6 con 1 moderada corregida en 4.1.11, que no funciona con Node 18:
+  "ninguna version compatible corrige todo". Node 18 sin soporte desde 2025-04-30.
+- mc: `postcss` 7 con 7 vulnerabilidades (alta); PHP 8.3 con soporte hasta 2027-12-31; Node 23
+  local sin soporte.
+- El selector de runtime usa los ciclos de endoflife.date (Node 26 → 26.10.0, etc.) con su soporte;
+  npm sigue con lineas fijas (no esta en endoflife.date).
 
 ## 3. Decisiones
 

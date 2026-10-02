@@ -10,6 +10,7 @@ interface DependenciesExplorerData {
   status: StatusFilter;
   query: string;
   hideDev: boolean;
+  onlyVulnerable: boolean;
   /** Llave ecosystem:name del paquete abierto en el drawer. */
   selected: string | null;
 }
@@ -19,11 +20,12 @@ interface DependenciesExplorerState extends DependenciesExplorerData {
   toggleStatus: (status: DependencyStatus) => void;
   setQuery: (query: string) => void;
   setHideDev: (hideDev: boolean) => void;
+  toggleVulnerable: () => void;
   select: (key: string | null) => void;
 }
 
 export function initialDependenciesExplorerState(): DependenciesExplorerData {
-  return { runtimes: {}, status: "all", query: "", hideDev: false, selected: null };
+  return { runtimes: {}, status: "all", query: "", hideDev: false, onlyVulnerable: false, selected: null };
 }
 
 export const useDependenciesExplorerStore = create<DependenciesExplorerState>((set, get, api) => {
@@ -37,6 +39,7 @@ export const useDependenciesExplorerStore = create<DependenciesExplorerState>((s
     toggleStatus: (status) => set((state) => ({ status: state.status === status ? "all" : status })),
     setQuery: (query) => set({ query }),
     setHideDev: (hideDev) => set({ hideDev }),
+    toggleVulnerable: () => set((state) => ({ onlyVulnerable: !state.onlyVulnerable })),
     select: (selected) => set({ selected }),
   };
 });

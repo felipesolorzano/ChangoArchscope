@@ -6,6 +6,8 @@ import { STATUS_ORDER, statusColor, statusLabel, upToDatePercent } from "../util
 export function DependencySummary({ summary }: { summary: DependencySummaryData }) {
   const active = useDependenciesExplorerStore((state) => state.status);
   const toggleStatus = useDependenciesExplorerStore((state) => state.toggleStatus);
+  const onlyVulnerable = useDependenciesExplorerStore((state) => state.onlyVulnerable);
+  const toggleVulnerable = useDependenciesExplorerStore((state) => state.toggleVulnerable);
   const present = STATUS_ORDER.filter((status) => summary.byStatus[status] > 0);
 
   return (
@@ -23,6 +25,11 @@ export function DependencySummary({ summary }: { summary: DependencySummaryData 
         </div>
       </div>
       <div className="deps-summary__chips">
+        {summary.vulnerable > 0 && (
+          <button type="button" className={`deps-chip deps-chip--danger${onlyVulnerable ? " deps-chip--active" : ""}`} onClick={toggleVulnerable}>
+            {`Vulnerables ${summary.vulnerable}`}
+          </button>
+        )}
         {present.map((status) => (
           <button
             key={status}
@@ -35,6 +42,7 @@ export function DependencySummary({ summary }: { summary: DependencySummaryData 
           </button>
         ))}
         {summary.limitedByRuntime > 0 && <span className="deps-summary__note">{summary.limitedByRuntime} limitados por el runtime</span>}
+        {summary.endOfLife > 0 && <span className="deps-summary__note">{summary.endOfLife} fuera de soporte</span>}
         {summary.lookupErrors > 0 && <span className="deps-summary__note">{summary.lookupErrors} sin datos del registro</span>}
       </div>
     </section>
