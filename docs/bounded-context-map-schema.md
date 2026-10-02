@@ -111,6 +111,18 @@ notifier/gateway/exporter segun el modulo) y el/los controlador(es) de presentac
 cada "archivo" es una clase propuesta: `{ "path": "Bookings/Application/CreateBookingUseCase.php" }`.
 Se guarda con `PUT /bounded-context-map?target=design`.
 
+### Proyectos React
+
+Mismo esquema y endpoints, con sus propios targets (el selector Laravel/React del shell elige
+cuales usa cada pestaña):
+
+- `target=react` → mapa de archivos del proyecto React (`config.react.modulesPath`). Pestaña
+  "Migración" con React seleccionado. `GET /bounded-context-source.json?target=react` lista los
+  `.ts/.tsx/.js/.jsx` en alcance (respetando `react.ignoredPaths`).
+- `target=react-design` → mapa de diseño to-be del proyecto React. Pestaña "Diseño". Cada
+  "archivo" es un modulo/componente propuesto, p. ej.
+  `{ "path": "checkout/application/use-cases/createBooking.ts" }`.
+
 ## Notas
 
 - El mapa es **editable por un humano** en la pestaña "Migración" (mover un archivo de capa,

@@ -5,6 +5,7 @@ import type { ArchitectureConfig } from "../../../../../app/modules/architecture
 import type { ArchitectureCheckResult } from "../../../../../app/modules/architecture/domain/value-objects/ArchitectureCheckReport.js";
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
 import type { PhpSourceParser } from "../../../../../app/modules/audit/domain/repositories/PhpSourceParser.js";
+import type { JsSourceParser } from "../../../../../app/modules/audit/domain/repositories/JsSourceParser.js";
 import { AuditGraphController } from "../../../../../app/modules/audit/presentation/http/AuditGraphController.js";
 
 function buildConfig(): ArchitectureConfig {
@@ -144,7 +145,7 @@ describe("AuditGraphController", async () => {
     expect((json.mock.calls[0][0] as { view: string }).view).toBe("heatmap");
   });
 
-  it("con target react no hay phpRoot, asi que un view=app cae a overview", async () => {
+  it("con target react usa react.modulesPath como raiz: view=app hace drill", async () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
       checkResult(options.target, options.module),
     );
@@ -152,12 +153,54 @@ describe("AuditGraphController", async () => {
     const { json, response } = fakeResponse();
 
     await controller.show(
-      { query: { target: "react", view: "app", focus: "admin" } } as unknown as Request,
+      { query: { target: "react", view: "app", focus: "pages" } } as unknown as Request,
       response,
       vi.fn() as unknown as NextFunction,
     );
 
-    expect((json.mock.calls[0][0] as { view: string }).view).toBe("overview");
+    expect(json.mock.calls[0][0]).toMatchObject({ view: "app", focus: "pages" });
+  });
+
+  it.each([
+    {
+      target: "laravel",
+      file: "/abs/app/modules/admin/X.php",
+      focus: "admin",
+      expected: "file:admin/X.php",
+    },
+    {
+      target: "react",
+      file: "/abs/react/pages/a.js",
+      focus: "pages",
+      expected: "file:pages/a.js",
+    },
+  ])("el drill de $target ubica los archivos relativos a la raiz de su stack", async ({ target, file, focus, expected }) => {
+    const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => [file], readText: () => "" };
+    const phpParser: PhpSourceParser = {
+      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [{ rule: "eval-usage", line: 1 }], sqlLiterals: [] }),
+    };
+    const jsParser: JsSourceParser = {
+      parse: (path) => ({
+        file: path,
+        linesCount: 1,
+        classes: [],
+        functions: [],
+        imports: [],
+        securityIssues: [{ rule: "eval-usage", line: 1 }],
+        httpCalls: [],
+        globalAccesses: [],
+      }),
+    };
+    const controller = new AuditGraphController({ getConfig: buildConfig, reader: scanningReader, parser: phpParser, check, jsParser });
+    const { json, response } = fakeResponse();
+
+    await controller.show({ query: { target, view: "app", focus } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    const graph = json.mock.calls[0][0] as { nodes: Array<{ id: string }> };
+    expect(graph.nodes.map((node) => node.id)).toEqual([`app:${focus}`, expected]);
   });
 
   it("delega el error a next sin responder cuando algo falla", async () => {

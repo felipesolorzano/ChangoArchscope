@@ -10,16 +10,16 @@ const GRID_COLUMNS = 6;
 const HEATMAP_COLUMNS = 8;
 export function buildAuditGraph(snapshot, options = {}) {
     const focus = options.focus ?? null;
-    const phpRoot = options.phpRoot ?? null;
-    if (phpRoot !== null) {
+    const sourceRoot = options.sourceRoot ?? null;
+    if (sourceRoot !== null) {
         if (options.view === "heatmap") {
-            return buildHeatmapView(snapshot, phpRoot);
+            return buildHeatmapView(snapshot, sourceRoot);
         }
         if (focus !== null && options.view === "app") {
-            return buildAppView(snapshot, focus, phpRoot);
+            return buildAppView(snapshot, focus, sourceRoot);
         }
         if (focus !== null && options.view === "file") {
-            return buildFileView(snapshot, focus, phpRoot);
+            return buildFileView(snapshot, focus, sourceRoot);
         }
     }
     return buildOverview(snapshot, focus);
@@ -46,37 +46,37 @@ function buildOverview(snapshot, focus) {
     const edges = apps.map((app) => containsEdge("root", `app:${app.key}`));
     return graph(snapshot, "overview", focus, [rootNode, ...appNodes], edges);
 }
-function buildHeatmapView(snapshot, phpRoot) {
+function buildHeatmapView(snapshot, sourceRoot) {
     const files = [...snapshot.riskBreakdown.byFile]
         .sort((a, b) => b.findingsCount - a.findingsCount)
         .slice(0, HEATMAP_LIMIT);
     const maxFindings = files.reduce((max, file) => Math.max(max, file.findingsCount), 0);
     const positions = gridPositions(files.length, HEATMAP_COLUMNS);
-    const nodes = files.map((file, index) => entryNode(file, `file:${relativePosix(phpRoot, file.key)}`, "file", path.basename(file.key), positions[index], sizeForRisk(file.findingsCount, maxFindings), true));
+    const nodes = files.map((file, index) => entryNode(file, `file:${relativePosix(sourceRoot, file.key)}`, "file", path.basename(file.key), positions[index], sizeForRisk(file.findingsCount, maxFindings), true));
     return graph(snapshot, "heatmap", null, nodes, []);
 }
-function buildAppView(snapshot, focus, phpRoot) {
+function buildAppView(snapshot, focus, sourceRoot) {
     const files = snapshot.riskBreakdown.byFile
-        .filter((file) => appOf(file.key, phpRoot) === focus)
+        .filter((file) => appOf(file.key, sourceRoot) === focus)
         .slice(0, APP_FILE_LIMIT);
     const maxRisk = files.reduce((max, file) => Math.max(max, file.value), 0);
     const positions = gridPositions(files.length, GRID_COLUMNS);
     const appEntry = snapshot.riskBreakdown.byModule.find((app) => app.key === focus);
     const appNode = entryNode(appEntry ?? emptyEntry(focus), `app:${focus}`, "app", focus, { x: 0, y: 0 }, MAX_NODE_SIZE, false);
     const fileNodes = files.map((file, index) => {
-        const id = `file:${relativePosix(phpRoot, file.key)}`;
+        const id = `file:${relativePosix(sourceRoot, file.key)}`;
         return entryNode(file, id, "file", path.basename(file.key), positions[index], sizeForRisk(file.value, maxRisk), false);
     });
     const containsEdges = fileNodes.map((file) => containsEdge(appNode.id, file.id));
     const duplicateEdges = findDuplicateEdges(fileNodes.map((file) => ({ id: file.id, label: file.label })));
     return graph(snapshot, "app", focus, [appNode, ...fileNodes], [...containsEdges, ...duplicateEdges]);
 }
-function buildFileView(snapshot, focus, phpRoot) {
-    const fileFindings = snapshot.findings.filter((finding) => relativePosix(phpRoot, finding.file) === focus);
+function buildFileView(snapshot, focus, sourceRoot) {
+    const fileFindings = snapshot.findings.filter((finding) => relativePosix(sourceRoot, finding.file) === focus);
     const rules = aggregateFileRules(fileFindings).slice(0, FILE_RULE_LIMIT);
     const maxRisk = rules.reduce((max, rule) => Math.max(max, rule.risk), 0);
     const positions = gridPositions(rules.length, GRID_COLUMNS);
-    const fileEntry = snapshot.riskBreakdown.byFile.find((file) => relativePosix(phpRoot, file.key) === focus);
+    const fileEntry = snapshot.riskBreakdown.byFile.find((file) => relativePosix(sourceRoot, file.key) === focus);
     const fileNode = entryNode(fileEntry ?? emptyEntry(focus), `file:${focus}`, "file", path.basename(focus), { x: 0, y: 0 }, MAX_NODE_SIZE, false);
     const ruleNodes = rules.map((rule, index) => ({
         ...entryNode({ key: rule.rule, value: rule.risk, byCategory: { [rule.category]: rule.risk }, bySeverity: rule.bySeverity, findingsCount: rule.findingsCount }, `rule:${focus}:${rule.rule}`, "rule", rule.rule, positions[index], sizeForRisk(rule.risk, maxRisk), false),
@@ -119,8 +119,8 @@ function graph(snapshot, view, focus, nodes, edges) {
         edges,
     };
 }
-function appOf(fileKey, phpRoot) {
-    return relativePosix(phpRoot, fileKey).split("/")[0];
+function appOf(fileKey, sourceRoot) {
+    return relativePosix(sourceRoot, fileKey).split("/")[0];
 }
 function relativePosix(from, to) {
     return path.relative(from, to).split(path.sep).join("/");

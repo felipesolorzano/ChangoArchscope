@@ -12,6 +12,7 @@ export type AuditGraphAccent =
   | "dead_code"
   | "coupling_low_level"
   | "php_compatibility"
+  | "api_access"
   | "mixed";
 
 export type AuditGraphPosition = {

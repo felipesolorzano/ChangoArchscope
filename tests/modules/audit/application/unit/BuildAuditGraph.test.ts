@@ -136,7 +136,7 @@ describe("buildAuditGraph (app view / drill-down)", () => {
   ];
 
   function appGraph() {
-    return buildAuditGraph(buildSnapshot(byModule, byFile), { view: "app", focus: "admin", phpRoot: "/root" });
+    return buildAuditGraph(buildSnapshot(byModule, byFile), { view: "app", focus: "admin", sourceRoot: "/root" });
   }
 
   it("la raiz es la app enfocada y los nodos son sus archivos (excluye otras apps)", () => {
@@ -185,13 +185,13 @@ describe("buildAuditGraph (app view / drill-down)", () => {
     expect(top?.severityMix).toEqual({ high: 10, medium: 0, low: 5 });
   });
 
-  it("cae a overview cuando falta phpRoot o focus", () => {
+  it("cae a overview cuando falta sourceRoot o focus", () => {
     expect(buildAuditGraph(buildSnapshot(byModule, byFile), { view: "app", focus: "admin" }).view).toBe("overview");
-    expect(buildAuditGraph(buildSnapshot(byModule, byFile), { view: "app", phpRoot: "/root" }).view).toBe("overview");
+    expect(buildAuditGraph(buildSnapshot(byModule, byFile), { view: "app", sourceRoot: "/root" }).view).toBe("overview");
   });
 
-  it("una vista no de drill (overview) con focus y phpRoot sigue siendo overview", () => {
-    const graph = buildAuditGraph(buildSnapshot(byModule, byFile), { focus: "admin", phpRoot: "/root" });
+  it("una vista no de drill (overview) con focus y sourceRoot sigue siendo overview", () => {
+    const graph = buildAuditGraph(buildSnapshot(byModule, byFile), { focus: "admin", sourceRoot: "/root" });
 
     expect(graph.view).toBe("overview");
   });
@@ -210,7 +210,7 @@ describe("buildAuditGraph (file view / drill nivel 2)", () => {
     return buildAuditGraph(buildSnapshot([], byFile, findings), {
       view: "file",
       focus: "admin/OrderService.lib.inc",
-      phpRoot: "/root",
+      sourceRoot: "/root",
     });
   }
 
@@ -252,8 +252,8 @@ describe("buildAuditGraph (file view / drill nivel 2)", () => {
     ]);
   });
 
-  it("cae a overview si falta focus o phpRoot", () => {
-    expect(buildAuditGraph(buildSnapshot([], byFile, findings), { view: "file", phpRoot: "/root" }).view).toBe("overview");
+  it("cae a overview si falta focus o sourceRoot", () => {
+    expect(buildAuditGraph(buildSnapshot([], byFile, findings), { view: "file", sourceRoot: "/root" }).view).toBe("overview");
   });
 });
 
@@ -265,7 +265,7 @@ describe("buildAuditGraph (heatmap global)", () => {
   ];
 
   function heatmap() {
-    return buildAuditGraph(buildSnapshot([], byFile), { view: "heatmap", phpRoot: "/root" });
+    return buildAuditGraph(buildSnapshot([], byFile), { view: "heatmap", sourceRoot: "/root" });
   }
 
   it("es una grilla plana de archivos (sin raiz ni edges), ordenada por cantidad de hallazgos", () => {
@@ -288,7 +288,7 @@ describe("buildAuditGraph (heatmap global)", () => {
     expect(graph.nodes.every((node) => node.drill === true)).toBe(true);
   });
 
-  it("cae a overview si falta phpRoot", () => {
+  it("cae a overview si falta sourceRoot", () => {
     expect(buildAuditGraph(buildSnapshot([], byFile), { view: "heatmap" }).view).toBe("overview");
   });
 });

@@ -41,6 +41,37 @@
   color: #f8fafc;
 }
 
+.app-target {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.app-target__option {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.app-target__option:hover {
+  color: #e2e8f0;
+}
+
+.app-target__option--active {
+  background: #0ea5e9;
+  color: #f8fafc;
+}
+
 .app-view {
   width: 100%;
 }

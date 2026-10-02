@@ -17,7 +17,8 @@ import { aggregateFileRules } from "../../domain/services/auditFileRules.js";
 export type BuildAuditGraphOptions = {
   view?: AuditGraphView;
   focus?: string | null;
-  phpRoot?: string | null;
+  /** Raiz escaneada del target (laravel o react). Sin ella no hay drill: cae a overview. */
+  sourceRoot?: string | null;
 };
 
 const APP_FILE_LIMIT = 24;
@@ -29,19 +30,19 @@ const HEATMAP_COLUMNS = 8;
 
 export function buildAuditGraph(snapshot: AuditSnapshot, options: BuildAuditGraphOptions = {}): AuditGraph {
   const focus = options.focus ?? null;
-  const phpRoot = options.phpRoot ?? null;
+  const sourceRoot = options.sourceRoot ?? null;
 
-  if (phpRoot !== null) {
+  if (sourceRoot !== null) {
     if (options.view === "heatmap") {
-      return buildHeatmapView(snapshot, phpRoot);
+      return buildHeatmapView(snapshot, sourceRoot);
     }
 
     if (focus !== null && options.view === "app") {
-      return buildAppView(snapshot, focus, phpRoot);
+      return buildAppView(snapshot, focus, sourceRoot);
     }
 
     if (focus !== null && options.view === "file") {
-      return buildFileView(snapshot, focus, phpRoot);
+      return buildFileView(snapshot, focus, sourceRoot);
     }
   }
 
@@ -77,7 +78,7 @@ function buildOverview(snapshot: AuditSnapshot, focus: string | null): AuditGrap
   return graph(snapshot, "overview", focus, [rootNode, ...appNodes], edges);
 }
 
-function buildHeatmapView(snapshot: AuditSnapshot, phpRoot: string): AuditGraph {
+function buildHeatmapView(snapshot: AuditSnapshot, sourceRoot: string): AuditGraph {
   const files = [...snapshot.riskBreakdown.byFile]
     .sort((a, b) => b.findingsCount - a.findingsCount)
     .slice(0, HEATMAP_LIMIT);
@@ -87,7 +88,7 @@ function buildHeatmapView(snapshot: AuditSnapshot, phpRoot: string): AuditGraph 
   const nodes: AuditGraphNode[] = files.map((file, index) =>
     entryNode(
       file,
-      `file:${relativePosix(phpRoot, file.key)}`,
+      `file:${relativePosix(sourceRoot, file.key)}`,
       "file",
       path.basename(file.key),
       positions[index],
@@ -99,9 +100,9 @@ function buildHeatmapView(snapshot: AuditSnapshot, phpRoot: string): AuditGraph 
   return graph(snapshot, "heatmap", null, nodes, []);
 }
 
-function buildAppView(snapshot: AuditSnapshot, focus: string, phpRoot: string): AuditGraph {
+function buildAppView(snapshot: AuditSnapshot, focus: string, sourceRoot: string): AuditGraph {
   const files = snapshot.riskBreakdown.byFile
-    .filter((file) => appOf(file.key, phpRoot) === focus)
+    .filter((file) => appOf(file.key, sourceRoot) === focus)
     .slice(0, APP_FILE_LIMIT);
   const maxRisk = files.reduce((max, file) => Math.max(max, file.value), 0);
   const positions = gridPositions(files.length, GRID_COLUMNS);
@@ -118,7 +119,7 @@ function buildAppView(snapshot: AuditSnapshot, focus: string, phpRoot: string): 
   );
 
   const fileNodes: AuditGraphNode[] = files.map((file, index) => {
-    const id = `file:${relativePosix(phpRoot, file.key)}`;
+    const id = `file:${relativePosix(sourceRoot, file.key)}`;
     return entryNode(file, id, "file", path.basename(file.key), positions[index], sizeForRisk(file.value, maxRisk), false);
   });
 
@@ -128,12 +129,12 @@ function buildAppView(snapshot: AuditSnapshot, focus: string, phpRoot: string): 
   return graph(snapshot, "app", focus, [appNode, ...fileNodes], [...containsEdges, ...duplicateEdges]);
 }
 
-function buildFileView(snapshot: AuditSnapshot, focus: string, phpRoot: string): AuditGraph {
-  const fileFindings = snapshot.findings.filter((finding) => relativePosix(phpRoot, finding.file) === focus);
+function buildFileView(snapshot: AuditSnapshot, focus: string, sourceRoot: string): AuditGraph {
+  const fileFindings = snapshot.findings.filter((finding) => relativePosix(sourceRoot, finding.file) === focus);
   const rules = aggregateFileRules(fileFindings).slice(0, FILE_RULE_LIMIT);
   const maxRisk = rules.reduce((max, rule) => Math.max(max, rule.risk), 0);
   const positions = gridPositions(rules.length, GRID_COLUMNS);
-  const fileEntry = snapshot.riskBreakdown.byFile.find((file) => relativePosix(phpRoot, file.key) === focus);
+  const fileEntry = snapshot.riskBreakdown.byFile.find((file) => relativePosix(sourceRoot, file.key) === focus);
 
   const fileNode: AuditGraphNode = entryNode(
     fileEntry ?? emptyEntry(focus),
@@ -214,8 +215,8 @@ function graph(
   };
 }
 
-function appOf(fileKey: string, phpRoot: string): string {
-  return relativePosix(phpRoot, fileKey).split("/")[0];
+function appOf(fileKey: string, sourceRoot: string): string {
+  return relativePosix(sourceRoot, fileKey).split("/")[0];
 }
 
 function relativePosix(from: string, to: string): string {

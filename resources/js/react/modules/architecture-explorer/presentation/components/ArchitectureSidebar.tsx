@@ -1,6 +1,5 @@
 import { Box, ClipboardCheck, PanelLeftClose, RefreshCcw, Search, X } from "lucide-react";
 import type { ArchitectureGraph, ArchitectureGraphNode } from "../../domain/value-objects/ArchitectureGraph";
-import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget";
 import {
   architectureLayerColors,
   architectureLayerOrder,
@@ -9,7 +8,6 @@ import type { FilteredArchitectureGraph } from "../utils/filterArchitectureGraph
 import { Stat } from "./Stat";
 
 interface ArchitectureSidebarProps {
-  target: ArchitectureTarget;
   graph: ArchitectureGraph | null;
   modules: string[];
   filteredGraph: FilteredArchitectureGraph;
@@ -19,7 +17,6 @@ interface ArchitectureSidebarProps {
   focusedNode: ArchitectureGraphNode | null;
   selectedNode: ArchitectureGraphNode | null;
   onClose: () => void;
-  onTargetChange: (target: ArchitectureTarget) => void;
   onModuleChange: (module: string) => void;
   onLayerChange: (layer: string) => void;
   onQueryChange: (query: string) => void;
@@ -29,7 +26,6 @@ interface ArchitectureSidebarProps {
 }
 
 export function ArchitectureSidebar({
-  target,
   graph,
   modules,
   filteredGraph,
@@ -39,7 +35,6 @@ export function ArchitectureSidebar({
   focusedNode,
   selectedNode,
   onClose,
-  onTargetChange,
   onModuleChange,
   onLayerChange,
   onQueryChange,
@@ -66,17 +61,6 @@ export function ArchitectureSidebar({
       </div>
 
       <div className="architecture-controls">
-        <label>
-          Target
-          <select
-            value={target}
-            onChange={(event) => onTargetChange(event.target.value as ArchitectureTarget)}
-          >
-            <option value="laravel">Laravel</option>
-            <option value="react">React</option>
-          </select>
-        </label>
-
         <label>
           Módulo
           <select value={selectedModule} onChange={(event) => onModuleChange(event.target.value)}>

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
 import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
 
-export function usePlanController(dependencies: PlanExplorerDependencies) {
+export function usePlanController(dependencies: PlanExplorerDependencies, target: "laravel" | "react") {
   const [graph, setGraph] = useState<PlanGraph | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,14 +13,14 @@ export function usePlanController(dependencies: PlanExplorerDependencies) {
     setError(null);
 
     try {
-      setGraph(await dependencies.planProvider.getPlan("laravel"));
+      setGraph(await dependencies.planProvider.getPlan(target));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Error inesperado");
       setGraph(null);
     } finally {
       setLoading(false);
     }
-  }, [dependencies.planProvider]);
+  }, [dependencies.planProvider, target]);
 
   useEffect(() => {
     void reload();
@@ -29,12 +29,12 @@ export function usePlanController(dependencies: PlanExplorerDependencies) {
   const setTaskState = useCallback(
     async (taskKey: string, state: PlanTaskState) => {
       try {
-        setGraph(await dependencies.planProvider.setTaskState(taskKey, state, "laravel"));
+        setGraph(await dependencies.planProvider.setTaskState(taskKey, state, target));
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "Error inesperado");
       }
     },
-    [dependencies.planProvider],
+    [dependencies.planProvider, target],
   );
 
   const [focusedTaskKey, setFocusedTaskKey] = useState<string | null>(null);
@@ -48,14 +48,14 @@ export function usePlanController(dependencies: PlanExplorerDependencies) {
       setFindingsLoading(true);
 
       try {
-        setTaskFindings(await dependencies.planProvider.getTaskFindings(taskKey, "laravel"));
+        setTaskFindings(await dependencies.planProvider.getTaskFindings(taskKey, target));
       } catch {
         setTaskFindings({ taskKey, total: 0, items: [] });
       } finally {
         setFindingsLoading(false);
       }
     },
-    [dependencies.planProvider],
+    [dependencies.planProvider, target],
   );
 
   const closeTask = useCallback(() => setFocusedTaskKey(null), []);

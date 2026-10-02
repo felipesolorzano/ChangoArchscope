@@ -11,6 +11,8 @@ import { listenChangoArchscopeServer } from "../build/server/bootstrap/server.js
 import { auditProject } from "../build/server/app/modules/audit/application/use-cases/AuditProject.js";
 import { exceedsSeverityThreshold } from "../build/server/app/modules/audit/domain/services/auditSeverityUtils.js";
 import { PhpAstParser } from "../build/server/app/modules/audit/infrastructure/parser/PhpAstParser.js";
+import { BabelJsParser } from "../build/server/app/modules/audit/infrastructure/parser/BabelJsParser.js";
+import { JS_SOURCE_EXTENSIONS } from "../build/server/app/modules/audit/application/use-cases/ScanJsFiles.js";
 import { DockerPhpcsScanner } from "../build/server/app/modules/audit/infrastructure/compat/DockerPhpcsScanner.js";
 
 const SEVERITY_THRESHOLDS = ["low", "medium", "high", "critical"];
@@ -71,6 +73,10 @@ try {
       phpExtensions: config.laravel.phpExtensions,
       ignoredPaths: config.laravel.ignoredPaths,
       compatibilityScan,
+      js:
+        target === "react"
+          ? { root: config.react.modulesPath, extensions: JS_SOURCE_EXTENSIONS, ignoredPaths: config.react.ignoredPaths, parser: new BabelJsParser() }
+          : undefined,
     });
 
     console.log(JSON.stringify(snapshot, null, 2));

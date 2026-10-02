@@ -43,8 +43,10 @@ type AuditSnapshotCache = {
 `resolveAuditSnapshot` queda:
 
 - Arma `compute = async () => { check + compat + auditProject }` (lo caro de hoy, sin cambios).
-- Si `snapshotCache` y `fingerprint` estan inyectados y `phpRoot !== null`: calcula `fp = await fingerprint(phpRoot, exts, ignoredPaths)` y devuelve `snapshotCache.resolve(key, fp, compute)`.
-- Si no (deps no inyectadas, o `phpRoot === null` para target `react` donde no hay parseo PHP caro): devuelve `compute()` directo, comportamiento actual intacto.
+- Raiz escaneada del target: `laravel` → `config.laravel.modulesPath` con `phpExtensions` e `ignoredPaths` de laravel; `react` → `config.react.modulesPath` con las extensiones JS (`.ts/.tsx/.js/.jsx`) e `ignoredPaths` de react **solo si hay `jsParser`** (sin parser JS no se escanea nada y no hay que fingerprintear).
+- Si `snapshotCache` y `fingerprint` estan inyectados y hay raiz escaneada: calcula `fp = await fingerprint(raiz, exts, ignoredPaths)` y devuelve `snapshotCache.resolve(key, fp, compute)`, con `key = "<raiz>|<target>|<module>|<phpVersion>"`.
+- Si no: devuelve `compute()` directo.
+- El scan de compatibilidad (Docker) sigue siendo solo de laravel y recibe el mismo fingerprint.
 
 Ambos campos son opcionales: los tests existentes de los controllers y el modulo `plan` (que no los inyecta) siguen funcionando sin cambios, recomputando como hoy.
 
@@ -54,7 +56,7 @@ Instancia un unico `createAuditSnapshotCache()` y un `computeRepoFingerprint` (i
 
 ## Casos invalidos o de borde
 
-- `phpRoot === null` (target react): no se cachea por fingerprint (no hay raiz PHP que `stat`ear); se computa directo. Es barato igual (sin parseo PHP).
+- Target react sin `jsParser`: no se cachea por fingerprint (no hay archivos escaneados); se computa directo.
 - Fingerprint cambia entre requests (alguien edito un archivo): miss => recomputo, se actualiza la entrada.
 - `compute()` rechaza: la entrada se evita/elimina; el siguiente request recomputa.
 - Repo vacio (cero archivos): `fingerprintFromStats([])` devuelve un hash estable de lista vacia; valido.

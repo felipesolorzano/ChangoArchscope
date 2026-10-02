@@ -4,6 +4,8 @@ import type { ArchitectureCheckResult } from "../../../../../app/modules/archite
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
 import type { PhpSourceParser } from "../../../../../app/modules/audit/domain/repositories/PhpSourceParser.js";
 import type { PhpFileStructure } from "../../../../../app/modules/audit/domain/value-objects/PhpFileStructure.js";
+import type { JsSourceParser } from "../../../../../app/modules/audit/domain/repositories/JsSourceParser.js";
+import type { JsFileStructure } from "../../../../../app/modules/audit/domain/value-objects/JsFileStructure.js";
 import { auditProject } from "../../../../../app/modules/audit/application/use-cases/AuditProject.js";
 
 function buildCheckResult(overrides: Partial<ArchitectureCheckResult> = {}): ArchitectureCheckResult {
@@ -273,6 +275,119 @@ describe("auditProject", () => {
       reason: "Docker no esta disponible",
     });
     expect(snapshot.findings.some((finding) => finding.category === "php_compatibility")).toBe(false);
+  });
+
+  describe("con js (target react)", () => {
+    const jsStructure = (file: string): JsFileStructure => ({
+      file,
+      linesCount: 3,
+      classes: [],
+      functions: [],
+      imports: [],
+      securityIssues: [{ rule: "eval-usage", line: 2 }],
+      httpCalls: [],
+      globalAccesses: [],
+    });
+    const jsParser: JsSourceParser = {
+      parse: (file) => {
+        if (file.endsWith("broken.js")) throw new Error("Unexpected token");
+        return jsStructure(file);
+      },
+    };
+    const jsInput = { root: "/src", extensions: [".js"], ignoredPaths: ["**/__tests__/**"], parser: jsParser };
+
+    it("escanea la raiz JS con su config y suma los findings nativos de JS", () => {
+      const walkFiles = vi.fn(() => ["/src/pages/index.js"]);
+
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react" }),
+        reader: { listDirectories: () => [], walkFiles, readText: () => "", isFile: () => true },
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: jsInput,
+      });
+
+      expect(walkFiles).toHaveBeenCalledTimes(1);
+      expect(walkFiles).toHaveBeenCalledWith("/src", [".js"], ["**/__tests__/**"]);
+      expect(snapshot.findings.filter((finding) => finding.source === "native")).toEqual([
+        expect.objectContaining({ category: "security", rule: "eval-usage", file: "/src/pages/index.js", line: 2 }),
+      ]);
+      expect(snapshot.findings[0].source).toBe("architecture");
+    });
+
+    it("corre los seis analizadores JS", () => {
+      const file: JsFileStructure = {
+        ...jsStructure("/src/pages/a_old.js"),
+        functions: [{ name: "A", kind: "function", startLine: 1, endLine: 400, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
+        httpCalls: [{ client: "fetch", endpoint: "/x", line: 3 }],
+        globalAccesses: [{ kind: "jquery", line: 4 }],
+      };
+
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react" }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: { ...jsInput, scanFiles: () => ({ files: [file], skipped: [] }) },
+      });
+
+      expect(new Set(snapshot.findings.filter((finding) => finding.source === "native").map((finding) => finding.category))).toEqual(
+        new Set(["complexity", "coupling_low_level", "dead_code", "security", "api_access", "testing"]),
+      );
+    });
+
+    it("usa el scanFiles JS inyectado en vez de recorrer el arbol", () => {
+      const walkFiles = vi.fn(() => []);
+      const scanFiles = vi.fn(() => ({ files: [jsStructure("/src/a.js")], skipped: [] }));
+
+      auditProject({
+        checkResult: buildCheckResult({ target: "react" }),
+        reader: { listDirectories: () => [], walkFiles, readText: () => "", isFile: () => true },
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: { ...jsInput, scanFiles },
+      });
+
+      expect(scanFiles).toHaveBeenCalledWith("/src", [".js"], ["**/__tests__/**"]);
+      expect(walkFiles).not.toHaveBeenCalled();
+    });
+
+    it("reporta los archivos JS que no parsean en skippedFiles", () => {
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react" }),
+        reader: fakeReader(["/src/ok.js", "/src/broken.js"]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: jsInput,
+      });
+
+      expect(snapshot.skippedFiles).toEqual([{ file: "/src/broken.js", error: "Unexpected token" }]);
+      expect(snapshot.summary.files_skipped).toBe(1);
+    });
+
+    it("agrupa byModule por la primera carpeta bajo js.root", () => {
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader(["/src/pages/a.js", "/src/pages/b.js", "/src/globals/g.js"]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: jsInput,
+      });
+
+      const modules = Object.fromEntries(snapshot.riskBreakdown.byModule.map((entry) => [entry.key, entry.findingsCount]));
+      expect(modules.pages).toBeGreaterThanOrEqual(2);
+      expect(modules.globals).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it("toma target, module y los conteos del summary desde el checkResult", () => {

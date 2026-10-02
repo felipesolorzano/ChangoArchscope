@@ -6,7 +6,7 @@ import type { AuditGraph, AuditGraphView } from "../../domain/value-objects/Audi
 
 export type AuditTarget = "laravel" | "react";
 
-export function useAuditGraphController(dependencies: AuditExplorerDependencies) {
+export function useAuditGraphController(dependencies: AuditExplorerDependencies, target: AuditTarget) {
   const [graph, setGraph] = useState<AuditGraph | null>(null);
   const [view, setView] = useState<AuditGraphView>("overview");
   const [focus, setFocus] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function useAuditGraphController(dependencies: AuditExplorerDependencies)
       setError(null);
 
       try {
-        setGraph(await loadAuditGraph(dependencies.graphProvider, "laravel", nextView, nextFocus, nextPhpVersion));
+        setGraph(await loadAuditGraph(dependencies.graphProvider, target, nextView, nextFocus, nextPhpVersion));
         setView(nextView);
         setFocus(nextFocus);
         setPhpVersionState(nextPhpVersion);
@@ -31,7 +31,7 @@ export function useAuditGraphController(dependencies: AuditExplorerDependencies)
         setLoading(false);
       }
     },
-    [dependencies.graphProvider],
+    [dependencies.graphProvider, target],
   );
 
   useEffect(() => {

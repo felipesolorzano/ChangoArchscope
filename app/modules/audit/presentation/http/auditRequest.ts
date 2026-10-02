@@ -2,10 +2,12 @@ import type { ArchitectureConfig } from "../../../architecture/domain/value-obje
 import type { ArchitectureCheckResult } from "../../../architecture/domain/value-objects/ArchitectureCheckReport.js";
 import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
 import type { PhpCompatibilityScanResult } from "../../domain/repositories/PhpCompatibilityScanner.js";
+import type { JsSourceParser } from "../../domain/repositories/JsSourceParser.js";
 import type { PhpSourceParser } from "../../domain/repositories/PhpSourceParser.js";
 import type { AuditSnapshot } from "../../domain/value-objects/AuditSnapshot.js";
 import type { AuditSnapshotCache } from "../../application/use-cases/AuditSnapshotCache.js";
-import { auditProject, type ScanPhpFilesFn } from "../../application/use-cases/AuditProject.js";
+import { auditProject, type AuditJsInput, type ScanPhpFilesFn } from "../../application/use-cases/AuditProject.js";
+import { JS_SOURCE_EXTENSIONS } from "../../application/use-cases/ScanJsFiles.js";
 
 export type AuditTarget = "laravel" | "react";
 
@@ -39,6 +41,8 @@ export type AuditControllerDeps = {
   snapshotCache?: AuditSnapshotCache;
   fingerprint?: RepoFingerprint;
   scanFiles?: ScanPhpFilesFn;
+  /** Parser JS/TS. Ausente = el target react solo trae findings de arquitectura. */
+  jsParser?: JsSourceParser;
 };
 
 const PHP_VERSION_PATTERN = /^\d+\.\d+$/;
@@ -66,12 +70,21 @@ export async function resolveAuditSnapshot(
 ): Promise<AuditSnapshot> {
   const config = deps.getConfig();
   const phpRoot = target === "laravel" ? config.laravel.modulesPath : null;
+  const js: AuditJsInput | undefined =
+    target === "react" && deps.jsParser !== undefined
+      ? { root: config.react.modulesPath, extensions: JS_SOURCE_EXTENSIONS, ignoredPaths: config.react.ignoredPaths, parser: deps.jsParser }
+      : undefined;
+  // Lo que se escanea de verdad para este target (null = react sin parser JS: nada que escanear).
+  const scanned =
+    phpRoot !== null
+      ? { root: phpRoot, extensions: config.laravel.phpExtensions, ignoredPaths: config.laravel.ignoredPaths }
+      : (js ?? null);
 
   // Fingerprint barato (mtime+size). Invalida tanto el cache de snapshot como el de compat,
   // para que ambos refresquen de forma consistente cuando se edita un archivo del repo.
   const fingerprint =
-    deps.fingerprint !== undefined && phpRoot !== null
-      ? await deps.fingerprint(phpRoot, config.laravel.phpExtensions, config.laravel.ignoredPaths)
+    deps.fingerprint !== undefined && scanned !== null
+      ? await deps.fingerprint(scanned.root, scanned.extensions, scanned.ignoredPaths)
       : null;
 
   // Lo caro de hoy: check de arquitectura + scan de compat + parseo/analisis de todos los
@@ -93,13 +106,15 @@ export async function resolveAuditSnapshot(
       ignoredPaths: config.laravel.ignoredPaths,
       compatibilityScan,
       scanFiles: deps.scanFiles,
+      js,
     });
   };
 
   if (deps.snapshotCache !== undefined && fingerprint !== null) {
-    // Incluye phpRoot en la llave: si cambia el modulesPath (otro repo), no se sirve un
-    // snapshot cacheado del repo anterior.
-    const key = `${phpRoot ?? ""}|${target}|${module ?? ""}|${phpVersion ?? ""}`;
+    // Incluye la raiz escaneada en la llave: si cambia el modulesPath (otro repo), no se sirve
+    // un snapshot cacheado del repo anterior.
+    // Hay fingerprint solo si hay raiz escaneada.
+    const key = `${scanned!.root}|${target}|${module ?? ""}|${phpVersion ?? ""}`;
     return deps.snapshotCache.resolve(key, fingerprint, compute);
   }
 

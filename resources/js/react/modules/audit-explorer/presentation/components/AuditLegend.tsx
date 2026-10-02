@@ -1,23 +1,19 @@
-import type { AuditGraphAccent } from "../../domain/value-objects/AuditGraph";
 import { accentStroke } from "../constants/auditView";
+import { auditCategoriesFor } from "../constants/auditCategories";
+import type { AuditTarget } from "../hooks/useAuditGraphController";
 
-const ACCENTS: Array<{ accent: AuditGraphAccent; label: string }> = [
-  { accent: "security", label: "Seguridad" },
-  { accent: "database", label: "Base de datos" },
-  { accent: "complexity", label: "Complejidad" },
-  { accent: "testing", label: "Testing" },
-  { accent: "dead_code", label: "Codigo muerto" },
-  { accent: "coupling_low_level", label: "Acoplamiento" },
-  { accent: "php_compatibility", label: "Compatibilidad PHP" },
-  { accent: "mixed", label: "Mixto" },
-];
+interface AuditLegendProps {
+  target: AuditTarget;
+}
 
-export function AuditLegend() {
+export function AuditLegend({ target }: AuditLegendProps) {
+  const items = [...auditCategoriesFor(target), { accent: "mixed" as const, label: "Mixto" }];
+
   return (
     <div className="audit-legend">
       <span className="audit-legend__title">Borde = categoria dominante</span>
       <div className="audit-legend__items">
-        {ACCENTS.map(({ accent, label }) => (
+        {items.map(({ accent, label }) => (
           <span key={accent} className="audit-legend__item">
             <span className="audit-legend__dot" style={{ background: accentStroke(accent) }} />
             {label}

@@ -45,6 +45,7 @@
     "preview:ui": "vite preview --config config/react/vite.config.mjs --host 0.0.0.0"
   },
   "dependencies": {
+    "@babel/parser": "^7.29.9",
     "@vitejs/plugin-react": "^4.3.1",
     "@xyflow/react": "^12.10.2",
     "better-sqlite3": "^12.11.1",

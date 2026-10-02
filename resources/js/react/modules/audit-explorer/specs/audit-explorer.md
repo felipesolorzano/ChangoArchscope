@@ -32,7 +32,7 @@ calcula layout**: solo mapea el grafo a nodos/edges de React Flow y los renderiz
   low amarillo tenue, none gris.
 - **Borde** = `accentStroke(node.accent)` (categoria dominante): security rojo, database azul,
   complexity morado, testing ambar, dead_code gris, coupling_low_level teal,
-  php_compatibility verde lima, mixed neutro.
+  php_compatibility verde lima, api_access rosa, mixed neutro.
 - **Mini-barra apilada** dentro del nodo con `severityBarSegments(node.severityMix)` (high/medium/low).
 - **Badges** (`node.badges`) como etiquetas colgando del nodo.
 - **Metrica** visible: `findings` y `risk`.
@@ -61,3 +61,20 @@ general (regla de React de `docs/development-rules.md`): se valida la logica via
 - `toneFill`/`accentStroke` devuelven un color por cada valor del enum y un fallback para desconocidos.
 - `severityBarSegments` devuelve segmentos proporcionales high/medium/low que suman 100% (o vacio si todo 0).
 - `toAuditGraph` preserva nodos/edges/summary del DTO.
+
+## Categorias por stack (target React, Fase 4)
+
+`auditCategoriesFor(target)` (`presentation/constants/auditCategories.ts`, puro) devuelve las
+categorias `{ accent, label }` que tienen sentido para el stack, en este orden:
+
+- `laravel`: Compatibilidad PHP, Seguridad, Base de datos, Complejidad, Testing, Codigo muerto,
+  Acoplamiento.
+- `react`: Seguridad, API / HTTP (`api_access`), Complejidad, Testing, Codigo muerto, Acoplamiento.
+
+El filtro de categoria antepone "Todas las categorias"; la leyenda agrega "Mixto" al final.
+
+Criterios de aceptacion:
+
+- `auditCategoriesFor("laravel")` incluye `php_compatibility` y `database`, no `api_access`.
+- `auditCategoriesFor("react")` incluye `api_access`, no `php_compatibility` ni `database`.
+- `accentStroke("api_access")` es un color propio, distinto de `mixed` y de los demas acentos.

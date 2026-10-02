@@ -13,11 +13,12 @@ import "./planExplorer.css";
 
 interface PlanExplorerProps {
   dependencies: PlanExplorerDependencies;
+  target: "laravel" | "react";
 }
 
-export default function PlanExplorer({ dependencies }: PlanExplorerProps) {
+export default function PlanExplorer({ dependencies, target }: PlanExplorerProps) {
   const { graph, loading, error, setTaskState, focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask } =
-    usePlanController(dependencies);
+    usePlanController(dependencies, target);
 
   useEffect(() => {
     registerPlanInteractions({ setTaskState, openTask });

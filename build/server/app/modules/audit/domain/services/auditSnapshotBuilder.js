@@ -19,7 +19,7 @@ export function buildAuditSnapshot(findings, context) {
         },
         findings,
         riskScore: buildRiskScore(findings),
-        riskBreakdown: buildRiskBreakdown(findings, context.phpRoot),
+        riskBreakdown: buildRiskBreakdown(findings, context.sourceRoot),
         skippedFiles,
     };
 }

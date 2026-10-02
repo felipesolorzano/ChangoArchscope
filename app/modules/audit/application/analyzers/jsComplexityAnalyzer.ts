@@ -1,0 +1,140 @@
+import type { AuditFinding } from "../../domain/value-objects/AuditSnapshot.js";
+import type { JsFileStructure, JsFunctionStructure } from "../../domain/value-objects/JsFileStructure.js";
+import { isComponentClass } from "../../domain/services/jsComponents.js";
+import { jsFinding } from "./jsFinding.js";
+
+export type JsComplexityThresholds = {
+  methodLines: number;
+  renderLines: number;
+  parameters: number;
+  cyclomaticComplexity: number;
+  componentLines: number;
+  classLines: number;
+  stateKeys: number;
+};
+
+// Calibrados contra un CRA legacy real: el JSX infla `render`, por eso tiene su propio umbral.
+const DEFAULT_THRESHOLDS: JsComplexityThresholds = {
+  methodLines: 50,
+  renderLines: 150,
+  parameters: 5,
+  cyclomaticComplexity: 10,
+  componentLines: 300,
+  classLines: 300,
+  stateKeys: 10,
+};
+
+type Span = { startLine: number; endLine: number };
+
+export function jsComplexityAnalyzer(
+  files: JsFileStructure[],
+  thresholds: JsComplexityThresholds = DEFAULT_THRESHOLDS,
+): AuditFinding[] {
+  return files.flatMap((file) => [
+    ...file.classes.flatMap((classStructure) =>
+      classStructure.methods.flatMap((method) => functionFindings(file.file, classStructure.name, method, true, thresholds)),
+    ),
+    ...file.functions.flatMap((fn) => functionFindings(file.file, null, fn, false, thresholds)),
+    ...file.classes.flatMap((classStructure) => {
+      const findings: AuditFinding[] = [];
+      const lines = linesOf(classStructure);
+      const isComponent = isComponentClass(classStructure);
+
+      if (isComponent && lines > thresholds.componentLines) {
+        findings.push(build(file.file, classStructure.name, classStructure.startLine, "large-component", { lines }));
+      }
+      if (!isComponent && lines > thresholds.classLines) {
+        findings.push(build(file.file, classStructure.name, classStructure.startLine, "large-class", { lines }));
+      }
+      if (classStructure.stateKeysCount > thresholds.stateKeys) {
+        findings.push(
+          build(file.file, classStructure.name, classStructure.startLine, "large-state", { stateKeys: classStructure.stateKeysCount }),
+        );
+      }
+      return findings;
+    }),
+    ...file.functions
+      .filter((fn) => fn.containsJsx && linesOf(fn) > thresholds.componentLines)
+      .map((fn) => build(file.file, fn.name, fn.startLine, "large-component", { lines: linesOf(fn) })),
+  ]);
+}
+
+function functionFindings(
+  file: string,
+  className: string | null,
+  fn: JsFunctionStructure,
+  isMethod: boolean,
+  thresholds: JsComplexityThresholds,
+): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const lines = linesOf(fn);
+  const isRender = isMethod && fn.name === "render";
+
+  if (isRender && lines > thresholds.renderLines) {
+    findings.push(build(file, className, fn.startLine, "long-render", { lines }));
+  }
+  if (!isRender && lines > thresholds.methodLines) {
+    findings.push(build(file, className, fn.startLine, "long-method", { lines }));
+  }
+  if (fn.parametersCount > thresholds.parameters) {
+    findings.push(build(file, className, fn.startLine, "too-many-parameters", { parametersCount: fn.parametersCount }));
+  }
+
+  const cyclomaticComplexity = fn.decisionPointsCount + 1;
+  if (cyclomaticComplexity > thresholds.cyclomaticComplexity) {
+    findings.push(build(file, className, fn.startLine, "high-cyclomatic-complexity", { cyclomaticComplexity }));
+  }
+
+  return findings;
+}
+
+function linesOf(span: Span): number {
+  return span.endLine - span.startLine + 1;
+}
+
+type JsComplexityRule =
+  | "long-method"
+  | "long-render"
+  | "too-many-parameters"
+  | "high-cyclomatic-complexity"
+  | "large-component"
+  | "large-class"
+  | "large-state";
+
+function build(
+  file: string,
+  className: string | null,
+  line: number,
+  rule: JsComplexityRule,
+  details: Record<string, number>,
+): AuditFinding {
+  return jsFinding({
+    category: "complexity",
+    rule,
+    severity: rule === "high-cyclomatic-complexity" ? "high" : "medium",
+    class: className,
+    file,
+    line,
+    message: messageFor(rule, details),
+    details,
+  });
+}
+
+function messageFor(rule: JsComplexityRule, details: Record<string, number>): string {
+  switch (rule) {
+    case "long-method":
+      return `Funcion o metodo con ${details.lines} lineas, supera el umbral configurado.`;
+    case "long-render":
+      return `render() con ${details.lines} lineas, supera el umbral configurado.`;
+    case "too-many-parameters":
+      return `Funcion o metodo con ${details.parametersCount} parametros, supera el umbral configurado.`;
+    case "high-cyclomatic-complexity":
+      return `Complejidad ciclomatica ${details.cyclomaticComplexity}, supera el umbral configurado.`;
+    case "large-component":
+      return `Componente con ${details.lines} lineas, supera el umbral configurado.`;
+    case "large-class":
+      return `Clase con ${details.lines} lineas, supera el umbral configurado.`;
+    case "large-state":
+      return `Componente con ${details.stateKeys} claves de estado, supera el umbral configurado.`;
+  }
+}

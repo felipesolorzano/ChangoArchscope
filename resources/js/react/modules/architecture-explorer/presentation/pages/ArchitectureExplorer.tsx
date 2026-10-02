@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "@xyflow/react/dist/style.css";
 import "../../infrastructure/react-flow/reactFlowFallback.css";
 import type { ArchitectureProviders } from "../../application/contracts/ArchitectureProviders";
+import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget";
 import { useArchitectureFlowGraph } from "../../infrastructure/react-flow/useArchitectureFlowGraph";
 import { ArchitectureCanvas } from "../components/ArchitectureCanvas";
 import { ArchitectureCheckModal } from "../components/ArchitectureCheckModal";
@@ -13,25 +14,20 @@ import "./architectureExplorer.css";
 
 interface ArchitectureExplorerProps {
   dependencies: ArchitectureProviders;
+  target: ArchitectureTarget;
 }
 
 export type { ArchitectureProviders };
 
-export default function ArchitectureExplorer({ dependencies }: ArchitectureExplorerProps) {
+export default function ArchitectureExplorer({ dependencies, target }: ArchitectureExplorerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const graphController = useArchitectureGraphController(dependencies);
+  const graphController = useArchitectureGraphController(dependencies, target);
   const checkController = useArchitectureCheckController(dependencies);
   const flowGraph = useArchitectureFlowGraph({
     filteredGraph: graphController.filteredGraph,
     focusedNodeId: graphController.focusedNodeId,
     onFocusNode: graphController.setFocusedNodeId,
   });
-
-  function changeTarget(target: typeof graphController.target) {
-    graphController.changeTarget(target);
-    checkController.reset();
-    flowGraph.resetNodePositions();
-  }
 
   function openArchitectureCheck() {
     checkController.run(graphController.selectedModule, graphController.target);
@@ -40,7 +36,6 @@ export default function ArchitectureExplorer({ dependencies }: ArchitectureExplo
   return (
     <main className={`architecture-explorer${sidebarOpen ? "" : " architecture-explorer--sidebar-closed"}`}>
       <ArchitectureSidebar
-        target={graphController.target}
         graph={graphController.graph}
         modules={graphController.modules}
         filteredGraph={graphController.filteredGraph}
@@ -50,7 +45,6 @@ export default function ArchitectureExplorer({ dependencies }: ArchitectureExplo
         focusedNode={graphController.focusedNode}
         selectedNode={graphController.selectedNode}
         onClose={() => setSidebarOpen(false)}
-        onTargetChange={changeTarget}
         onModuleChange={graphController.changeModule}
         onLayerChange={graphController.changeLayer}
         onQueryChange={graphController.changeQuery}

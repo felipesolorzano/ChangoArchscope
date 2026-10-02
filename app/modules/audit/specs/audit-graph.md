@@ -1,5 +1,11 @@
 # Audit Graph (backend-driven, drill-down)
 
+> Target React (Fase 4 de `docs/react-target-plan.md`): las vistas de drill usan `sourceRoot`, la
+> raiz escaneada del target (antes `phpRoot`, solo Laravel). `AuditGraphController` pasa
+> `config.laravel.modulesPath` o `config.react.modulesPath` segun `target`, asi que `app`, `file`
+> y `heatmap` funcionan igual para los dos stacks. `api_access` (categoria de los analizadores
+> React) es un acento conocido.
+
 ## Objetivo
 
 Producir, desde el backend, un grafo **pre-posicionado y pre-codificado** que React Flow
@@ -11,7 +17,7 @@ Niveles:
 
 - `overview`: monorepo (raiz) -> apps (primer segmento de ruta).
 - `heatmap`: grilla global plana con los archivos mas riesgosos de TODO el repo (sin drill
-  jerarquico). **Implementada.** Requiere `phpRoot`; si falta, cae a `overview`. Toma
+  jerarquico). **Implementada.** Requiere `sourceRoot`; si falta, cae a `overview`. Toma
   `byFile` ordenado por `findingsCount` desc, top `HEATMAP_LIMIT` (60); cada nodo es un
   `file` con `size` escalado por **cantidad de hallazgos** (no risk), `tone`/`accent` de su
   entrada, `id: "file:<rel-posix>"` y `drill: true` (click -> vista `file`). Sin raiz ni edges.
@@ -20,10 +26,10 @@ Niveles:
 
 ## Vista `file` (drill nivel 2)
 
-`buildAuditGraph(snapshot, { view: "file", focus: <rel-posix>, phpRoot })`:
+`buildAuditGraph(snapshot, { view: "file", focus: <rel-posix>, sourceRoot })`:
 
 - Requiere `focus` (ruta relativa del archivo, el id del nodo file sin el prefijo `file:`) y
-  `phpRoot`. Si falta alguno, cae a `overview`.
+  `sourceRoot`. Si falta alguno, cae a `overview`.
 - Nodo raiz = el archivo (`type: "file"`, `id: "file:<focus>"`, metrica de su entrada en
   `byFile`), centrado, `drill: false`.
 - Nodos regla = `aggregateFileRules(findings del archivo)` (top `FILE_RULE_LIMIT` = 24 por
@@ -35,14 +41,14 @@ Niveles:
 
 ## Vista `app` (drill-down)
 
-`buildAuditGraph(snapshot, { view: "app", focus: <app>, phpRoot })`:
+`buildAuditGraph(snapshot, { view: "app", focus: <app>, sourceRoot })`:
 
-- Requiere `focus` (la app) y `phpRoot` (la raiz del proyecto, `config.laravel.modulesPath`).
+- Requiere `focus` (la app) y `sourceRoot` (la raiz escaneada del target: `config.laravel.modulesPath` para `laravel`, `config.react.modulesPath` para `react`).
   Si falta alguno, cae a `overview`.
 - Nodo raiz = la app enfocada (`type: "app"`, `id: "app:<focus>"`, metrica de su entrada en
   `byModule`), centrada en `{ x: 0, y: 0 }`, `drill: false`.
 - Nodos archivo = entradas de `snapshot.riskBreakdown.byFile` cuya app (primer segmento de
-  `path.relative(phpRoot, file)`) coincide con `focus`, top `APP_FILE_LIMIT` (24) por risk.
+  `path.relative(sourceRoot, file)`) coincide con `focus`, top `APP_FILE_LIMIT` (24) por risk.
   Cada uno: `id: "file:<rel-posix>"`, `label` = basename, `size` por risk relativo al maximo
   del conjunto, `accent`/`tone`/`severityMix`/`badges` derivados de su `RiskEntry`.
 - Posiciones en grilla (`gridPositions(count, 6)`) debajo de la app.
@@ -54,7 +60,7 @@ Niveles:
 ## Entradas
 
 - `snapshot: AuditSnapshot` (el que produce `auditProject`/`runAudit`). Ya trae
-  `riskBreakdown.byModule` (agrupado por app = primer segmento de ruta cuando hay `phpRoot`),
+  `riskBreakdown.byModule` (agrupado por app = primer segmento de ruta cuando hay `sourceRoot`),
   `summary`, `findings`, `riskScore`.
 - `options: { view: AuditGraphView; focus: string | null }` con `view = "overview"` por ahora;
   `focus` se ignora en `overview`.
@@ -64,7 +70,7 @@ Niveles:
 ```text
 AuditGraphNodeType = "root" | "app" | "module" | "file" | "rule"
 AuditGraphTone     = "critical" | "high" | "medium" | "low" | "none"
-AuditGraphAccent   = "security" | "database" | "complexity" | "testing" | "dead_code" | "coupling_low_level" | "php_compatibility" | "mixed"
+AuditGraphAccent   = "security" | "database" | "complexity" | "testing" | "dead_code" | "coupling_low_level" | "php_compatibility" | "api_access" | "mixed"
 
 AuditGraphNode {
   id: string
@@ -151,7 +157,7 @@ sin recomputar sobre `findings`. Es aditivo: no cambia `value`/`byCategory`/`fin
 ## Casos de borde
 
 - Snapshot sin findings: solo el nodo raiz (`metrics` en 0, `tone: "none"`), sin apps ni edges.
-- `byModule` vacio (no hubo `phpRoot`/native): solo raiz.
+- `byModule` vacio (no hubo `sourceRoot`/native): solo raiz.
 - `maxRisk = 0`: todas las apps a tamano `MIN`.
 
 ## Criterios de aceptacion

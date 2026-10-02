@@ -8,7 +8,7 @@ export type AuditSnapshotContext = {
   module: string | null;
   filesScanned: number;
   modules: number;
-  phpRoot?: string;
+  sourceRoot?: string;
   skippedFiles?: PhpParseFailure[];
   phpCompatibilityStatus?: AuditScannerStatus;
 };
@@ -33,7 +33,7 @@ export function buildAuditSnapshot(findings: AuditFinding[], context: AuditSnaps
     },
     findings,
     riskScore: buildRiskScore(findings),
-    riskBreakdown: buildRiskBreakdown(findings, context.phpRoot),
+    riskBreakdown: buildRiskBreakdown(findings, context.sourceRoot),
     skippedFiles,
   };
 }

@@ -5,6 +5,7 @@ import { NodeFsSourceTreeReader } from "../../../shared/infrastructure/filesyste
 import { createAuditSnapshotCache } from "../../application/use-cases/AuditSnapshotCache.js";
 import { createRepoFingerprint } from "../../infrastructure/cache/computeRepoFingerprint.js";
 import { IncrementalDockerPhpcsScanner } from "../../infrastructure/compat/IncrementalDockerPhpcsScanner.js";
+import { BabelJsParser } from "../../infrastructure/parser/BabelJsParser.js";
 import { PhpAstParser } from "../../infrastructure/parser/PhpAstParser.js";
 import { IncrementalPhpFileScanner } from "../../infrastructure/scan/IncrementalPhpFileScanner.js";
 const DOCKERFILE_DIR = resolve(process.cwd(), "tools/php-compatibility");
@@ -51,6 +52,7 @@ export function getAuditDeps() {
             snapshotCache: createAuditSnapshotCache(),
             fingerprint: createRepoFingerprint(reader),
             scanFiles: (phpRoot, extensions, ignoredPaths) => nativeScanner.scan(phpRoot, extensions, ignoredPaths),
+            jsParser: new BabelJsParser(),
         };
     }
     return shared;

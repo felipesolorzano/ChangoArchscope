@@ -1,4 +1,5 @@
 import { auditProject } from "../../application/use-cases/AuditProject.js";
+import { JS_SOURCE_EXTENSIONS } from "../../application/use-cases/ScanJsFiles.js";
 const PHP_VERSION_PATTERN = /^\d+\.\d+$/;
 export function targetFromQuery(value) {
     return value === "react" ? "react" : "laravel";
@@ -15,10 +16,17 @@ export function phpVersionFromQuery(value) {
 export async function resolveAuditSnapshot(deps, target, module, phpVersion = null) {
     const config = deps.getConfig();
     const phpRoot = target === "laravel" ? config.laravel.modulesPath : null;
+    const js = target === "react" && deps.jsParser !== undefined
+        ? { root: config.react.modulesPath, extensions: JS_SOURCE_EXTENSIONS, ignoredPaths: config.react.ignoredPaths, parser: deps.jsParser }
+        : undefined;
+    // Lo que se escanea de verdad para este target (null = react sin parser JS: nada que escanear).
+    const scanned = phpRoot !== null
+        ? { root: phpRoot, extensions: config.laravel.phpExtensions, ignoredPaths: config.laravel.ignoredPaths }
+        : (js ?? null);
     // Fingerprint barato (mtime+size). Invalida tanto el cache de snapshot como el de compat,
     // para que ambos refresquen de forma consistente cuando se edita un archivo del repo.
-    const fingerprint = deps.fingerprint !== undefined && phpRoot !== null
-        ? await deps.fingerprint(phpRoot, config.laravel.phpExtensions, config.laravel.ignoredPaths)
+    const fingerprint = deps.fingerprint !== undefined && scanned !== null
+        ? await deps.fingerprint(scanned.root, scanned.extensions, scanned.ignoredPaths)
         : null;
     // Lo caro de hoy: check de arquitectura + scan de compat + parseo/analisis de todos los
     // archivos PHP. Se envuelve en un closure para poder saltarlo via cache en un hit.
@@ -36,12 +44,14 @@ export async function resolveAuditSnapshot(deps, target, module, phpVersion = nu
             ignoredPaths: config.laravel.ignoredPaths,
             compatibilityScan,
             scanFiles: deps.scanFiles,
+            js,
         });
     };
     if (deps.snapshotCache !== undefined && fingerprint !== null) {
-        // Incluye phpRoot en la llave: si cambia el modulesPath (otro repo), no se sirve un
-        // snapshot cacheado del repo anterior.
-        const key = `${phpRoot ?? ""}|${target}|${module ?? ""}|${phpVersion ?? ""}`;
+        // Incluye la raiz escaneada en la llave: si cambia el modulesPath (otro repo), no se sirve
+        // un snapshot cacheado del repo anterior.
+        // Hay fingerprint solo si hay raiz escaneada.
+        const key = `${scanned.root}|${target}|${module ?? ""}|${phpVersion ?? ""}`;
         return deps.snapshotCache.resolve(key, fingerprint, compute);
     }
     return compute();

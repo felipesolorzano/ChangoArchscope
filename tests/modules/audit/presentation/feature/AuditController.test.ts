@@ -5,7 +5,9 @@ import type { ArchitectureConfig } from "../../../../../app/modules/architecture
 import type { ArchitectureCheckResult } from "../../../../../app/modules/architecture/domain/value-objects/ArchitectureCheckReport.js";
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
 import type { PhpSourceParser } from "../../../../../app/modules/audit/domain/repositories/PhpSourceParser.js";
+import type { JsSourceParser } from "../../../../../app/modules/audit/domain/repositories/JsSourceParser.js";
 import { AuditController } from "../../../../../app/modules/audit/presentation/http/AuditController.js";
+import { createAuditSnapshotCache } from "../../../../../app/modules/audit/application/use-cases/AuditSnapshotCache.js";
 
 function buildConfig(): ArchitectureConfig {
   const coupling = {
@@ -112,8 +114,141 @@ describe("AuditController", async () => {
       vi.fn() as unknown as NextFunction,
     );
 
-    const snapshot = json.mock.calls[0][0] as { findings: Array<{ source: string }> };
+    const snapshot = json.mock.calls[0][0] as { findings: Array<{ source: string }>; skippedFiles: unknown[] };
     expect(snapshot.findings.some((finding) => finding.source === "native")).toBe(false);
+    expect(snapshot.skippedFiles).toEqual([]);
+  });
+
+  it("con target react y jsParser audita react.modulesPath con los analizadores JS", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const walkFiles = vi.fn(() => ["/abs/react/modules/pages/a.js"]);
+    const jsReader: SourceTreeReader = { listDirectories: () => [], walkFiles, readText: () => "", isFile: () => true };
+    const jsParser: JsSourceParser = {
+      parse: (file) => ({
+        file,
+        linesCount: 1,
+        classes: [],
+        functions: [],
+        imports: [],
+        securityIssues: [{ rule: "eval-usage", line: 1 }],
+        httpCalls: [],
+        globalAccesses: [],
+      }),
+    };
+    const config = () => ({ ...buildConfig(), react: { ...buildConfig().react, ignoredPaths: ["**/__tests__/**"] } });
+    const controller = new AuditController({ getConfig: config, reader: jsReader, parser, check, jsParser });
+    const { json, response } = fakeResponse();
+
+    await controller.show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect(walkFiles).toHaveBeenCalledTimes(1);
+    expect(walkFiles).toHaveBeenCalledWith("/abs/react/modules", [".ts", ".tsx", ".js", ".jsx"], ["**/__tests__/**"]);
+    const snapshot = json.mock.calls[0][0] as { findings: Array<{ source: string; file: string; rule: string }> };
+    const native = snapshot.findings.filter((finding) => finding.source === "native");
+    expect(new Set(native.map((finding) => finding.file))).toEqual(new Set(["/abs/react/modules/pages/a.js"]));
+    expect(native.map((finding) => finding.rule)).toContain("eval-usage");
+  });
+
+  it("con target react y jsParser cachea por fingerprint de la raiz React", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const jsParser: JsSourceParser = {
+      parse: vi.fn((file: string) => ({
+        file,
+        linesCount: 1,
+        classes: [],
+        functions: [],
+        imports: [],
+        securityIssues: [],
+        httpCalls: [],
+        globalAccesses: [],
+      })),
+    };
+    const fingerprint = vi.fn(async () => "fp-1");
+    const config = () => ({ ...buildConfig(), react: { ...buildConfig().react, ignoredPaths: ["**/__tests__/**"] } });
+    const controller = new AuditController({
+      getConfig: config,
+      reader,
+      parser,
+      check,
+      jsParser,
+      fingerprint,
+      snapshotCache: createAuditSnapshotCache(),
+    });
+
+    for (let index = 0; index < 2; index += 1) {
+      await controller.show({ query: { target: "react" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+    }
+
+    expect(fingerprint).toHaveBeenCalledWith("/abs/react/modules", [".ts", ".tsx", ".js", ".jsx"], ["**/__tests__/**"]);
+    expect(check).toHaveBeenCalledTimes(1);
+  });
+
+  it("separa en el cache dos targets con la misma huella", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const jsParser: JsSourceParser = { parse: vi.fn(() => { throw new Error("x"); }) };
+    const controller = new AuditController({
+      getConfig: buildConfig,
+      reader,
+      parser,
+      check,
+      jsParser,
+      fingerprint: vi.fn(async () => "same"),
+      snapshotCache: createAuditSnapshotCache(),
+    });
+
+    await controller.show({ query: { target: "react" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+    await controller.show({ query: {} } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+
+    expect(check.mock.calls.map((call) => call[2].target)).toEqual(["react", "laravel"]);
+  });
+
+  it("con target react sin jsParser no calcula fingerprint ni cachea", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const fingerprint = vi.fn(async () => "fp");
+    const controller = new AuditController({ getConfig: buildConfig, reader, parser, check, fingerprint, snapshotCache: createAuditSnapshotCache() });
+
+    for (let index = 0; index < 2; index += 1) {
+      await controller.show({ query: { target: "react" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+    }
+
+    expect(fingerprint).not.toHaveBeenCalled();
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
+  it("con target laravel cachea por fingerprint de la raiz PHP", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const fingerprint = vi.fn(async () => "fp");
+    const controller = new AuditController({ getConfig: buildConfig, reader, parser, check, fingerprint, snapshotCache: createAuditSnapshotCache() });
+
+    for (let index = 0; index < 2; index += 1) {
+      await controller.show({ query: {} } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+    }
+
+    expect(fingerprint).toHaveBeenCalledWith("/abs/app/modules", [".php", ".inc"], ["**/vendor/**"]);
+    expect(check).toHaveBeenCalledTimes(1);
+  });
+
+  it("con target laravel no usa el jsParser aunque este disponible", async () => {
+    const check = vi.fn((_config, _reader, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const jsParser: JsSourceParser = { parse: vi.fn() };
+    const controller = new AuditController({ getConfig: buildConfig, reader, parser, check, jsParser });
+    const { response } = fakeResponse();
+
+    await controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect(jsParser.parse).not.toHaveBeenCalled();
   });
 
   it("con target laravel escanea PHP usando modulesPath: el snapshot trae findings nativos", async () => {

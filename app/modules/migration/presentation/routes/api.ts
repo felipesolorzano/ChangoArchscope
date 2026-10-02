@@ -4,7 +4,9 @@ import { getArchitectureConfig } from "../../../architecture/infrastructure/conf
 import { NodeFsSourceTreeReader } from "../../../shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
 import { createDrizzleDatabase } from "../../../shared/infrastructure/persistence/sqlite/createDrizzleDatabase.js";
 import { getSqliteDatabaseConnection } from "../../../shared/infrastructure/persistence/sqlite/sqliteDatabaseConnection.js";
+import { reactSourceExtensions } from "../../../architecture/application/analyzers/tsImports.js";
 import type { ProjectSource, SourceProvider } from "../../application/contracts/SourceProvider.js";
+import { resolveProjectSource } from "../../application/use-cases/resolveProjectSource.js";
 import { SqliteBoundedContextMapRepository } from "../../infrastructure/persistence/SqliteBoundedContextMapRepository.js";
 import { BoundedContextMapController } from "../http/BoundedContextMapController.js";
 
@@ -15,18 +17,15 @@ export function migrationApiRoutes(): Router {
 
   const source: SourceProvider = {
     getSource: (target): ProjectSource => {
-      const config = getArchitectureConfig();
-      if (target === "react") {
-        return { target, root: config.react.modulesPath, extensions: [], ignoredPaths: config.react.ignoredPaths, files: [] };
-      }
-      const { modulesPath, phpExtensions, ignoredPaths } = config.laravel;
-      return {
+      const { laravel, react } = getArchitectureConfig();
+      return resolveProjectSource(
         target,
-        root: modulesPath,
-        extensions: phpExtensions,
-        ignoredPaths,
-        files: reader.walkFiles(modulesPath, phpExtensions, ignoredPaths),
-      };
+        {
+          laravel: { root: laravel.modulesPath, extensions: laravel.phpExtensions, ignoredPaths: laravel.ignoredPaths },
+          react: { root: react.modulesPath, extensions: reactSourceExtensions, ignoredPaths: react.ignoredPaths },
+        },
+        (root, extensions, ignoredPaths) => reader.walkFiles(root, extensions, ignoredPaths),
+      );
     },
   };
 

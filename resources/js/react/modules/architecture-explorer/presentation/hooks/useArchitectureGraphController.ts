@@ -8,8 +8,7 @@ import {
   type FilteredArchitectureGraph,
 } from "../utils/filterArchitectureGraph";
 
-export function useArchitectureGraphController(dependencies: ArchitectureProviders) {
-  const [target, setTarget] = useState<ArchitectureTarget>("laravel");
+export function useArchitectureGraphController(dependencies: ArchitectureProviders, target: ArchitectureTarget) {
   const [graph, setGraph] = useState<ArchitectureGraph | null>(null);
   const [selectedModule, setSelectedModule] = useState("");
   const [selectedLayer, setSelectedLayer] = useState("");
@@ -71,13 +70,6 @@ export function useArchitectureGraphController(dependencies: ArchitectureProvide
     ) ?? null;
   }, [filteredGraph.nodes, focusedNode, query]);
 
-  function changeTarget(nextTarget: ArchitectureTarget) {
-    setTarget(nextTarget);
-    setSelectedModule("");
-    setSelectedLayer("");
-    setFocusedNodeId(null);
-  }
-
   function changeModule(module: string) {
     setSelectedModule(module);
     refresh(module, target);
@@ -108,7 +100,6 @@ export function useArchitectureGraphController(dependencies: ArchitectureProvide
     selectedNode,
     refresh,
     setFocusedNodeId,
-    changeTarget,
     changeModule,
     changeLayer,
     changeQuery,

@@ -34,6 +34,13 @@ describe("accentStroke", () => {
     expect(accentStroke("security")).not.toBe(accentStroke("database"));
   });
 
+  it("api_access tiene su propio color, distinto de 'mixed' y de los demas accents", () => {
+    const others = ["security", "database", "complexity", "testing", "dead_code", "coupling_low_level", "php_compatibility", "mixed"] as const;
+
+    expect(accentStroke("api_access")).toMatch(/^#/);
+    expect(others.map(accentStroke)).not.toContain(accentStroke("api_access"));
+  });
+
   it("php_compatibility tiene su propio color, distinto de 'mixed'", () => {
     expect(accentStroke("php_compatibility")).not.toBe(accentStroke("mixed"));
   });

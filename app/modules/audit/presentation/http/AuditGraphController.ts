@@ -23,7 +23,7 @@ export class AuditGraphController {
       const graph = buildAuditGraph(snapshot, {
         view: viewFromQuery(request.query.view),
         focus: moduleFromQuery(request.query.focus),
-        phpRoot: target === "laravel" ? config.laravel.modulesPath : null,
+        sourceRoot: target === "laravel" ? config.laravel.modulesPath : config.react.modulesPath,
       });
 
       response.status(200).json(graph);

@@ -1,10 +1,10 @@
 import path from "node:path";
 import { SEVERITY_WEIGHTS } from "./auditSeverityWeights.js";
 const TOP_RISKIEST_FILES_LIMIT = 20;
-export function buildRiskBreakdown(findings, phpRoot) {
+export function buildRiskBreakdown(findings, sourceRoot) {
     const byFile = buildEntries(findings, (finding) => finding.file);
     const byClass = buildEntries(findings.filter((finding) => finding.class !== null), (finding) => `${finding.file}#${finding.class}`);
-    const byModule = buildEntries(findings.filter((finding) => moduleOf(finding, phpRoot) !== null), (finding) => moduleOf(finding, phpRoot));
+    const byModule = buildEntries(findings.filter((finding) => moduleOf(finding, sourceRoot) !== null), (finding) => moduleOf(finding, sourceRoot));
     return {
         byFile,
         byClass,
@@ -12,14 +12,14 @@ export function buildRiskBreakdown(findings, phpRoot) {
         topRiskiestFiles: byFile.slice(0, TOP_RISKIEST_FILES_LIMIT),
     };
 }
-function moduleOf(finding, phpRoot) {
+function moduleOf(finding, sourceRoot) {
     if (finding.module !== "") {
         return finding.module;
     }
-    if (phpRoot === undefined) {
+    if (sourceRoot === undefined) {
         return null;
     }
-    const [firstSegment] = path.relative(phpRoot, finding.file).split(path.sep);
+    const [firstSegment] = path.relative(sourceRoot, finding.file).split(path.sep);
     return firstSegment ?? null;
 }
 function buildEntries(findings, keyFn) {

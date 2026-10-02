@@ -10,7 +10,7 @@ import { AuditCanvas } from "../components/AuditCanvas";
 import { AuditDetailDrawer } from "../components/AuditDetailDrawer";
 import { AuditFilters } from "../components/AuditFilters";
 import { AuditLegend } from "../components/AuditLegend";
-import { useAuditGraphController } from "../hooks/useAuditGraphController";
+import { useAuditGraphController, type AuditTarget } from "../hooks/useAuditGraphController";
 import { useAuditExplorerStore } from "../store/auditExplorerStore";
 import { breadcrumbFor, drillTargetFor } from "../utils/auditNavigation";
 import { filterGraphByCategory, type CategoryFilter } from "../utils/auditNodeFilter";
@@ -19,12 +19,13 @@ import "./auditExplorer.css";
 
 interface AuditExplorerProps {
   dependencies: AuditExplorerDependencies;
+  target: AuditTarget;
 }
 
 const UNIT_BY_VIEW = { overview: "apps", heatmap: "archivos", app: "archivos", file: "reglas" } as const;
 
-export default function AuditExplorer({ dependencies }: AuditExplorerProps) {
-  const { graph, view, focus, phpVersion, loading, error, goTo, setPhpVersion } = useAuditGraphController(dependencies);
+export default function AuditExplorer({ dependencies, target }: AuditExplorerProps) {
+  const { graph, view, focus, phpVersion, loading, error, goTo, setPhpVersion } = useAuditGraphController(dependencies, target);
   const focusedNodeId = useAuditExplorerStore((state) => state.focusedNodeId);
   const setFocusedNodeId = useAuditExplorerStore((state) => state.setFocusedNodeId);
   const clearFocus = useAuditExplorerStore((state) => state.clearFocus);
@@ -95,6 +96,7 @@ export default function AuditExplorer({ dependencies }: AuditExplorerProps) {
             {loading ? "Escaneando…" : "Refrescar"}
           </button>
           <AuditFilters
+            target={target}
             phpVersion={phpVersion}
             onPhpVersionChange={setPhpVersion}
             category={category}
@@ -118,7 +120,7 @@ export default function AuditExplorer({ dependencies }: AuditExplorerProps) {
               </button>
             </div>
           )}
-          <AuditLegend />
+          <AuditLegend target={target} />
         </div>
       </header>
 
