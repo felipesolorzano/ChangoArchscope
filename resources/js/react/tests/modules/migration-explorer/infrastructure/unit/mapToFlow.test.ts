@@ -70,6 +70,29 @@ describe("mapToFlow module view", () => {
     expect(edges[0]).toMatchObject({ id: "e:layer:tours:domain:file:tours:domain:Tours/Domain/Tour.php", source: "layer:tours:domain", target: "file:tours:domain:Tours/Domain/Tour.php" });
   });
 
+  it("apila los archivos segun la altura de la tarjeta anterior (notas largas)", () => {
+    const withNotes: BoundedContextMap = {
+      generatedAt: "t",
+      modules: [
+        {
+          key: "tours",
+          name: "Tours",
+          validated: false,
+          layers: {
+            domain: [{ path: "a.ts", note: "x".repeat(70) }, { path: "b.ts" }, { path: "c.ts" }],
+            application: [],
+            infrastructure: [],
+            presentation: [],
+          },
+        },
+      ],
+    };
+
+    const files = mapToFlow(withNotes, "module", "tours").nodes.filter((node) => node.type === "bcFile");
+
+    expect(files.map((node) => node.position.y)).toEqual([110, 224, 294]);
+  });
+
   it("un focus inexistente cae a overview", () => {
     expect(mapToFlow(map(), "module", "nope").nodes.every((node) => node.type === "bcModule")).toBe(true);
   });

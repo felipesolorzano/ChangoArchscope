@@ -1,0 +1,1057 @@
+{
+  "generatedAt": "2026-10-02T02:24:15.561Z",
+  "generatedBy": "claude-opus (diseno to-be derivado del mapa react y de los endpoints reales)",
+  "modules": [
+    {
+      "key": "shared",
+      "name": "Shared Kernel",
+      "description": "Reemplaza la cadena de herencia Global > Utils > I18n > Gtm > Crud por contratos inyectables y hooks. Ningun componente hereda de una base propia. Se descarta globals/global.scripts.js (vacio, solo un import comentado).",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "shared/domain/value-objects/Money.ts",
+            "note": "monto + moneda; reemplaza currencyformat() de global.utils"
+          },
+          {
+            "path": "shared/domain/value-objects/Locale.ts",
+            "note": "idioma activo (es/en/fr)"
+          },
+          {
+            "path": "shared/domain/services/emailRules.ts",
+            "note": "validateEmail de component.form.validator, sin jQuery/bootstrap"
+          }
+        ],
+        "application": [
+          {
+            "path": "shared/application/contracts/HttpClient.ts",
+            "note": "puerto HTTP; reemplaza all/single/edit/create/delete de global.crud ($.ajax + forceUpdate)"
+          },
+          {
+            "path": "shared/application/contracts/Translator.ts",
+            "note": "puerto de traduccion; reemplaza translate()/t() heredados de global.i18n"
+          },
+          {
+            "path": "shared/application/contracts/AnalyticsTracker.ts",
+            "note": "puerto de analytics; reemplaza gtm*() heredados de global.gtm"
+          },
+          {
+            "path": "shared/application/contracts/Navigator.ts",
+            "note": "navegacion/query string; reemplaza navigate/pushnavigate/setquery de global.utils"
+          },
+          {
+            "path": "shared/application/use-cases/loadTranslations.ts",
+            "note": "GetSiteTranslateTextLang"
+          },
+          {
+            "path": "shared/application/use-cases/listCurrencies.ts",
+            "note": "GetCurrencies"
+          },
+          {
+            "path": "shared/application/use-cases/listLanguages.ts",
+            "note": "GetLanguages"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "shared/infrastructure/http/FetchHttpClient.ts",
+            "note": "fetch + credentials; base URL desde BrandConfig, sin URLs hardcodeadas"
+          },
+          {
+            "path": "shared/infrastructure/i18n/DictionaryTranslator.ts",
+            "note": "usa languages/language.{es,en,fr} como datos"
+          },
+          {
+            "path": "shared/infrastructure/analytics/GtmAnalyticsTracker.ts",
+            "note": "react-gtm-hook detras del puerto"
+          },
+          {
+            "path": "shared/infrastructure/routing/RouterNavigator.ts",
+            "note": "react-router-dom detras del puerto"
+          },
+          {
+            "path": "shared/infrastructure/factory/createSharedDependencies.ts",
+            "note": "composition root del kernel"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "shared/presentation/main.tsx",
+            "note": "entry point; reemplaza index.js (ReactDOM.render + Router con basename por marca)"
+          },
+          {
+            "path": "shared/presentation/providers/AppProviders.tsx",
+            "note": "inyecta HttpClient/Translator/Analytics por contexto de React"
+          },
+          {
+            "path": "shared/presentation/components/Section.tsx",
+            "note": "component.section"
+          },
+          {
+            "path": "shared/presentation/hooks/useTranslation.ts",
+            "note": "reemplaza this.t() heredado"
+          },
+          {
+            "path": "shared/presentation/hooks/useAnalytics.ts"
+          },
+          {
+            "path": "shared/presentation/components/Pagination.tsx",
+            "note": "component.pagination"
+          },
+          {
+            "path": "shared/presentation/components/InfiniteScroll.tsx",
+            "note": "component.scroll.infinite"
+          },
+          {
+            "path": "shared/presentation/components/ButtonLoader.tsx",
+            "note": "component.button.loader"
+          },
+          {
+            "path": "shared/presentation/components/ErrorMessages.tsx",
+            "note": "component.error.messages + component.advice.message"
+          },
+          {
+            "path": "shared/presentation/components/DatePicker.tsx",
+            "note": "component.datepicker.custom"
+          },
+          {
+            "path": "shared/presentation/components/CurrencySelector.tsx",
+            "note": "component.currency"
+          },
+          {
+            "path": "shared/presentation/components/LanguageSelector.tsx",
+            "note": "component.language"
+          },
+          {
+            "path": "shared/presentation/components/SafeHtml.tsx",
+            "note": "unico punto con HTML sanitizado; elimina los 105 dangerouslySetInnerHTML sueltos"
+          }
+        ]
+      }
+    },
+    {
+      "key": "brand",
+      "name": "Brand (white-label)",
+      "description": "El multi-marca pasa a ser DATOS: una BrandConfig por marca en vez de 65 configs JS, 9 sets de rutas por variable de entorno y headers/footers por marca.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "brand/domain/value-objects/BrandConfig.ts",
+            "note": "forma tipada de configs/config.*.js (apiurl, cdn, travelagentid, features)"
+          },
+          {
+            "path": "brand/domain/value-objects/BrandFeatures.ts",
+            "note": "flags por marca (tours/transfers/shops/donaciones) en vez de rutas distintas por marca"
+          },
+          {
+            "path": "brand/domain/services/resolveApiUrl.ts",
+            "note": "reglas sandbox/devel de configs/config.js, puras y testeables"
+          }
+        ],
+        "application": [
+          {
+            "path": "brand/application/contracts/BrandConfigSource.ts",
+            "note": "de donde sale la marca activa"
+          },
+          {
+            "path": "brand/application/use-cases/loadActiveBrand.ts",
+            "note": "reemplaza require(`./config.${REACT_APP_BRAND}`)"
+          },
+          {
+            "path": "brand/application/use-cases/buildSitemap.ts",
+            "note": "reemplaza sitemaps/sitemap.bookingwidget*.js (5 copias)"
+          },
+          {
+            "path": "brand/application/contracts/BrandConfigGateway.ts",
+            "note": "alta/edicion remota de marcas"
+          },
+          {
+            "path": "brand/application/use-cases/saveBrandConfig.ts",
+            "note": "CreateBrandConfig + GetBrandConfig de brand.generator"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "brand/infrastructure/config/brands/*.json",
+            "note": "las 65 marcas como datos (migradas de configs/config.*.js)"
+          },
+          {
+            "path": "brand/infrastructure/config/EnvBrandConfigSource.ts",
+            "note": "REACT_APP_BRAND en un solo lugar"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "brand/presentation/routes/AppRoutes.tsx",
+            "note": "UNA tabla de rutas filtrada por BrandFeatures; reemplaza routes/routes*.js (9)"
+          },
+          {
+            "path": "brand/presentation/components/Header.tsx",
+            "note": "partial.header* (5 variantes) parametrizado por marca"
+          },
+          {
+            "path": "brand/presentation/components/Footer.tsx",
+            "note": "partial.footer* (4 variantes) parametrizado por marca"
+          },
+          {
+            "path": "brand/presentation/components/Menu.tsx",
+            "note": "component.menu"
+          },
+          {
+            "path": "brand/presentation/hooks/useBrand.ts"
+          },
+          {
+            "path": "brand/presentation/pages/BrandRegisterPage.tsx",
+            "note": "brand.generator (mini-app aparte con su propia copia de global.crud/global.utils) integrada como una ruta mas: page.brand.register, header, footer, 404, global.crud.request"
+          }
+        ]
+      }
+    },
+    {
+      "key": "tours",
+      "name": "Tours",
+      "description": "Catalogo, busqueda, detalle, disponibilidad y precio de tours. El calculo de precios sale del componente de 2000 lineas a un servicio de dominio.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "tours/domain/value-objects/Tour.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "tours/domain/value-objects/TourId.ts"
+          },
+          {
+            "path": "tours/domain/value-objects/Participants.ts",
+            "note": "adultos/ninos/edades; reemplaza age.selector + persons.selector"
+          },
+          {
+            "path": "tours/domain/value-objects/TourQuote.ts",
+            "note": "precio calculado por tipo de participante + extras"
+          },
+          {
+            "path": "tours/domain/value-objects/TourSearchFilters.ts",
+            "note": "filtros de busqueda (fecha, destino, proveedor)"
+          },
+          {
+            "path": "tours/domain/services/tourPricing.ts",
+            "note": "reglas de precio hoy dentro de component.tour.availability (calculations.adults/children/extras)"
+          },
+          {
+            "path": "tours/domain/services/participantRules.ts",
+            "note": "limites y edades validas"
+          }
+        ],
+        "application": [
+          {
+            "path": "tours/application/contracts/ToursGateway.ts",
+            "note": "puerto de la API de tours"
+          },
+          {
+            "path": "tours/application/use-cases/searchTours.ts",
+            "note": "SearchTours"
+          },
+          {
+            "path": "tours/application/use-cases/listTours.ts",
+            "note": "GetTours"
+          },
+          {
+            "path": "tours/application/use-cases/getTourDetails.ts",
+            "note": "GetTourDetails"
+          },
+          {
+            "path": "tours/application/use-cases/quoteTour.ts",
+            "note": "GetTourPrices + GetTourPricingInfo + tourPricing"
+          },
+          {
+            "path": "tours/application/use-cases/listTrendingTours.ts",
+            "note": "GetTrendingTours"
+          },
+          {
+            "path": "tours/application/use-cases/listSpecialOffers.ts",
+            "note": "GetAllSpecialOffersWithoutLogin"
+          },
+          {
+            "path": "tours/application/use-cases/listProviders.ts",
+            "note": "GetSBIProviders"
+          },
+          {
+            "path": "tours/application/use-cases/listRandomTours.ts",
+            "note": "GetRandomTours"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "tours/infrastructure/api/HttpToursGateway.ts",
+            "note": "implementa ToursGateway con HttpClient"
+          },
+          {
+            "path": "tours/infrastructure/factory/createToursDependencies.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "tours/presentation/pages/ToursPage.tsx",
+            "note": "page.tours + page.tours.random"
+          },
+          {
+            "path": "tours/presentation/pages/TourDetailsPage.tsx",
+            "note": "page.tour.details"
+          },
+          {
+            "path": "tours/presentation/pages/TourAvailabilityPage.tsx",
+            "note": "page.tours.availability"
+          },
+          {
+            "path": "tours/presentation/pages/SpecialOffersPage.tsx",
+            "note": "page.specials"
+          },
+          {
+            "path": "tours/presentation/pages/GroupTourPage.tsx",
+            "note": "page.group + page.landing (+ page.landing_copy)"
+          },
+          {
+            "path": "tours/presentation/pages/ToursWidgetPage.tsx",
+            "note": "page.tours.widget.2 (widget embebible de tours aleatorios)"
+          },
+          {
+            "path": "tours/presentation/components/TourAvailability.tsx",
+            "note": "UI de component.tour.availability (+ .devel) sin logica de precio"
+          },
+          {
+            "path": "tours/presentation/components/ParticipantsSelector.tsx",
+            "note": "age.selector + persons.selector"
+          },
+          {
+            "path": "tours/presentation/components/TourCard.tsx",
+            "note": "tour.card + special.card + trending.tour"
+          },
+          {
+            "path": "tours/presentation/components/ToursFilter.tsx",
+            "note": "tours.filter"
+          },
+          {
+            "path": "tours/presentation/components/ToursList.tsx",
+            "note": "tours.list + search.tours.result"
+          },
+          {
+            "path": "tours/presentation/components/TourSearch.tsx",
+            "note": "search.tours + search.alltours"
+          },
+          {
+            "path": "tours/presentation/components/TourPricesTable.tsx",
+            "note": "tour.prices.table + tour.prices.table.2"
+          },
+          {
+            "path": "tours/presentation/components/TourRules.tsx",
+            "note": "tour.rules.things"
+          },
+          {
+            "path": "tours/presentation/hooks/useTourAvailabilityController.ts",
+            "note": "orquesta quoteTour; reemplaza los 28 campos de this.state"
+          },
+          {
+            "path": "tours/presentation/hooks/useToursSearchController.ts"
+          },
+          {
+            "path": "tours/presentation/store/tourAvailabilityStore.ts",
+            "note": "Zustand: participantes/fecha/extras compartidos con el carrito"
+          }
+        ]
+      }
+    },
+    {
+      "key": "reviews",
+      "name": "Reviews",
+      "description": "Resenas de tours: listado, tendencias y envio.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "reviews/domain/value-objects/Review.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "reviews/domain/services/reviewRules.ts",
+            "note": "validacion del formulario de resena"
+          }
+        ],
+        "application": [
+          {
+            "path": "reviews/application/contracts/ReviewsGateway.ts"
+          },
+          {
+            "path": "reviews/application/use-cases/submitReview.ts",
+            "note": "RegisterPendingUserReview"
+          },
+          {
+            "path": "reviews/application/use-cases/listTrendingReviews.ts",
+            "note": "GetTrendingTours"
+          },
+          {
+            "path": "reviews/application/use-cases/listCountries.ts",
+            "note": "GetCountries (candidato a shared si otro contexto lo usa)"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "reviews/infrastructure/api/HttpReviewsGateway.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "reviews/presentation/pages/TrendingReviewsPage.tsx",
+            "note": "page.trending.reviews"
+          },
+          {
+            "path": "reviews/presentation/components/ReviewCard.tsx",
+            "note": "review.card"
+          },
+          {
+            "path": "reviews/presentation/components/ReviewForm.tsx",
+            "note": "review.send"
+          },
+          {
+            "path": "reviews/presentation/components/TourReviews.tsx",
+            "note": "tour.reviews (lo consume tours por props)"
+          }
+        ]
+      }
+    },
+    {
+      "key": "transfers",
+      "name": "Transfers",
+      "description": "Traslados aeropuerto-hotel: busqueda, cotizacion y detalle.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "transfers/domain/value-objects/Transfer.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "transfers/domain/value-objects/TransferRoute.ts",
+            "note": "aeropuerto <-> hotel, ida/vuelta"
+          },
+          {
+            "path": "transfers/domain/value-objects/FlightInfo.ts",
+            "note": "aerolinea, vuelo, horario"
+          },
+          {
+            "path": "transfers/domain/value-objects/TransferQuote.ts"
+          },
+          {
+            "path": "transfers/domain/services/transferPricing.ts",
+            "note": "reglas de transfer.prices.details (hoy 36 campos de estado)"
+          }
+        ],
+        "application": [
+          {
+            "path": "transfers/application/contracts/TransfersGateway.ts"
+          },
+          {
+            "path": "transfers/application/use-cases/searchTransfers.ts",
+            "note": "GetTransfers"
+          },
+          {
+            "path": "transfers/application/use-cases/getTransferDetails.ts",
+            "note": "GetTransferDetails"
+          },
+          {
+            "path": "transfers/application/use-cases/listAirports.ts",
+            "note": "GetAirports"
+          },
+          {
+            "path": "transfers/application/use-cases/listAirlines.ts",
+            "note": "GetAirlines"
+          },
+          {
+            "path": "transfers/application/use-cases/searchHotels.ts",
+            "note": "GetHotels"
+          },
+          {
+            "path": "transfers/application/use-cases/listVacationCompanies.ts",
+            "note": "GetVacationCompanies"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "transfers/infrastructure/api/HttpTransfersGateway.ts"
+          },
+          {
+            "path": "transfers/infrastructure/factory/createTransfersDependencies.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "transfers/presentation/pages/TransfersPage.tsx",
+            "note": "page.transfers"
+          },
+          {
+            "path": "transfers/presentation/pages/TransferPricesPage.tsx",
+            "note": "page.transfers.prices (hoy importada por el carrito: violacion de folderOrder)"
+          },
+          {
+            "path": "transfers/presentation/components/TransferPricesTable.tsx",
+            "note": "transfer.prices.table + la tabla que hoy el carrito toma de page.transfers.prices"
+          },
+          {
+            "path": "transfers/presentation/components/TransferPriceDetails.tsx",
+            "note": "transfer.prices.details (+ - Copy)"
+          },
+          {
+            "path": "transfers/presentation/components/TransferSearch.tsx",
+            "note": "search.transfers + search.transfers.result + transfers.container"
+          },
+          {
+            "path": "transfers/presentation/components/TransferCard.tsx",
+            "note": "transfer.card + transfer.card.option"
+          },
+          {
+            "path": "transfers/presentation/components/AirportSelector.tsx",
+            "note": "airport.selector"
+          },
+          {
+            "path": "transfers/presentation/components/AirlineSelector.tsx",
+            "note": "airlines.selector"
+          },
+          {
+            "path": "transfers/presentation/components/HotelSearch.tsx",
+            "note": "search.hotel + input.search.hotel"
+          },
+          {
+            "path": "transfers/presentation/components/VacationCompanySelector.tsx",
+            "note": "vacationcompanies.selector"
+          },
+          {
+            "path": "transfers/presentation/hooks/useTransferQuoteController.ts"
+          },
+          {
+            "path": "transfers/presentation/store/transferQuoteStore.ts",
+            "note": "Zustand: ruta/vuelo/pasajeros compartidos con el carrito"
+          }
+        ]
+      }
+    },
+    {
+      "key": "destinations",
+      "name": "Destinations",
+      "description": "Home y descubrimiento: destinos populares y buscador de destino.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "destinations/domain/value-objects/Destination.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "destinations/domain/value-objects/Weather.ts"
+          }
+        ],
+        "application": [
+          {
+            "path": "destinations/application/contracts/DestinationsGateway.ts"
+          },
+          {
+            "path": "destinations/application/use-cases/searchDestinations.ts",
+            "note": "SearchDestinations (hoy con query string hardcodeado en global.requests)"
+          },
+          {
+            "path": "destinations/application/use-cases/listPopularDestinations.ts",
+            "note": "destinations.popular + popular-ids"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "destinations/infrastructure/api/HttpDestinationsGateway.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "destinations/presentation/pages/HomePage.tsx",
+            "note": "page.home"
+          },
+          {
+            "path": "destinations/presentation/components/DestinationSelector.tsx",
+            "note": "destination.selector + search.destination"
+          },
+          {
+            "path": "destinations/presentation/components/PopularDestinations.tsx",
+            "note": "destinations.popular + destinations.popular-ids + home.destinations"
+          },
+          {
+            "path": "destinations/presentation/components/DestinationCard.tsx",
+            "note": "home.destination.card"
+          },
+          {
+            "path": "destinations/presentation/components/GlobalSearch.tsx",
+            "note": "component.search"
+          },
+          {
+            "path": "destinations/presentation/components/WeatherWidget.tsx",
+            "note": "component.weather"
+          }
+        ]
+      }
+    },
+    {
+      "key": "checkout",
+      "name": "Cart & Checkout",
+      "description": "Carrito, cupones y checkout. Un solo checkout en vez de page.checkout + 6 copias; el pago se delega a payments.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "checkout/domain/value-objects/Cart.ts",
+            "note": "entidad raiz (items de tours y transfers)"
+          },
+          {
+            "path": "checkout/domain/value-objects/CartItem.ts"
+          },
+          {
+            "path": "checkout/domain/value-objects/Coupon.ts"
+          },
+          {
+            "path": "checkout/domain/value-objects/CustomerData.ts",
+            "note": "datos del comprador del formulario de checkout"
+          },
+          {
+            "path": "checkout/domain/services/cartTotals.ts",
+            "note": "subtotal/descuentos/puntos (hoy en cart.aside y page.checkout)"
+          },
+          {
+            "path": "checkout/domain/services/checkoutValidation.ts",
+            "note": "validaciones del formulario hoy dentro del render de 870 lineas"
+          }
+        ],
+        "application": [
+          {
+            "path": "checkout/application/contracts/CartGateway.ts"
+          },
+          {
+            "path": "checkout/application/use-cases/applyCoupon.ts",
+            "note": "getCouponDiscountAmount"
+          },
+          {
+            "path": "checkout/application/use-cases/getPromotionDiscount.ts",
+            "note": "GetPromotionDiscount (hoy duplicado en cart.list + 3 copias)"
+          },
+          {
+            "path": "checkout/application/use-cases/registerCustomer.ts",
+            "note": "UserRegister (hoy en 7 archivos de checkout)"
+          },
+          {
+            "path": "checkout/application/use-cases/placeOrder.ts",
+            "note": "doBookingCartPayment + delega el cobro en payments"
+          },
+          {
+            "path": "checkout/application/use-cases/listCardTypes.ts",
+            "note": "GetCreditCardNames"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "checkout/infrastructure/api/HttpCartGateway.ts"
+          },
+          {
+            "path": "checkout/infrastructure/storage/LocalCartStorage.ts",
+            "note": "persistencia del carrito (hoy setglobaldata)"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "checkout/presentation/pages/CartPage.tsx",
+            "note": "page.cart (+ - Copy)"
+          },
+          {
+            "path": "checkout/presentation/pages/CheckoutPage.tsx",
+            "note": "page.checkout (+ .1, .2 y 4 copias)"
+          },
+          {
+            "path": "checkout/presentation/components/CartList.tsx",
+            "note": "cart.list (+ 3 copias) usando TransferPricesTable de transfers, no la pagina"
+          },
+          {
+            "path": "checkout/presentation/components/CartSummary.tsx",
+            "note": "cart.aside + cart.header"
+          },
+          {
+            "path": "checkout/presentation/components/CouponForm.tsx",
+            "note": "component.coupon"
+          },
+          {
+            "path": "checkout/presentation/components/CartItemOptions.tsx",
+            "note": "component.cart.list.options"
+          },
+          {
+            "path": "checkout/presentation/components/CustomerForm.tsx",
+            "note": "seccion de datos del comprador de page.checkout"
+          },
+          {
+            "path": "checkout/presentation/hooks/useCheckoutController.ts"
+          },
+          {
+            "path": "checkout/presentation/store/cartStore.ts",
+            "note": "Zustand: el carrito compartido entre paginas"
+          }
+        ]
+      }
+    },
+    {
+      "key": "payments",
+      "name": "Payments",
+      "description": "Procesadores de pago como estrategias detras de un puerto: Bancomer, MIT, WorldPay y Stripe (incluye donaciones). Se descartan stripes/ y customStripe/ DemoText.js (texto de demo).",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "payments/domain/value-objects/Payment.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "payments/domain/value-objects/PaymentMethod.ts",
+            "note": "bancomer | mit | worldpay | stripe"
+          },
+          {
+            "path": "payments/domain/value-objects/CardNumber.ts",
+            "note": "reglas de component.credit.card.validator"
+          },
+          {
+            "path": "payments/domain/services/paymentResult.ts",
+            "note": "interpretacion de los retornos (end.point.*) en un solo lugar"
+          }
+        ],
+        "application": [
+          {
+            "path": "payments/application/contracts/PaymentGateway.ts",
+            "note": "puerto comun a todos los procesadores"
+          },
+          {
+            "path": "payments/application/use-cases/payOrder.ts",
+            "note": "elige la estrategia segun la marca/metodo"
+          },
+          {
+            "path": "payments/application/use-cases/confirmPayment.ts",
+            "note": "getWorldPayPayment + retornos de Bancomer/MIT"
+          },
+          {
+            "path": "payments/application/use-cases/donate.ts",
+            "note": "page.stripe (donaciones)"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "payments/infrastructure/gateways/BancomerPaymentGateway.ts",
+            "note": "doBancomerPaymentV2"
+          },
+          {
+            "path": "payments/infrastructure/gateways/MitPaymentGateway.ts",
+            "note": "component.payment.processor.mit"
+          },
+          {
+            "path": "payments/infrastructure/gateways/WorldPayPaymentGateway.ts",
+            "note": "doPaymentWorldPay + worldPayPaymentLink"
+          },
+          {
+            "path": "payments/infrastructure/gateways/StripePaymentGateway.ts",
+            "note": "createStripeCart / createCustomStripeCart; unifica stripes/ y customStripe/ (api/StripeAPI.js, App.js, index.js: casi identicos)"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "payments/presentation/pages/PaymentPage.tsx",
+            "note": "page.payment"
+          },
+          {
+            "path": "payments/presentation/pages/PaymentReturnPage.tsx",
+            "note": "page.end.point.bancomer + page.end.point.mit"
+          },
+          {
+            "path": "payments/presentation/pages/DonationPage.tsx",
+            "note": "page.stripe"
+          },
+          {
+            "path": "payments/presentation/components/CardForm.tsx",
+            "note": "credit.cards + creditcardtypes.selector"
+          },
+          {
+            "path": "payments/presentation/components/StripeCheckoutForm.tsx",
+            "note": "stripes/CheckoutForm + customStripe/CheckoutForm (+ copias)"
+          }
+        ]
+      }
+    },
+    {
+      "key": "account",
+      "name": "Customer Account",
+      "description": "Login, perfil, historial de compras, notificaciones y wishlist.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "account/domain/value-objects/Customer.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "account/domain/value-objects/Purchase.ts"
+          },
+          {
+            "path": "account/domain/value-objects/Notification.ts"
+          },
+          {
+            "path": "account/domain/value-objects/Wishlist.ts"
+          }
+        ],
+        "application": [
+          {
+            "path": "account/application/contracts/AccountGateway.ts"
+          },
+          {
+            "path": "account/application/use-cases/login.ts",
+            "note": "UserLogin"
+          },
+          {
+            "path": "account/application/use-cases/listPurchases.ts",
+            "note": "GetPurchaseHistory"
+          },
+          {
+            "path": "account/application/use-cases/getPurchaseDetails.ts",
+            "note": "GetPurchaseDetails + GetCartPurchase"
+          },
+          {
+            "path": "account/application/use-cases/resendConfirmation.ts",
+            "note": "SendTourBookingEmailConfirm"
+          },
+          {
+            "path": "account/application/use-cases/manageNotifications.ts",
+            "note": "Get/Update/DeleteUserNotification"
+          },
+          {
+            "path": "account/application/use-cases/toggleWishlist.ts",
+            "note": "AddTourToWishList / DeleteTourFromWishList"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "account/infrastructure/api/HttpAccountGateway.ts"
+          },
+          {
+            "path": "account/infrastructure/session/BrowserSession.ts",
+            "note": "setuserinfo de global.utils"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "account/presentation/pages/LoginPage.tsx",
+            "note": "page.login"
+          },
+          {
+            "path": "account/presentation/pages/MyAccountPage.tsx",
+            "note": "page.my.account"
+          },
+          {
+            "path": "account/presentation/pages/PurchaseDetailPage.tsx",
+            "note": "page.purchase.history.detail + .detail.cart"
+          },
+          {
+            "path": "account/presentation/pages/WishlistPage.tsx",
+            "note": "page.wishlist"
+          },
+          {
+            "path": "account/presentation/components/ProfileForm.tsx",
+            "note": "component.profile"
+          },
+          {
+            "path": "account/presentation/components/PurchaseHistory.tsx",
+            "note": "purchase.history + purchase.history.card"
+          },
+          {
+            "path": "account/presentation/components/PurchaseDetail.tsx",
+            "note": "purchase.history.detail.tour + .detail.transfer (+ card)"
+          },
+          {
+            "path": "account/presentation/components/NotificationsPanel.tsx",
+            "note": "notifications.alerts + .card"
+          },
+          {
+            "path": "account/presentation/components/WishlistButton.tsx",
+            "note": "icon.wishlist"
+          },
+          {
+            "path": "account/presentation/store/sessionStore.ts",
+            "note": "Zustand: usuario logueado"
+          }
+        ]
+      }
+    },
+    {
+      "key": "agents",
+      "name": "Travel Agents & Ambassadors",
+      "description": "Busqueda de agentes, mensaje del agente y landing de embajadores.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "agents/domain/value-objects/TravelAgent.ts",
+            "note": "entidad raiz; telefonos hoy hardcodeados en whatsappChat() de global.utils"
+          }
+        ],
+        "application": [
+          {
+            "path": "agents/application/contracts/AgentsGateway.ts"
+          },
+          {
+            "path": "agents/application/use-cases/searchAgents.ts",
+            "note": "DoSearchTravelAgent"
+          },
+          {
+            "path": "agents/application/use-cases/installClientApp.ts",
+            "note": "TAgentClientAppInstall"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "agents/infrastructure/api/HttpAgentsGateway.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "agents/presentation/pages/AmbassadorPage.tsx",
+            "note": "page.ambassador + page.homelanding (casi iguales)"
+          },
+          {
+            "path": "agents/presentation/pages/AgentMessagePage.tsx",
+            "note": "page.travel.agent.message"
+          },
+          {
+            "path": "agents/presentation/components/AgentSearch.tsx",
+            "note": "agents.search"
+          },
+          {
+            "path": "agents/presentation/components/AmbassadorSlider.tsx",
+            "note": "sliderambassador + ambassador.spinner"
+          },
+          {
+            "path": "agents/presentation/components/WhatsappChat.tsx",
+            "note": "whatsappChat() de global.utils"
+          }
+        ]
+      }
+    },
+    {
+      "key": "shops",
+      "name": "Shops (Dining & Shopping)",
+      "description": "Directorio de restaurantes/tiendas y su detalle.",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "shops/domain/value-objects/Shop.ts",
+            "note": "entidad raiz"
+          },
+          {
+            "path": "shops/domain/value-objects/ShopCategory.ts",
+            "note": "dining | shopping"
+          }
+        ],
+        "application": [
+          {
+            "path": "shops/application/contracts/ShopsGateway.ts"
+          },
+          {
+            "path": "shops/application/use-cases/listShops.ts",
+            "note": "GetFullShopsInfo"
+          },
+          {
+            "path": "shops/application/use-cases/getShopDetails.ts",
+            "note": "GetShopDetails"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "shops/infrastructure/api/HttpShopsGateway.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "shops/presentation/pages/ShopsPage.tsx",
+            "note": "page.dining + page.shopping (shopping hoy reusa la clase de dining)"
+          },
+          {
+            "path": "shops/presentation/pages/ShopDetailsPage.tsx",
+            "note": "page.shop.details"
+          },
+          {
+            "path": "shops/presentation/components/ShopsList.tsx",
+            "note": "shops.list"
+          }
+        ]
+      }
+    },
+    {
+      "key": "content",
+      "name": "Legal & Static Content",
+      "description": "Textos legales y estaticos por marca como DATOS: 1 pagina legal parametrizada en vez de 19 componentes/paginas por marca. Se descarta page.cicles (pagina de prueba: un DatePicker y un console.log).",
+      "validated": false,
+      "layers": {
+        "domain": [
+          {
+            "path": "content/domain/value-objects/LegalDocument.ts",
+            "note": "tipo (privacy/terms/cookies) + marca + idioma"
+          }
+        ],
+        "application": [
+          {
+            "path": "content/application/contracts/ContentSource.ts"
+          },
+          {
+            "path": "content/application/use-cases/getLegalDocument.ts",
+            "note": "resuelve el documento de la marca activa"
+          },
+          {
+            "path": "content/application/contracts/ContactGateway.ts"
+          },
+          {
+            "path": "content/application/use-cases/sendContactMessage.ts",
+            "note": "ContactUs"
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "content/infrastructure/content/legal/*.md",
+            "note": "los textos de privacy*/terms* por marca (bbva, toorzy, totoura, trafictours, sunexcursions, ids, viajeypunto) como markdown"
+          },
+          {
+            "path": "content/infrastructure/content/MarkdownContentSource.ts"
+          },
+          {
+            "path": "content/infrastructure/api/HttpContactGateway.ts"
+          }
+        ],
+        "presentation": [
+          {
+            "path": "content/presentation/pages/LegalPage.tsx",
+            "note": "page.privacy*, page.terms*, page.cookies y los 10 component.privacy/terms.*"
+          },
+          {
+            "path": "content/presentation/pages/AboutPage.tsx",
+            "note": "page.about.us"
+          },
+          {
+            "path": "content/presentation/pages/ContactPage.tsx",
+            "note": "page.contact"
+          },
+          {
+            "path": "content/presentation/pages/NotFoundPage.tsx",
+            "note": "page.404"
+          },
+          {
+            "path": "content/presentation/components/IframeEmbed.tsx",
+            "note": "component.generic.iframe"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1024 @@
+{
+  "generatedAt": "2026-10-01T19:08:20.629Z",
+  "generatedBy": "claude-opus (analisis por contenido: endpoints de API, imports y herencia)",
+  "modules": [
+    {
+      "key": "shared-kernel",
+      "name": "Shared Kernel",
+      "description": "Cadena de herencia Global/Utils/I18n/Gtm/Crud, traducciones y UI generica. Hoy es el acoplamiento central del proyecto: todo componente hereda HTTP, i18n, analytics y navegacion.",
+      "validated": true,
+      "layers": {
+        "domain": [
+          {
+            "path": "components/component.form.validator.js",
+            "note": "Validaciones puras (email) mezcladas con imports de jQuery/bootstrap."
+          }
+        ],
+        "application": [
+          {
+            "path": "globals/global.js",
+            "note": "Base comun `Global` de la que heredan casi todos los componentes."
+          },
+          {
+            "path": "globals/global.utils.js",
+            "note": "God class (~1200 lineas): navegacion, query string, init de marca/agencia, menu, dispatcher, ajaxsetup. Hay que partirla."
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "globals/global.crud.js",
+            "note": "Base Crud: cliente HTTP ($.ajax a config.apiurl) heredado por TODOS los componentes; muta this.state y llama forceUpdate."
+          },
+          {
+            "path": "globals/global.gtm.js",
+            "note": "Analytics (Google Tag Manager) metido en la cadena de herencia."
+          },
+          {
+            "path": "globals/global.i18n_copy.js",
+            "note": "Traduccion + reemplazos por marca dentro de la cadena de herencia. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "globals/global.i18n.js",
+            "note": "Traduccion + reemplazos por marca dentro de la cadena de herencia."
+          },
+          {
+            "path": "globals/global.requests.js",
+            "note": "Cliente HTTP alterno (lib `request`), usado solo por sitemaps."
+          },
+          {
+            "path": "globals/global.scripts.js"
+          },
+          {
+            "path": "languages/language.en.js",
+            "note": "Diccionarios de traduccion (en/es/fr)."
+          },
+          {
+            "path": "languages/language.es.js",
+            "note": "Diccionarios de traduccion (en/es/fr)."
+          },
+          {
+            "path": "languages/language.fr.js",
+            "note": "Diccionarios de traduccion (en/es/fr)."
+          }
+        ],
+        "presentation": [
+          {
+            "path": "components/component.advice.message.js"
+          },
+          {
+            "path": "components/component.button.loader.js"
+          },
+          {
+            "path": "components/component.currency.js"
+          },
+          {
+            "path": "components/component.datepicker.custom.js"
+          },
+          {
+            "path": "components/component.error.messages.js"
+          },
+          {
+            "path": "components/component.generic.iframe.js"
+          },
+          {
+            "path": "components/component.language.js"
+          },
+          {
+            "path": "components/component.pagination.js"
+          },
+          {
+            "path": "components/component.scroll.infinite.js"
+          },
+          {
+            "path": "components/component.section.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "branding",
+      "name": "Branding (white-label)",
+      "description": "Configuracion multi-marca: config por marca, rutas/sitemaps por variable de entorno, headers/footers por marca y la mini-app brand.generator.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [
+          {
+            "path": "brand.generator/globals/global.js",
+            "note": "brand.generator: duplicado de la base Global."
+          },
+          {
+            "path": "brand.generator/globals/global.utils.js",
+            "note": "brand.generator: duplicado de la base Global."
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "brand.generator/globals/global.crud.js",
+            "note": "brand.generator: duplicado de globals/global.crud.js."
+          },
+          {
+            "path": "brand.generator/globals/global.crud.request.js",
+            "note": "brand.generator: mini-app separada de alta de marcas."
+          },
+          {
+            "path": "brand.generator/index.js",
+            "note": "brand.generator: mini-app separada de alta de marcas."
+          },
+          {
+            "path": "brand.generator/routes/routes.js",
+            "note": "brand.generator: mini-app separada de alta de marcas."
+          },
+          {
+            "path": "configs/config.americanairlines.js"
+          },
+          {
+            "path": "configs/config.autopartner.js"
+          },
+          {
+            "path": "configs/config.avis.js"
+          },
+          {
+            "path": "configs/config.bookaway.js"
+          },
+          {
+            "path": "configs/config.bookingwidget.js"
+          },
+          {
+            "path": "configs/config.bookingwidget2.js"
+          },
+          {
+            "path": "configs/config.bookingwidget3.js"
+          },
+          {
+            "path": "configs/config.bookingwidget4.js"
+          },
+          {
+            "path": "configs/config.bookingwidget5.js"
+          },
+          {
+            "path": "configs/config.bookingwidget6.js"
+          },
+          {
+            "path": "configs/config.bookingwidget7.js"
+          },
+          {
+            "path": "configs/config.bookingwidget8.js"
+          },
+          {
+            "path": "configs/config.cabosexpeditions.js"
+          },
+          {
+            "path": "configs/config.cancunexcursions.js"
+          },
+          {
+            "path": "configs/config.cityexpressions.js"
+          },
+          {
+            "path": "configs/config.condoboutique.js"
+          },
+          {
+            "path": "configs/config.delmarboutiqueaccommodation.js"
+          },
+          {
+            "path": "configs/config.demo.js"
+          },
+          {
+            "path": "configs/config.donations.js"
+          },
+          {
+            "path": "configs/config.dreamlifeplaya.js"
+          },
+          {
+            "path": "configs/config.experiencemita.js"
+          },
+          {
+            "path": "configs/config.experienciastore.js"
+          },
+          {
+            "path": "configs/config.hertz.js"
+          },
+          {
+            "path": "configs/config.hopper.js"
+          },
+          {
+            "path": "configs/config.hotelescityexpress.js"
+          },
+          {
+            "path": "configs/config.hotelesmision.js"
+          },
+          {
+            "path": "configs/config.indestinationstore.js"
+          },
+          {
+            "path": "configs/config.inovationtravel.js"
+          },
+          {
+            "path": "configs/config.interjet.js"
+          },
+          {
+            "path": "configs/config.islandsun.js"
+          },
+          {
+            "path": "configs/config.jorieandpietro.js"
+          },
+          {
+            "path": "configs/config.js"
+          },
+          {
+            "path": "configs/config.ladymultitask.js"
+          },
+          {
+            "path": "configs/config.localadventures.js"
+          },
+          {
+            "path": "configs/config.marivalarmony.js"
+          },
+          {
+            "path": "configs/config.marivaldistinct.js"
+          },
+          {
+            "path": "configs/config.marivalemotions.js"
+          },
+          {
+            "path": "configs/config.masexperiencias.js"
+          },
+          {
+            "path": "configs/config.medicalholidaydirect.js"
+          },
+          {
+            "path": "configs/config.meetingthefrench.js"
+          },
+          {
+            "path": "configs/config.naturleon.js"
+          },
+          {
+            "path": "configs/config.oyorooms.js"
+          },
+          {
+            "path": "configs/config.pricetravel.js"
+          },
+          {
+            "path": "configs/config.pueblosmagicos.js"
+          },
+          {
+            "path": "configs/config.reservamos.js"
+          },
+          {
+            "path": "configs/config.santander.js"
+          },
+          {
+            "path": "configs/config.selina.js"
+          },
+          {
+            "path": "configs/config.suitescorazon.js"
+          },
+          {
+            "path": "configs/config.sunexcursions.js"
+          },
+          {
+            "path": "configs/config.taconnect.js"
+          },
+          {
+            "path": "configs/config.toorzy.js"
+          },
+          {
+            "path": "configs/config.topguestpro.js"
+          },
+          {
+            "path": "configs/config.totoura.js"
+          },
+          {
+            "path": "configs/config.toursmexico.js"
+          },
+          {
+            "path": "configs/config.trafictours.js"
+          },
+          {
+            "path": "configs/config.trafictours1.js"
+          },
+          {
+            "path": "configs/config.transat.js"
+          },
+          {
+            "path": "configs/config.turissimo.js"
+          },
+          {
+            "path": "configs/config.turissimojamaica.js"
+          },
+          {
+            "path": "configs/config.ultramar.js"
+          },
+          {
+            "path": "configs/config.vacasa.js"
+          },
+          {
+            "path": "configs/config.viajeypunto.js"
+          },
+          {
+            "path": "configs/config.vivaaerobus.js"
+          },
+          {
+            "path": "configs/config.vivevallarta.js"
+          },
+          {
+            "path": "configs/config.zamilparealtors.js"
+          },
+          {
+            "path": "index.js",
+            "note": "Entry point (ReactDOM.render + Router con basename por marca)."
+          },
+          {
+            "path": "routes/routes.bookingwidget.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget2.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget3.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget4.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget5.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget6.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget7.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.bookingwidget8.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "routes/routes.js",
+            "note": "Rutas por marca elegidas con process.env.REACT_APP_BOOKING_WIDGET."
+          },
+          {
+            "path": "sitemaps/sitemap.bookingwidget.js",
+            "note": "Generadores de sitemap por marca."
+          },
+          {
+            "path": "sitemaps/sitemap.bookingwidget2.js",
+            "note": "Generadores de sitemap por marca."
+          },
+          {
+            "path": "sitemaps/sitemap.bookingwidget3.js",
+            "note": "Generadores de sitemap por marca."
+          },
+          {
+            "path": "sitemaps/sitemap.bookingwidget4.js",
+            "note": "Generadores de sitemap por marca."
+          },
+          {
+            "path": "sitemaps/sitemap.bookingwidget5.js",
+            "note": "Generadores de sitemap por marca."
+          }
+        ],
+        "presentation": [
+          {
+            "path": "brand.generator/pages/page.404.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "brand.generator/pages/page.brand.register.js",
+            "note": "Alta/edicion de config de marca (CreateBrandConfig/GetBrandConfig)."
+          },
+          {
+            "path": "brand.generator/pages/page.footer.js"
+          },
+          {
+            "path": "brand.generator/pages/page.header.js"
+          },
+          {
+            "path": "components/component.menu.js"
+          },
+          {
+            "path": "partials/partial.footer.delmar.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.footer.ids.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.footer.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.footer.toorzy.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.header.delmarboutiqueaccommodation.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.header.global.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.header.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.header.viajeypunto.js",
+            "note": "Header/footer por marca."
+          },
+          {
+            "path": "partials/partial.header.widget.js",
+            "note": "Header/footer por marca."
+          }
+        ]
+      }
+    },
+    {
+      "key": "tours",
+      "name": "Tours",
+      "description": "Catalogo, busqueda, detalle, disponibilidad y calculo de precio de tours (incluye tours de grupo y especiales).",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.age.selector.js"
+          },
+          {
+            "path": "components/component.persons.selector.js"
+          },
+          {
+            "path": "components/component.search.alltours.js"
+          },
+          {
+            "path": "components/component.search.tours.js"
+          },
+          {
+            "path": "components/component.search.tours.result.js"
+          },
+          {
+            "path": "components/component.special.card.js"
+          },
+          {
+            "path": "components/component.tour.availability.devel.js",
+            "note": "Componente gigante (~2000 lineas): calcula precios/pax/extras en el componente. La regla de pricing deberia ir a domain. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.tour.availability.js",
+            "note": "Componente gigante (~2000 lineas): calcula precios/pax/extras en el componente. La regla de pricing deberia ir a domain."
+          },
+          {
+            "path": "components/component.tour.card.js"
+          },
+          {
+            "path": "components/component.tour.prices.table.2.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.tour.prices.table.js"
+          },
+          {
+            "path": "components/component.tour.rules.things.js"
+          },
+          {
+            "path": "components/component.tours.filter.js"
+          },
+          {
+            "path": "components/component.tours.list.js"
+          },
+          {
+            "path": "components/component.trending.tour.js"
+          },
+          {
+            "path": "pages/page.group.js"
+          },
+          {
+            "path": "pages/page.landing_copy.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.landing.js"
+          },
+          {
+            "path": "pages/page.specials.js"
+          },
+          {
+            "path": "pages/page.tour.details.js"
+          },
+          {
+            "path": "pages/page.tours.availability.js"
+          },
+          {
+            "path": "pages/page.tours.js"
+          },
+          {
+            "path": "pages/page.tours.random.js"
+          },
+          {
+            "path": "pages/page.tours.widget.2.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          }
+        ]
+      }
+    },
+    {
+      "key": "reviews",
+      "name": "Reviews",
+      "description": "Resenas de tours: listado, tendencias y envio de resena.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.review.card.js"
+          },
+          {
+            "path": "components/component.review.send.js"
+          },
+          {
+            "path": "components/component.tour.reviews.js"
+          },
+          {
+            "path": "pages/page.trending.reviews.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "transfers",
+      "name": "Transfers",
+      "description": "Traslados aeropuerto-hotel: busqueda, cotizacion y detalle de precios.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.airlines.selector.js"
+          },
+          {
+            "path": "components/component.airport.selector.js"
+          },
+          {
+            "path": "components/component.input.search.hotel.js"
+          },
+          {
+            "path": "components/component.search.hotel.js"
+          },
+          {
+            "path": "components/component.search.transfers.js"
+          },
+          {
+            "path": "components/component.search.transfers.result.js"
+          },
+          {
+            "path": "components/component.transfer.card.js"
+          },
+          {
+            "path": "components/component.transfer.card.option.js"
+          },
+          {
+            "path": "components/component.transfer.prices.details - Copy.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.transfer.prices.details.js"
+          },
+          {
+            "path": "components/component.transfer.prices.table.js"
+          },
+          {
+            "path": "components/component.transfers.container.js"
+          },
+          {
+            "path": "components/component.vacationcompanies.selector.js"
+          },
+          {
+            "path": "pages/page.transfers.js"
+          },
+          {
+            "path": "pages/page.transfers.prices.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "destinations",
+      "name": "Destinations",
+      "description": "Home y descubrimiento: destinos populares, selector/buscador de destino, clima.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.destination.selector.js"
+          },
+          {
+            "path": "components/component.destinations.popular-ids.js"
+          },
+          {
+            "path": "components/component.destinations.popular.js"
+          },
+          {
+            "path": "components/component.home.destination.card.js"
+          },
+          {
+            "path": "components/component.home.destinations.js"
+          },
+          {
+            "path": "components/component.search.destination.js"
+          },
+          {
+            "path": "components/component.search.js"
+          },
+          {
+            "path": "components/component.weather.js"
+          },
+          {
+            "path": "pages/page.home.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "cart-checkout",
+      "name": "Cart & Checkout",
+      "description": "Carrito, cupones/promociones y checkout (registro de usuario + orquestacion del pago).",
+      "validated": true,
+      "layers": {
+        "domain": [
+          {
+            "path": "components/component.credit.card.validator.js",
+            "note": "Formateo/validacion pura de tarjeta (lib payment)."
+          }
+        ],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.cart.aside.js"
+          },
+          {
+            "path": "components/component.cart.header.js"
+          },
+          {
+            "path": "components/component.cart.list copy 2.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.cart.list copy.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.cart.list_copia.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.cart.list.js"
+          },
+          {
+            "path": "components/component.cart.list.options.js"
+          },
+          {
+            "path": "components/component.coupon.js"
+          },
+          {
+            "path": "components/component.credit.cards.js"
+          },
+          {
+            "path": "components/component.creditcardtypes.selector.js"
+          },
+          {
+            "path": "pages/page.cart - Copy.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.cart.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago."
+          },
+          {
+            "path": "pages/page.checkout - copia (2).js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago."
+          },
+          {
+            "path": "pages/page.checkout - copia (3).js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago."
+          },
+          {
+            "path": "pages/page.checkout - copia (4).js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago."
+          },
+          {
+            "path": "pages/page.checkout - copia.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.checkout.1.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.checkout.2.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago. Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.checkout.js",
+            "note": "Checkout (~3100 lineas) con 6 copias manuales; mezcla registro de usuario y 3 procesadores de pago."
+          }
+        ]
+      }
+    },
+    {
+      "key": "payments",
+      "name": "Payments",
+      "description": "Procesadores de pago (Bancomer, MIT, WorldPay, Stripe) y sus endpoints de retorno; donaciones via Stripe.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [
+          {
+            "path": "customStripe/App.js",
+            "note": "customStripe/ y stripes/ son casi identicos: consolidar."
+          },
+          {
+            "path": "customStripe/index.js",
+            "note": "customStripe/ y stripes/ son casi identicos: consolidar."
+          },
+          {
+            "path": "stripes/App.js",
+            "note": "customStripe/ y stripes/ son casi identicos: consolidar."
+          },
+          {
+            "path": "stripes/index.js",
+            "note": "customStripe/ y stripes/ son casi identicos: consolidar."
+          }
+        ],
+        "infrastructure": [
+          {
+            "path": "customStripe/api/StripeAPI.js",
+            "note": "Cliente Stripe (createCustomStripeCart)."
+          },
+          {
+            "path": "stripes/api/StripeAPI.js",
+            "note": "Cliente Stripe (createCustomStripeCart)."
+          }
+        ],
+        "presentation": [
+          {
+            "path": "components/component.payment.processor.mit.js"
+          },
+          {
+            "path": "customStripe/components/CheckoutForm - copia.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "customStripe/components/CheckoutForm.js"
+          },
+          {
+            "path": "customStripe/components/DemoText.js"
+          },
+          {
+            "path": "pages/page.end.point.bancomer.js"
+          },
+          {
+            "path": "pages/page.end.point.mit.js"
+          },
+          {
+            "path": "pages/page.payment.js"
+          },
+          {
+            "path": "pages/page.stripe.js"
+          },
+          {
+            "path": "stripes/components/CheckoutForm - copia.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "stripes/components/CheckoutForm.js"
+          },
+          {
+            "path": "stripes/components/DemoText.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "account",
+      "name": "Customer Account",
+      "description": "Login, perfil, historial de compras, notificaciones y wishlist.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.icon.wishlist.js"
+          },
+          {
+            "path": "components/component.notifications.alerts.card.js"
+          },
+          {
+            "path": "components/component.notifications.alerts.js"
+          },
+          {
+            "path": "components/component.profile.js"
+          },
+          {
+            "path": "components/component.purchase.history.card.js"
+          },
+          {
+            "path": "components/component.purchase.history.detail.tour.js"
+          },
+          {
+            "path": "components/component.purchase.history.detail.transfer.card.js"
+          },
+          {
+            "path": "components/component.purchase.history.detail.transfer.js"
+          },
+          {
+            "path": "components/component.purchase.history.js"
+          },
+          {
+            "path": "pages/page.login.js"
+          },
+          {
+            "path": "pages/page.my.account.js"
+          },
+          {
+            "path": "pages/page.purchase.history.detail.cart.js"
+          },
+          {
+            "path": "pages/page.purchase.history.detail.js"
+          },
+          {
+            "path": "pages/page.wishlist.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "agents",
+      "name": "Travel Agents & Ambassadors",
+      "description": "Busqueda de agentes, mensajes de agente y landing de embajadores.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.agents.search.js"
+          },
+          {
+            "path": "components/component.ambassador.spinner.js"
+          },
+          {
+            "path": "components/component.sliderambassador.js"
+          },
+          {
+            "path": "pages/page.ambassador.js"
+          },
+          {
+            "path": "pages/page.homelanding.js"
+          },
+          {
+            "path": "pages/page.travel.agent.message.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "shops",
+      "name": "Shops (Dining & Shopping)",
+      "description": "Directorio de restaurantes/tiendas y su detalle.",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.shops.list.js"
+          },
+          {
+            "path": "pages/page.dining.js"
+          },
+          {
+            "path": "pages/page.shop.details.js"
+          },
+          {
+            "path": "pages/page.shopping.js"
+          }
+        ]
+      }
+    },
+    {
+      "key": "legal-content",
+      "name": "Legal & Static Content",
+      "description": "Privacidad, terminos, cookies, about, contacto y 404 (con variantes por marca).",
+      "validated": true,
+      "layers": {
+        "domain": [],
+        "application": [],
+        "infrastructure": [],
+        "presentation": [
+          {
+            "path": "components/component.privacy.bbva.js"
+          },
+          {
+            "path": "components/component.privacy.policy.sunexcursions.js"
+          },
+          {
+            "path": "components/component.privacy.policy.totoura_old.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.privacy.policy.totoura.js"
+          },
+          {
+            "path": "components/component.privacy.policy.trafictours_old.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.privacy.policy.trafictours.js"
+          },
+          {
+            "path": "components/component.privacy.toorzy_old.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "components/component.privacy.toorzy.js"
+          },
+          {
+            "path": "components/component.terms.bbva.js"
+          },
+          {
+            "path": "components/component.terms.ids.js"
+          },
+          {
+            "path": "components/component.terms.other.js"
+          },
+          {
+            "path": "components/component.terms.toorzy.js"
+          },
+          {
+            "path": "components/component.terms.totoura.js"
+          },
+          {
+            "path": "pages/page.404.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.about.us.js"
+          },
+          {
+            "path": "pages/page.cicles.js",
+            "note": "Parece pagina de prueba (solo un DatePicker + console.log). Confirmar si se usa."
+          },
+          {
+            "path": "pages/page.contact.js",
+            "note": "Formulario de contacto (ContactUs)."
+          },
+          {
+            "path": "pages/page.cookies.js"
+          },
+          {
+            "path": "pages/page.privacy_old.js",
+            "note": "Copia/variante manual de otro archivo: candidata a eliminar tras confirmar que no se importa."
+          },
+          {
+            "path": "pages/page.privacy.js"
+          },
+          {
+            "path": "pages/page.privacy.toorzy.js"
+          },
+          {
+            "path": "pages/page.terms.js"
+          },
+          {
+            "path": "pages/page.terms.toorzy.js"
+          },
+          {
+            "path": "pages/page.terms.viajeypunto.js"
+          }
+        ]
+      }
+    }
+  ]
+}

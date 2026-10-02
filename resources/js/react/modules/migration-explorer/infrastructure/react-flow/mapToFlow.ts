@@ -7,6 +7,7 @@ import {
   type BoundedContextMap,
   type LayerKey,
 } from "../../domain/value-objects/BoundedContextMap";
+import { fileCardHeight } from "./fileCardHeight";
 
 export type MigrationView = "overview" | "module";
 
@@ -15,7 +16,7 @@ const MODULE_CELL_X = 240;
 const MODULE_CELL_Y = 220;
 const LAYER_COL_X = 320;
 const FILE_Y_START = 110;
-const FILE_ROW = 70;
+const FILE_GAP = 10;
 
 export interface ModuleNodeData {
   module: BoundedContextMap["modules"][number];
@@ -80,18 +81,22 @@ function moduleFlow(module: BoundedContextMap["modules"][number]): MigrationFlow
       selectable: false,
     });
 
-    module.layers[layer].forEach((file, fileIndex) => {
+    // Cada tarjeta empieza debajo de la anterior segun su altura (las notas largas ocupan mas).
+    let y = FILE_Y_START;
+
+    module.layers[layer].forEach((file) => {
       const fileId = `file:${module.key}:${layer}:${file.path}`;
 
       nodes.push({
         id: fileId,
         type: "bcFile",
-        position: { x, y: FILE_Y_START + fileIndex * FILE_ROW },
+        position: { x, y },
         data: { moduleKey: module.key, layer, file } satisfies FileNodeData,
         draggable: true,
       });
 
       edges.push({ id: `e:${layerId}:${fileId}`, source: layerId, target: fileId, type: "smoothstep", style: { stroke: "#475569" } });
+      y += fileCardHeight(file.note) + FILE_GAP;
     });
   });
 

@@ -123,6 +123,27 @@ Limitacion conocida: el extractor de imports de `architecture` (`tsImports`, reg
 `require(...)`, asi que esas dependencias (p. ej. `sitemaps → globals`) no entran a la regla. El audit
 usa el parser de Babel y si las ve.
 
+## Mapas de bounded contexts del proyecto React
+
+Generados por un agente segun `docs/bounded-context-map-schema.md` y guardados en la base local
+(`database/*.sqlite`, fuera de git):
+
+- `react` (as-is, pestaña Migracion): 12 contextos — shared-kernel, branding, tours, reviews,
+  transfers, destinations, cart-checkout, payments, account, agents, shops, legal-content — con los
+  259 archivos asignados una vez; las copias manuales marcadas en `note`.
+- `react-design` (to-be, pestaña Diseño): 12 modulos hexagonales y 223 piezas, cada una con la nota
+  de que reemplaza del legacy. Criterios: composicion en vez de la herencia `Global > … > Crud`
+  (modulo `shared` con `HttpClient`/`Translator`/`AnalyticsTracker`), un caso de uso por endpoint real
+  detras de un gateway por contexto, reglas de negocio enterradas en componentes movidas a `domain`
+  (p. ej. `tourPricing` desde `component.tour.availability`), multi-marca como datos (`BrandConfig`
+  en vez de 65 configs, 9 sets de rutas y headers/footers por marca; 1 `LegalPage` en vez de 19
+  componentes legales), TypeScript y Zustand para estado compartido. Descartados sin destino:
+  `global.scripts.js`, los `DemoText.js` de Stripe y `page.cicles`.
+
+La vista de modulo apila las tarjetas segun la altura de su nota (spec
+`resources/js/react/modules/migration-explorer/specs/module-layout.md`); con paso fijo, las notas
+largas del mapa de diseño quedaban tapadas.
+
 ## 4. Definicion de hecho (global)
 
 - Cada fase con spec + tests rojos→verdes + mutation sobre la logica pura nueva.
