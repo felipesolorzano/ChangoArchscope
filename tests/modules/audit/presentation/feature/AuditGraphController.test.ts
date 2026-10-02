@@ -203,6 +203,18 @@ describe("AuditGraphController", async () => {
     expect(graph.nodes.map((node) => node.id)).toEqual([`app:${focus}`, expected]);
   });
 
+  it.each(["bogus", undefined, ["app"]])("un view no reconocido (%s) cae a overview", async (view) => {
+    const check = vi.fn((_c, _r, options: { target: string; module: string | null }) =>
+      checkResult(options.target, options.module),
+    );
+    const controller = new AuditGraphController({ getConfig: buildConfig, reader, parser, check });
+    const { json, response } = fakeResponse();
+
+    await controller.show({ query: { view, focus: "admin" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect((json.mock.calls[0][0] as { view: string }).view).toBe("overview");
+  });
+
   it("delega el error a next sin responder cuando algo falla", async () => {
     const boom = new Error("config no registrada");
     const controller = new AuditGraphController({

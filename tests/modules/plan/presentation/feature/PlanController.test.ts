@@ -115,6 +115,35 @@ describe("PlanController", async () => {
     expect(next).toHaveBeenCalled();
     expect(status).not.toHaveBeenCalled();
     expect(repo.setState).not.toHaveBeenCalled();
+    expect((next.mock.calls[0][0] as Error).message).toBe('Invalid task state "". Use one of: pending, in_progress, done, blocked.');
+  });
+
+  it("update sin body (ni state) responde el mismo error de validacion", async () => {
+    const repo = repository();
+    const controller = new PlanController({ snapshots, repository: repo });
+    const next = vi.fn();
+
+    await controller.update(
+      { params: { key: "close-sql-injections" }, query: {} } as unknown as Request,
+      fakeResponse().response,
+      next as unknown as NextFunction,
+    );
+
+    expect((next.mock.calls[0][0] as Error).message).toBe('Invalid task state "". Use one of: pending, in_progress, done, blocked.');
+    expect(repo.setState).not.toHaveBeenCalled();
+  });
+
+  it("update con un state que no es string lo trata como vacio", async () => {
+    const next = vi.fn();
+    const controller = new PlanController({ snapshots, repository: repository() });
+
+    await controller.update(
+      { params: { key: "close-sql-injections" }, body: { state: ["done"] }, query: {} } as unknown as Request,
+      fakeResponse().response,
+      next as unknown as NextFunction,
+    );
+
+    expect((next.mock.calls[0][0] as Error).message).toMatch(/^Invalid task state ""/);
   });
 
   it("findings responde 200 con los hallazgos concretos de la tarea", async () => {

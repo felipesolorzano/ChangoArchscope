@@ -108,4 +108,13 @@ describe("buildAuditSnapshot", () => {
     expect(snapshot.skippedFiles).toEqual([]);
     expect(snapshot.summary.files_skipped).toBe(0);
   });
+
+  it("summary.scanners solo existe cuando el contexto trae el estado de compatibilidad", () => {
+    const context = { target: "laravel", module: null, filesScanned: 1, modules: 1 };
+
+    expect("scanners" in buildAuditSnapshot([], context).summary).toBe(false);
+    expect(buildAuditSnapshot([], { ...context, phpCompatibilityStatus: { status: "skipped" } }).summary.scanners).toEqual({
+      php_compatibility: { status: "skipped" },
+    });
+  });
 });

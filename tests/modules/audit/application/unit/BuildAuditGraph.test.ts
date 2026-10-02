@@ -292,3 +292,59 @@ describe("buildAuditGraph (heatmap global)", () => {
     expect(buildAuditGraph(buildSnapshot([], byFile), { view: "heatmap" }).view).toBe("overview");
   });
 });
+
+describe("buildAuditGraph (limites, raices y badges)", () => {
+  const many = (count: number, prefix: string, extra: (index: number) => Partial<RiskEntry> = () => ({})) =>
+    Array.from({ length: count }, (_, index) => entry({ key: `/root/${prefix}/F${index}.php`, value: count - index, findingsCount: count - index, ...extra(index) }));
+
+  it("heatmap: como maximo 60 archivos, los de mas hallazgos", () => {
+    const graph = buildAuditGraph(buildSnapshot([], many(65, "app")), { view: "heatmap", sourceRoot: "/root" });
+
+    expect(graph.nodes).toHaveLength(60);
+    expect(graph.nodes[0].label).toBe("F0.php");
+    expect(graph.nodes.at(-1)?.label).toBe("F59.php");
+  });
+
+  it("app: como maximo 24 archivos de la app enfocada", () => {
+    const graph = buildAuditGraph(buildSnapshot([entry({ key: "app" })], many(30, "app")), { view: "app", focus: "app", sourceRoot: "/root" });
+
+    expect(graph.nodes.filter((node) => node.type === "file")).toHaveLength(24);
+  });
+
+  it("app: la raiz es la entrada de la app enfocada (no la primera), centrada y sin drill", () => {
+    const byModule = [entry({ key: "other", findingsCount: 1, value: 1 }), entry({ key: "app", findingsCount: 7, value: 70 })];
+
+    const [root] = buildAuditGraph(buildSnapshot(byModule, []), { view: "app", focus: "app", sourceRoot: "/root" }).nodes;
+
+    expect(root).toMatchObject({ id: "app:app", position: { x: 0, y: 0 }, drill: false, metrics: { findings: 7, risk: 70 } });
+  });
+
+  it("file: la raiz es la entrada del archivo enfocado (no la primera), centrada y sin drill", () => {
+    const byFile = [entry({ key: "/root/a/First.php", findingsCount: 1 }), entry({ key: "/root/a/Target.php", findingsCount: 9, value: 90 })];
+
+    const [root] = buildAuditGraph(buildSnapshot([], byFile), { view: "file", focus: "a/Target.php", sourceRoot: "/root" }).nodes;
+
+    expect(root).toMatchObject({ id: "file:a/Target.php", position: { x: 0, y: 0 }, drill: false, metrics: { findings: 9, risk: 90 } });
+  });
+
+  it("file: como maximo 24 reglas, y 50 hallazgos adjuntos por regla", () => {
+    const findings = [
+      ...Array.from({ length: 30 }, (_, index) => finding("/root/a/X.php", `rule-${index}`, "complexity", "low")),
+      ...Array.from({ length: 60 }, () => finding("/root/a/X.php", "hot-rule", "security", "high")),
+    ];
+
+    const graph = buildAuditGraph(buildSnapshot([], [entry({ key: "/root/a/X.php" })], findings), { view: "file", focus: "a/X.php", sourceRoot: "/root" });
+    const rules = graph.nodes.filter((node) => node.type === "rule");
+
+    expect(rules).toHaveLength(24);
+    expect(rules.find((node) => node.label === "hot-rule")?.findings).toHaveLength(50);
+  });
+
+  it("badges: las 2 categorias de mayor peso aunque no vengan ordenadas", () => {
+    const byModule = [entry({ key: "app", byCategory: { testing: 1, security: 5, complexity: 3 } })];
+
+    const app = buildAuditGraph(buildSnapshot(byModule)).nodes.find((node) => node.id === "app:app");
+
+    expect(app?.badges).toEqual(["security", "complexity"]);
+  });
+});

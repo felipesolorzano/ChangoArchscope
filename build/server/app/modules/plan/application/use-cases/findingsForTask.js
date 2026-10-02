@@ -1,3 +1,4 @@
+import { findDuplicateMigrationPairs } from "../../domain/services/findDuplicateMigrationPairs.js";
 import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, matchesSelectors } from "../../domain/services/planTaskRules.js";
 const ITEMS_LIMIT = 100;
 export function findingsForTask(snapshot, taskKey) {
@@ -32,26 +33,11 @@ function collectItems(snapshot, taskKey) {
     return [];
 }
 function duplicateFileItems(fileKeys) {
-    const basenameToKey = new Map();
-    for (const key of fileKeys) {
-        const name = key.split("/").pop() ?? key;
-        if (!basenameToKey.has(name)) {
-            basenameToKey.set(name, key);
-        }
-    }
-    const items = [];
-    for (const key of fileKeys) {
-        const name = key.split("/").pop() ?? key;
-        const dot = name.indexOf(".");
-        const stem = dot === -1 ? name : name.slice(0, dot);
-        const extension = dot === -1 ? "" : name.slice(dot);
-        if (!stem.endsWith("_new")) {
-            continue;
-        }
-        const originalName = stem.slice(0, -"_new".length) + extension;
-        if (basenameToKey.has(originalName)) {
-            items.push({ file: key, line: 0, rule: "duplicate-file", severity: "medium", message: `Duplicado de ${originalName}` });
-        }
-    }
-    return items;
+    return findDuplicateMigrationPairs(fileKeys).map(({ file, original }) => ({
+        file,
+        line: 0,
+        rule: "duplicate-file",
+        severity: "medium",
+        message: `Duplicado de ${original}`,
+    }));
 }

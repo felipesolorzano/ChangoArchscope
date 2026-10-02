@@ -52,6 +52,18 @@ Las tareas basadas en reglas solo aparecen si el stack produce esas reglas: un p
 genera las de React y viceversa (salvo `close-code-injection` y `break-god-classes`, que aplican a
 los dos).
 
+## Pares de migracion a medias (`findDuplicateMigrationPairs`, puro, `domain/services`)
+
+Fuente UNICA de `duplicatePairs` (metrica) y de los items de `resolve-duplicate-migrations` (panel):
+
+- Entrada: las rutas de `riskBreakdown.byFile`.
+- El basename se parte en el PRIMER punto: `stem` + `extension` (`Trafic_new.lib.inc` → `Trafic_new` +
+  `.lib.inc`; sin punto, extension vacia).
+- Un archivo es la mitad nueva de un par si su `stem` termina en `_new` y existe (en cualquier carpeta)
+  un archivo cuyo basename es `stem` sin `_new` + la misma extension.
+- Devuelve `{ file, original }` por cada archivo `_new` que cumple, en el orden de entrada
+  (`original` = basename del archivo viejo). `duplicatePairs` = su cantidad.
+
 ## Hallazgos por tarea (`findingsForTask(snapshot, taskKey)`)
 
 - Tarea con selectores: los hallazgos del snapshot que coinciden con alguno (maximo 100 items;

@@ -9,15 +9,15 @@ export const reactSourceExtensions = [".ts", ".tsx", ".js", ".jsx"];
 export function tsImports(file: string, reader: SourceTreeReader): ImportReference[] {
   const imports: ImportReference[] = [];
   const text = reader.readText(file);
-  const pattern = /import(?:\s+type)?(?:[\s\S]*?)\s+from\s+['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  // Alternativas: `import … from "x"` (el tramo hasta `from` no cruza comillas ni `;`, asi un
+  // `import "x"` sin `from` no se traga el import siguiente), `import "x"`, `import("x")`, `require("x")`.
+  const pattern =
+    /\bimport\b[^'";]*?\bfrom\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)|(?<![.\w$])require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(text))) {
-    const imported = match[1] || match[2];
-
-    if (!imported) {
-      continue;
-    }
+    // Cada alternativa captura una ruta no vacia, asi que siempre hay una.
+    const imported = match[1] || match[2] || match[3] || match[4];
 
     imports.push({
       import: imported,

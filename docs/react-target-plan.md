@@ -119,9 +119,8 @@ Matriz real de imports entre carpetas: `routes → pages` 184, `pages → compon
 (y sus 3 copias) importa la pagina `page.transfers.prices` para renderizarla como tabla dentro del
 carrito. Aparecen tambien en Auditoria como `architecture_violation`. El check de Laravel no cambia.
 
-Limitacion conocida: el extractor de imports de `architecture` (`tsImports`, regex) no ve
-`require(...)`, asi que esas dependencias (p. ej. `sitemaps → globals`) no entran a la regla. El audit
-usa el parser de Babel y si las ve.
+`tsImports` (extractor de imports de `architecture`) ahora reconoce `require("x")` e `import "x"`; antes
+un import de efecto lateral (`import "./x.css"`) se tragaba el import siguiente.
 
 ## Mapas de bounded contexts del proyecto React
 

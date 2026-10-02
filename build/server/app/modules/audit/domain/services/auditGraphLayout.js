@@ -29,10 +29,8 @@ export function foldSeverityMix(bySeverity) {
     };
 }
 export function dominantAccent(byCategory) {
+    // Sin categorias no hay ganador unico (Math.max() = -Infinity): cae en "mixed" mas abajo.
     const entries = Object.entries(byCategory);
-    if (entries.length === 0) {
-        return "mixed";
-    }
     const maxWeight = Math.max(...entries.map(([, weight]) => weight));
     const winners = entries.filter(([, weight]) => weight === maxWeight).map(([category]) => category);
     if (winners.length !== 1) {

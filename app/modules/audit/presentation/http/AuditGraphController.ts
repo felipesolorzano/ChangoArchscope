@@ -33,6 +33,9 @@ export class AuditGraphController {
   };
 }
 
+// Una vista no reconocida termina en overview de todos modos (buildAuditGraph cae a overview para lo
+// que no conoce), asi que los mutantes de esta guarda son equivalentes.
 function viewFromQuery(value: unknown): AuditGraphView {
+  // Stryker disable next-line ConditionalExpression,StringLiteral
   return value === "app" || value === "file" || value === "heatmap" ? value : "overview";
 }

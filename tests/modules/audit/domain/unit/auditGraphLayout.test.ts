@@ -122,3 +122,19 @@ describe("gridPositions", () => {
     expect(sum).toBe(0);
   });
 });
+
+describe("dominantAccent (bordes)", () => {
+  it.each(["complexity", "testing", "dead_code", "coupling_low_level", "security", "database"])("reconoce %s como accent propio", (category) => {
+    expect(dominantAccent({ [category]: 9, architecture_violation: 1 })).toBe(category);
+  });
+
+  it("un empate en el maximo es 'mixed'", () => {
+    expect(dominantAccent({ database: 5, security: 5, testing: 1 })).toBe("mixed");
+  });
+});
+
+describe("toneForSeverity (medium)", () => {
+  it("medium gana sobre low", () => {
+    expect(toneForSeverity({ medium: 2, low: 9 })).toBe("medium");
+  });
+});

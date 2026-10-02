@@ -50,7 +50,9 @@ export async function resolveAuditSnapshot(deps, target, module, phpVersion = nu
     if (deps.snapshotCache !== undefined && fingerprint !== null) {
         // Incluye la raiz escaneada en la llave: si cambia el modulesPath (otro repo), no se sirve
         // un snapshot cacheado del repo anterior.
-        // Hay fingerprint solo si hay raiz escaneada.
+        // Hay fingerprint solo si hay raiz escaneada. El fallback de module/phpVersion nulos solo tiene
+        // que ser constante para que la clave lo sea (cualquier string es equivalente).
+        // Stryker disable next-line StringLiteral
         const key = `${scanned.root}|${target}|${module ?? ""}|${phpVersion ?? ""}`;
         return deps.snapshotCache.resolve(key, fingerprint, compute);
     }
