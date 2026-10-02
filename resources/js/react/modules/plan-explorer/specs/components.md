@@ -58,3 +58,31 @@ componente muestra para un estado dado. Las interacciones viven en stores/hooks.
 - `ProtectionStrip({ protection })` en el encabezado de Plan (nada si es `null`): "Red de seguridad:
   <nivel>" con el color del nivel, las partes separadas, y con nivel `none` la ayuda "Sin red de
   seguridad: empezar por tests de caracterizacion".
+
+## Que proteger primero (XRay X4)
+
+`/characterization.json?target=` (ver `app/modules/characterization/specs/characterization-targets.md`)
+→ `{ targets: [{ file, kind, score, risk, importers, untested, endpoints, skeletons: [{ kind, path,
+content }] }] }`.
+
+- `PlanProvider.getCharacterization(target)` (`characterizationUrl`, target en la query, error HTTP →
+  lanza con el status); `createPlanExplorerDependencies({ …, characterizationUrl })`; el shell usa
+  `"/characterization.json"`.
+- Store Zustand `characterizationStore`: `open` (default `false`) y `setOpen`; `getServerState` =
+  `getState` (render estatico de los tests).
+- Helpers puros (`presentation/constants/characterizationView.ts`):
+  - `targetKindLabel`: page → "Pagina", component → "Componente", php → "PHP".
+  - `skeletonLabel`: rtl → "Test RTL", msw → "Handlers MSW", playwright → "Playwright", phpunit →
+    "PHPUnit".
+  - `targetReasons(target)`: `"riesgo <risk>"`; `"importado por <n>"` si `importers > 0`;
+    `"<n> sin test: <hasta 3 nombres separados por ', '>"` + `" (+<resto>)"` si hay mas de 3;
+    `"<n> endpoint(s)"` si hay endpoints (`"1 endpoint"` / `"N endpoints"`).
+- `ProtectionStrip`: boton "Que proteger primero" (abre el panel).
+- `CharacterizationList({ plan })` (presentacional): sin objetivos, "No hay objetivos: todo lo
+  riesgoso ya tiene evidencia de test"; si no, un item por objetivo con `file`, la etiqueta del kind,
+  `score`, las razones unidas por `" · "` y un boton por esqueleto (`skeletonLabel`) con `title` = su
+  `path`.
+- `CharacterizationDrawer({ provider, target })`: solo con `open`; al abrir pide el plan (una vez por
+  montaje); "Calculando objetivos…" mientras carga, el error si falla, y la lista; boton "Cerrar".
+  Click en un esqueleto lo descarga (`infrastructure/browser/downloadText(path, content)`: Blob +
+  ancla con `download` = nombre del archivo; adaptador de navegador, fuera de mutation).

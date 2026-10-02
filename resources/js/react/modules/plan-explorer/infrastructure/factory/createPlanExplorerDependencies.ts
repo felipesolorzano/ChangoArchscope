@@ -9,12 +9,14 @@ export function createPlanExplorerDependencies({
   planUrl,
   taskUrl,
   protectionUrl,
+  characterizationUrl,
 }: {
   planUrl: string;
   taskUrl: string;
   protectionUrl: string;
+  characterizationUrl: string;
 }): PlanExplorerDependencies {
   return {
-    planProvider: new HttpPlanProvider(planUrl, taskUrl, protectionUrl),
+    planProvider: new HttpPlanProvider(planUrl, taskUrl, protectionUrl, characterizationUrl),
   };
 }

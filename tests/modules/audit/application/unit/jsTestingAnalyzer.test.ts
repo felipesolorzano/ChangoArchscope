@@ -20,9 +20,28 @@ describe("jsTestingAnalyzer", () => {
         file: "/src/card.js",
         line: 4,
         message: 'El componente "Card" no tiene evidencia de test.',
-        details: { name: "Card", cyclomaticComplexity: 1 },
+        details: { name: "Card", cyclomaticComplexity: 1, exportedAs: null },
       },
     ]);
+  });
+
+  it("exportedAs: default (por nombre o por local del export default), nombrado o null (XRay X4)", () => {
+    const classes = ["checkout", "Cart", "Inner", "default"].map((name) => jsComponentClass({ name }));
+    const exportsOf = [
+      { name: "default", line: 9, local: "checkout" },
+      { name: "Cart", line: 9 },
+      { name: "Other", line: 9 },
+    ];
+    const findings = jsTestingAnalyzer([jsFile("/src/page.checkout.js", { classes, exports: exportsOf })]);
+
+    expect(findings.map((finding) => [finding.class, finding.details.exportedAs])).toEqual([
+      ["checkout", "default"],
+      ["Cart", "Cart"],
+      ["Inner", null],
+      ["default", "default"],
+    ]);
+    const anonymous = jsTestingAnalyzer([jsFile("/src/anon.js", { classes: [jsComponentClass({ name: "default" })] })]);
+    expect(anonymous[0].details.exportedAs).toBe("default");
   });
 
   it("high cuando la complejidad del componente supera 10; medium en 10", () => {

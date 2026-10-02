@@ -1,4 +1,5 @@
 import type { PlanProvider } from "../../application/contracts/PlanProvider";
+import type { CharacterizationPlan } from "../../domain/value-objects/Characterization";
 import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
 import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 
@@ -15,7 +16,17 @@ export class HttpPlanProvider implements PlanProvider {
     private readonly planUrl: string,
     private readonly taskUrl: string,
     private readonly protectionUrl: string,
+    private readonly characterizationUrl: string,
   ) {}
+
+  async getCharacterization(target: "laravel" | "react" = "laravel"): Promise<CharacterizationPlan> {
+    const url = new URL(this.characterizationUrl, window.location.origin);
+    url.searchParams.set("target", target);
+
+    const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+
+    return readJson<CharacterizationPlan>(response, "No se pudieron calcular los objetivos de caracterizacion");
+  }
 
   async getProtection(target: "laravel" | "react" = "laravel"): Promise<ProtectionBaseline> {
     const url = new URL(this.protectionUrl, window.location.origin);

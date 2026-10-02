@@ -18,7 +18,7 @@ estado), Migracion/Diseño (bounded contexts).
 | **X1b Grafo de includes PHP** | Resolver `include`/`require` del PHP legacy (rutas literales, relativas y con constantes declaradas en la config: `_PRIVATE_DIR`, `_COMPUMATIC_DIR`...) para que mc tenga grafo, ciclos y hubs. Spec: `app/modules/architecture/specs/php-includes.md` | Completa |
 | **X2 Exports muertos** | Exports que nadie importa (estilo Knip) en JS/TS: el parser registra `exports`, regla `unused-export` en Auditoria (dead_code), tarea `remove-unused-exports` en Plan. Specs: `js-source-parser.md`, `react-analyzers.md`, `plan-tasks.md` | Completa |
 | **X3 Linea base de proteccion** | Bounded context `protection`: evidencia de tests + reportes existentes (Istanbul/lcov/clover, Stryker JSON/HTML, Infection, Playwright) → nivel none/low/medium/high; `/protection.json`; franja "Red de seguridad" en Plan. Spec: `app/modules/protection/specs/protection-baseline.md` | Completa |
-| **X4 Objetivos de caracterizacion** | Ranking de componentes/flujos a proteger (riesgo × sin tests × uso) + esqueletos MSW/RTL/Playwright descargables | Pendiente |
+| **X4 Objetivos de caracterizacion** | Bounded context `characterization`: ranking (riesgo × uso, sin tests, sin copias ni muertos) + esqueletos RTL/MSW/Playwright/PHPUnit golden master; `/characterization.json`; panel "Que proteger primero" en Plan. Spec: `app/modules/characterization/specs/characterization-targets.md` | Completa |
 | **X5 Candidatos a codemod** | Patrones AST (lifecycles deprecated, imports de librerias deprecated, jQuery) con archivos afectados y tests que los cubren | Pendiente |
 | **X6 Plan por fases con quality gates** | Fases 0–10 con metas medibles que se validan solas contra las metricas | Pendiente |
 
@@ -71,4 +71,17 @@ estado), Migracion/Diseño (bounded contexts).
 - ChangoArchscope: 28 tests, mutation 100% leido de sus reportes HTML de Stryker (formato con
   `app.report = …` y uniones `"+"`), sin reporte de cobertura → "Media".
 - Los tests cuentan aunque `ignoredPaths` los excluya del analisis.
+
+### X4 — validacion
+
+- brandsites: 20 objetivos; primero `pages/page.checkout.js` (riesgo 80, 6 importadores, 4 endpoints →
+  RTL + MSW + Playwright), despues `page.tours.js` y `component.tour.availability.js`. ~0.9 s.
+- El legacy exporta `export default withRouter(checkout)` con clases en minuscula: el parser ahora
+  registra a que apunta el `export default` (`local`, atravesando HOCs), `untested-component` trae
+  `exportedAs`, y el esqueleto importa `Checkout` (PascalCase: `<checkout />` seria una etiqueta HTML);
+  los componentes no exportados quedan como comentario.
+- mc: 20 clases; primero `MSAdminTraficSys.lib.inc` (riesgo 7220, 430 metodos sin test) y
+  `MSTraficSys.lib.inc`; un golden master de PHPUnit por clase. ~12 s en frio (incluye el audit).
+- UI: boton "Que proteger primero" en la franja de proteccion → panel con score, razones y descarga de
+  cada esqueleto (archivo con el nombre de su ruta). Sin errores de consola.
 

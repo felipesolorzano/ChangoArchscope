@@ -279,7 +279,8 @@ function exportsOf(statement: AstNode): JsExport[] {
   const named = (names: string[]) => names.map((name) => ({ name, line }));
 
   if (statement.type === "ExportDefaultDeclaration") {
-    return named(["default"]);
+    const local = defaultLocal(statement.declaration as AstNode);
+    return [local === null ? { name: "default", line } : { name: "default", line, local }];
   }
   // `export * from "m"` no nombra nada (`export * as ns` llega como ExportNamedDeclaration).
   // Solo valores: `export type …` / `export interface …` / `export type { X }` son contrato de tipos.
@@ -288,6 +289,26 @@ function exportsOf(statement: AstNode): JsExport[] {
   }
   const values = (statement.specifiers as AstNode[]).filter((specifier) => specifier.exportKind !== "type");
   return named([...declaredNames(statement.declaration), ...values.map((specifier) => keyName(specifier.exported as AstNode))]);
+}
+
+// A que identificador apunta `export default …`: el mismo, el de la declaracion o el que envuelve un
+// HOC (`withRouter(Foo)`, `connect(m)(Foo)`): primero los argumentos, despues un callee que es llamada.
+function defaultLocal(node: AstNode): string | null {
+  if (node.type === "ClassDeclaration" || node.type === "FunctionDeclaration") {
+    return identifierName(node.id);
+  }
+  if (node.type !== "CallExpression") {
+    return identifierName(node);
+  }
+  const callee = node.callee as AstNode;
+  const args = node.arguments as AstNode[];
+  for (const candidate of callee.type === "CallExpression" ? [...args, callee] : args) {
+    const local = defaultLocal(candidate);
+    if (local !== null) {
+      return local;
+    }
+  }
+  return null;
 }
 
 // Nombres que declara `export <declaracion>` (una desestructuracion no cuenta).

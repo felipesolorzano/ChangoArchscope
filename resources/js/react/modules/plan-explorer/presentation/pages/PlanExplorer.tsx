@@ -3,6 +3,7 @@ import "@xyflow/react/dist/style.css";
 
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
 import { toPlanFlowEdges, toPlanFlowNodes } from "../../infrastructure/react-flow/planFlowAdapter";
+import { CharacterizationDrawer } from "../components/CharacterizationDrawer";
 import { PlanCanvas } from "../components/PlanCanvas";
 import { PlanFindingsDrawer } from "../components/PlanFindingsDrawer";
 import { ProtectionStrip } from "../components/ProtectionStrip";
@@ -60,6 +61,8 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
         loading={findingsLoading}
         onClose={closeTask}
       />
+
+      <CharacterizationDrawer provider={dependencies.planProvider} target={target} />
     </main>
   );
 }

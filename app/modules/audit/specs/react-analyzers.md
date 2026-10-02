@@ -145,7 +145,10 @@ llamada, `details: { client, endpoint }`:
 |---|---|---|
 | `untested-component` | componente de un archivo que no es test ni esta testeado | high si `cyclomaticComplexity > 10`, si no medium |
 
-`class` = componente, `line` = su `startLine`, `details: { name, cyclomaticComplexity }`.
+`class` = componente, `line` = su `startLine`, `details: { name, cyclomaticComplexity, exportedAs }`.
+`exportedAs` (XRay X4, para importarlo desde un test): `"default"` si el componente se llama
+`"default"` o el `export default` del archivo apunta a el (`local`); si no, su nombre si el archivo lo
+exporta con ese nombre; si no `null` (no se exporta: se prueba a traves de quien lo usa).
 Limitacion: si `react.ignoredPaths` excluye los tests, todo componente queda como no testeado —
 salvo que se declaren en `react.testPaths` (ver Integracion).
 

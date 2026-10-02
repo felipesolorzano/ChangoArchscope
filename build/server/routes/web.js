@@ -6,6 +6,7 @@ import { planApiRoutes } from "../app/modules/plan/presentation/routes/api.js";
 import { migrationApiRoutes } from "../app/modules/migration/presentation/routes/api.js";
 import { dependenciesApiRoutes } from "../app/modules/dependencies/presentation/routes/api.js";
 import { protectionApiRoutes } from "../app/modules/protection/presentation/routes/api.js";
+import { characterizationApiRoutes } from "../app/modules/characterization/presentation/routes/api.js";
 export function webRoutes() {
     const router = Router();
     router.use(architectureWebRoutes());
@@ -16,6 +17,7 @@ export function webRoutes() {
     router.use(migrationApiRoutes());
     router.use(dependenciesApiRoutes());
     router.use(protectionApiRoutes());
+    router.use(characterizationApiRoutes());
     router.use(coreWebRoutes());
     return router;
 }

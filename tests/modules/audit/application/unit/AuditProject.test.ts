@@ -297,6 +297,7 @@ describe("auditProject", () => {
       classes: [],
       functions: [],
       imports: [],
+      exports: [],
       securityIssues: [{ rule: "eval-usage", line: 2 }],
       httpCalls: [],
       globalAccesses: [],

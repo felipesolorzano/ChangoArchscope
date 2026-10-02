@@ -78,7 +78,11 @@ nivel, codigo muerto, seguridad, datos/API, testing). Es el equivalente de `PhpS
 
 `{ name, line }`, un elemento por nombre que el archivo exporta, con la linea de la sentencia:
 
-- `export default …` → `"default"`.
+- `export default …` → `"default"`, con `local` (XRay X4) = el identificador al que apunta, si se
+  deduce: `export default Foo` → `Foo`; `export default class Foo` / `function Foo` → `Foo`; un HOC
+  → el primer argumento identificador, buscando dentro de llamadas anidadas en los argumentos y en
+  el callee (`withRouter(Foo)`, `connect(m)(Foo)`, `withRouter(connect(m)(Foo))` → `Foo`). Si no se
+  deduce (anonimo, objeto, etc.) no hay `local`.
 - `export function f`, `export class C`, `export const a = 1, b = 2` (solo identificadores; una
   desestructuracion no cuenta) y en TS `export enum E`. Solo valores: `export type`,
   `export interface`, `export type { X }` y los especificadores `export { type X }` no cuentan (son

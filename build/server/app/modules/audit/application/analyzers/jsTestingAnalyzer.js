@@ -15,8 +15,16 @@ export function jsTestingAnalyzer(files) {
         file: file.file,
         line: component.startLine,
         message: `El componente "${component.name}" no tiene evidencia de test.`,
-        details: { name: component.name, cyclomaticComplexity: component.cyclomaticComplexity },
+        details: { name: component.name, cyclomaticComplexity: component.cyclomaticComplexity, exportedAs: exportedAs(component.name, file.exports) },
     })));
+}
+// Como se importa el componente desde un test: por defecto, con su nombre, o no se exporta (null).
+function exportedAs(name, exports) {
+    // Solo el `export default` trae `local`.
+    if (name === "default" || exports.some((entry) => entry.local === name)) {
+        return "default";
+    }
+    return exports.some((entry) => entry.name === name) ? name : null;
 }
 // Archivos que algun test importa directamente.
 function testedFiles(files) {

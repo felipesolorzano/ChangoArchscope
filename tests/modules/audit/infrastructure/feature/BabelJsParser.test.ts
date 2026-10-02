@@ -42,7 +42,7 @@ export let f;
 `;
 
     expect(parse(source).exports).toEqual([
-      { name: "default", line: 1 },
+      { name: "default", line: 1, local: "App" },
       { name: "helper", line: 2 },
       { name: "Store", line: 3 },
       { name: "a", line: 4 },
@@ -53,6 +53,22 @@ export let f;
       { name: "ns", line: 9 },
       { name: "f", line: 11 },
     ]);
+  });
+
+  it("export default registra a que identificador apunta (XRay X4), tambien a traves de HOCs", () => {
+    const local = (source: string) => parse(source).exports[0].local;
+
+    expect(local("class Foo {}\nexport default Foo;")).toBe("Foo");
+    expect(local("export default class Foo {}")).toBe("Foo");
+    expect(local("export default withRouter(checkout);")).toBe("checkout");
+    expect(local("export default connect(mapState)(Cart);")).toBe("Cart");
+    expect(local("export default withRouter(connect(mapState, actions)(Cart));")).toBe("Cart");
+    expect(local('export default memo("x", Card);')).toBe("Card");
+    expect(local("export default connect(mapState)(() => null);")).toBe("mapState");
+    expect("local" in parse("export default class {}").exports[0]).toBe(false);
+    expect("local" in parse("export default () => null;").exports[0]).toBe(false);
+    expect("local" in parse("export default wrap(() => null);").exports[0]).toBe(false);
+    expect("local" in parse("export default { a: 1 };").exports[0]).toBe(false);
   });
 
   it("en TypeScript solo valores: enums si, tipos e interfaces no; export default de expresion es default", () => {

@@ -29,6 +29,8 @@ export type JsImport = {
 export type JsExport = {
   name: string;
   line: number;
+  /** Solo en `export default`: el identificador al que apunta, si se deduce (XRay X4). */
+  local?: string;
 };
 
 export type JsSecurityIssue = {
