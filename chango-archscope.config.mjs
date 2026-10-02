@@ -6,13 +6,17 @@ export default {
     // soporta extensiones compuestas como ".lib.inc" (distinta de ".inc").
     phpExtensions: [".php", ".inc", ".lib.inc"],
     // Carpetas/archivos a excluir dentro de modulesPath (patrones glob, minimatch).
-    ignoredPaths: ["**/README.md", "**/vendor/**"],
+    // Un nombre de carpeta de primer nivel (p. ej. "sql") deja fuera ese modulo completo.
+    ignoredPaths: ["**/README.md", "**/vendor/**", "docs", "Documents", "nbproject", "sql"],
+    // Ignora archivos/carpetas ocultos (.git, .idea, .vscode...). Default true; false para escanearlos.
+    ignoreHidden: true,
   },
   react: {
     modulesPath: "resources/js/react/modules",
     alias: "@modules",
     // Carpetas/archivos React a excluir dentro de modulesPath (patrones glob).
     ignoredPaths: ["**/__tests__/**", "**/*.test.*"],
+    ignoreHidden: true,
     // Tests fuera de modulesPath: el audit los usa solo como evidencia de testing.
     testPaths: ["resources/js/react/tests"],
     // Arbol plano legacy: carpetas de arriba (entrada) hacia abajo (base). Importar una carpeta de

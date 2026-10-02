@@ -11,6 +11,18 @@ function relativePosix(from: string, to: string): string {
   return path.relative(from, to).split(path.sep).join("/");
 }
 
+function readerWithHiddenModule(root: string, files: string[]): SourceTreeReader {
+  return {
+    listDirectories: (dir, ignoredPaths = []) =>
+      dir === root
+        ? [`${root}/.git`, `${root}/Users`].filter((entry) => !ignoredPaths.some((pattern) => minimatch(relativePosix(dir, entry), pattern, { dot: true })))
+        : [],
+    walkFiles: (dir, extensions) => files.filter((file) => file.startsWith(`${dir}/`) && extensions.some((ext) => file.endsWith(ext))),
+    readText: () => "",
+    isFile: () => false,
+  };
+}
+
 function buildConfig(ignoredPaths: string[] = []): ArchitectureConfig {
   const coupling = {
     enabled: false,
@@ -137,5 +149,14 @@ describe("checkReactArchitecture con react.folderOrder (arbol plano)", () => {
 
     expect(result.reports.flatMap((report) => report.violations)).toEqual([]);
   });
-});
 
+  it("no toma como modulo una carpeta que coincide con ignoredPaths (p. ej. .git)", () => {
+    const root = "resources/js/react/modules";
+    const reader = readerWithHiddenModule(root, [`${root}/.git/x.ts`, `${root}/Users/domain/User.ts`]);
+
+    const graph = buildReactGraph(buildConfig(["**/.*"]), reader);
+
+    expect(graph.nodes.filter((node) => node.type === "module").map((node) => node.module)).toEqual(["Users"]);
+    expect(checkReactArchitecture(buildConfig(["**/.*"]), reader).reports.map((report) => report.module)).toEqual(["Users"]);
+  });
+});

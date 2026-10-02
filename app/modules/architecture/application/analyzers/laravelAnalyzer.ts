@@ -152,7 +152,7 @@ function laravelModules(
   onlyModule: string | null,
 ): Array<[string, string]> {
   return reader
-    .listDirectories(config.laravel.modulesPath)
+    .listDirectories(config.laravel.modulesPath, config.laravel.ignoredPaths)
     .map((modulePath): [string, string] => [path.basename(modulePath), modulePath])
     .filter(([module]) => !onlyModule || studly(onlyModule) === module);
 }

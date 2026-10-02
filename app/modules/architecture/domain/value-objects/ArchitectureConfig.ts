@@ -20,6 +20,8 @@ export type LaravelArchitectureConfig = {
   namespaceRoot: string;
   layers: string[];
   ignoredPaths: string[];
+  /** Ignora archivos/carpetas ocultos (nombre con `.`); default true. Ver normalizeConfig. */
+  ignoreHidden?: boolean;
   phpExtensions: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;
@@ -34,6 +36,8 @@ export type ReactArchitectureConfig = {
   /** Carpetas de tests fuera de modulesPath: el audit las usa solo como evidencia de testing. */
   testPaths?: string[];
   ignoredPaths: string[];
+  /** Ignora archivos/carpetas ocultos (nombre con `.`); default true. Ver normalizeConfig. */
+  ignoreHidden?: boolean;
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;
 };

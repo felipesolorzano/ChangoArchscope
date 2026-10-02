@@ -158,7 +158,7 @@ function reactModules(
   onlyModule: string | null,
 ): Array<[string, string]> {
   return reader
-    .listDirectories(config.react.modulesPath)
+    .listDirectories(config.react.modulesPath, config.react.ignoredPaths)
     .map((modulePath): [string, string] => [path.basename(modulePath), modulePath])
     .filter(([module]) => !onlyModule || onlyModule.toLowerCase() === module.toLowerCase());
 }

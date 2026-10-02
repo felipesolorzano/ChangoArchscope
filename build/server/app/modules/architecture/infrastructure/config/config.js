@@ -3,6 +3,8 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { defaultConfig } from "./defaultConfig.js";
 export const CONFIG_FILE = "chango-archscope.config.mjs";
+/** Patron que agrega `ignoreHidden`: todo archivo o carpeta cuyo nombre empieza con `.`. */
+export const HIDDEN_PATTERN = "**/.*";
 export async function loadConfig(cwd = process.cwd(), explicitConfigPath = null) {
     const projectRoot = explicitConfigPath ? cwd : detectProjectRoot(cwd);
     const configPath = explicitConfigPath
@@ -33,13 +35,19 @@ export function normalizeConfig(config, cwd) {
         laravel: {
             ...config.laravel,
             modulesPath: path.resolve(cwd, config.laravel.modulesPath),
+            ignoredPaths: withHidden(config.laravel.ignoredPaths, config.laravel.ignoreHidden),
         },
         react: {
             ...config.react,
             modulesPath: path.resolve(cwd, config.react.modulesPath),
+            ignoredPaths: withHidden(config.react.ignoredPaths, config.react.ignoreHidden),
             testPaths: (config.react.testPaths ?? []).map((testPath) => path.resolve(cwd, testPath)),
         },
     };
+}
+// `ignoreHidden` (default true) se resuelve aca, asi todo lo que lee `ignoredPaths` lo respeta.
+function withHidden(ignoredPaths, ignoreHidden = true) {
+    return ignoreHidden && !ignoredPaths.includes(HIDDEN_PATTERN) ? [...ignoredPaths, HIDDEN_PATTERN] : ignoredPaths;
 }
 function detectProjectRoot(cwd) {
     let current = path.resolve(cwd);

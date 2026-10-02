@@ -7,6 +7,9 @@ import { defaultConfig } from "./defaultConfig.js";
 
 export const CONFIG_FILE = "chango-archscope.config.mjs";
 
+/** Patron que agrega `ignoreHidden`: todo archivo o carpeta cuyo nombre empieza con `.`. */
+export const HIDDEN_PATTERN = "**/.*";
+
 export async function loadConfig(
   cwd: string = process.cwd(),
   explicitConfigPath: string | null = null,
@@ -48,13 +51,20 @@ export function normalizeConfig(config: ArchitectureConfig, cwd: string): Archit
     laravel: {
       ...config.laravel,
       modulesPath: path.resolve(cwd, config.laravel.modulesPath),
+      ignoredPaths: withHidden(config.laravel.ignoredPaths, config.laravel.ignoreHidden),
     },
     react: {
       ...config.react,
       modulesPath: path.resolve(cwd, config.react.modulesPath),
+      ignoredPaths: withHidden(config.react.ignoredPaths, config.react.ignoreHidden),
       testPaths: (config.react.testPaths ?? []).map((testPath) => path.resolve(cwd, testPath)),
     },
   };
+}
+
+// `ignoreHidden` (default true) se resuelve aca, asi todo lo que lee `ignoredPaths` lo respeta.
+function withHidden(ignoredPaths: string[], ignoreHidden: boolean = true): string[] {
+  return ignoreHidden && !ignoredPaths.includes(HIDDEN_PATTERN) ? [...ignoredPaths, HIDDEN_PATTERN] : ignoredPaths;
 }
 
 function detectProjectRoot(cwd: string): string {

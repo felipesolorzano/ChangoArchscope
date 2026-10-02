@@ -20,6 +20,12 @@ Construir un grafo navegable de modulos/archivos/imports y validar reglas de arq
 - Para `laravel`, las extensiones de archivo a recorrer dentro de cada modulo (`reader.walkFiles(modulePath, extensions)`) se toman de `config.laravel.phpExtensions`, no de un literal `[".php"]` fijo. Esto permite incluir proyectos legacy que usan `.inc`/`.lib.inc` (u otras extensiones) ademas o en vez de `.php`. El default es `[".php"]` (ver `defaultConfig.ts`).
 - El emparejamiento de extension es por sufijo (`endsWith`), por lo que `.lib.inc` es una extension compuesta valida y distinta de `.inc` (ver `app/modules/shared/specs/walk-files-filtering.md`).
 - Tanto `laravel` como `react` pasan su `config.<target>.ignoredPaths` como tercer argumento de `reader.walkFiles(modulePath, extensions, ignoredPaths)` para excluir carpetas/archivos (p. ej. `**/vendor/**`, `**/__tests__/**`) dentro de cada modulo. El default de `laravel` es `["**/README.md"]` y el de `react` es `[]`.
+- El descubrimiento de modulos (`reader.listDirectories(modulesPath, ignoredPaths)`) usa los mismos
+  `ignoredPaths`: una carpeta de primer nivel que coincide no es modulo (ni nodo, ni reporte).
+- `ignoreHidden` (por stack, default `true`): ignora todo archivo o carpeta cuyo nombre empieza con
+  `.` (`.git`, `.idea`, `.vscode`, `.env.php`...). `normalizeConfig` lo traduce agregando el patron
+  `**/.*` al final de `ignoredPaths` (sin duplicarlo), asi aplica igual a arquitectura, audit,
+  fingerprint y migracion. Con `ignoreHidden: false` los ocultos se escanean como cualquier otro.
 
 ## Salidas
 
@@ -34,6 +40,8 @@ Construir un grafo navegable de modulos/archivos/imports y validar reglas de arq
 - `config.laravel.phpExtensions: [".lib.inc"]` recorre solo archivos cuyo nombre termina en `.lib.inc`, no los `.inc` simples.
 - Con `config.laravel.phpExtensions` en su default (`[".php"]`), el comportamiento es exactamente el de antes: solo se recorren archivos `.php`.
 - Con `config.laravel.ignoredPaths: ["**/vendor/**"]`, los archivos PHP dentro de `vendor/` no aparecen en el grafo ni en el check; lo mismo para `config.react.ignoredPaths` en el lado React.
+- Un modulo cuya carpeta coincide con `ignoredPaths` (p. ej. `.git` con `**/.*`) no aparece en el grafo ni en el check, en laravel y en react.
+- `normalizeConfig` con `ignoreHidden` ausente o `true` deja `ignoredPaths` = los del usuario + `**/.*` (una sola vez aunque ya estuviera); con `ignoreHidden: false` los deja igual.
 
 ## Orden de carpetas para arboles React planos (`react.folderOrder`)
 

@@ -34,6 +34,7 @@ describe("NodeFsSourceTreeReader", () => {
     const reader = new NodeFsSourceTreeReader();
 
     expect(reader.listDirectories(path.join(os.tmpdir(), "missing-architecture-directory"))).toEqual([]);
+    expect(reader.walkFiles(path.join(os.tmpdir(), "missing-architecture-directory"), [".php"])).toEqual([]);
   });
 
   it("walks files by extension recursively", () => {
@@ -168,5 +169,33 @@ describe("NodeFsSourceTreeReader", () => {
     expect(reader.isFile(file)).toBe(true);
     expect(reader.isFile(tempDirectory)).toBe(false);
     expect(reader.isFile(path.join(tempDirectory, "missing.txt"))).toBe(false);
+  });
+
+  it("listDirectories omite las carpetas que coinciden con ignoredPaths (ocultas incluidas)", () => {
+    tempDirectory = mkdtempSync(path.join(os.tmpdir(), "architecture-fs-"));
+    mkdirSync(path.join(tempDirectory, "Users"));
+    mkdirSync(path.join(tempDirectory, ".git"));
+    mkdirSync(path.join(tempDirectory, "Legacy"));
+
+    const reader = new NodeFsSourceTreeReader();
+    const names = (ignoredPaths?: string[]) => reader.listDirectories(tempDirectory!, ignoredPaths).map((entry) => path.basename(entry));
+
+    expect(names(["**/.*"])).toEqual(["Legacy", "Users"]);
+    expect(names(["Legacy"])).toEqual([".git", "Users"]);
+    expect(names()).toEqual([".git", "Legacy", "Users"]);
+  });
+
+  it("ordena carpetas y archivos aunque el filesystem los devuelva en otro orden", () => {
+    tempDirectory = mkdtempSync(path.join(os.tmpdir(), "architecture-fs-"));
+    // libuv ya entrega readdir por strcmp ("B" < "a"); el sort por localeCompare deja "a" < "B".
+    for (const name of ["a", "B", "c"]) {
+      mkdirSync(path.join(tempDirectory, name));
+      writeFileSync(path.join(tempDirectory, `${name}.php`), "");
+    }
+
+    const reader = new NodeFsSourceTreeReader();
+
+    expect(reader.listDirectories(tempDirectory).map((entry) => path.basename(entry))).toEqual(["a", "B", "c"]);
+    expect(reader.walkFiles(tempDirectory, [".php"]).map((entry) => relativePosix(tempDirectory!, entry))).toEqual(["a.php", "B.php", "c.php"]);
   });
 });

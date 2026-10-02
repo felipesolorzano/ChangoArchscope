@@ -165,6 +165,7 @@ Defaults relevantes:
 | Laravel namespace root | `App\Modules` |
 | Laravel `phpExtensions` | `[".php"]` |
 | Laravel `ignoredPaths` | `["**/README.md"]` |
+| `ignoreHidden` (Laravel y React) | `true` |
 | React modules | `resources/js/react/modules` |
 | React alias | `@modules` |
 | React `ignoredPaths` | `[]` |
@@ -183,6 +184,12 @@ extensiones compuestas: `".inc"` incluye `foo.inc` y `foo.lib.inc`, mientras que
 al `modulesPath` de cada modulo) para excluir carpetas o archivos del escaneo. Aplica al
 grafo, al `check` y al `audit`. Una carpeta cuyo path coincide con un patron se poda sin
 descender en ella. Ejemplos: `"**/vendor/**"`, `"**/__tests__/**"`, `"**/*.test.php"`.
+Tambien filtra los modulos: una carpeta de primer nivel de `modulesPath` que coincide (p. ej.
+`"Legacy"`) no se toma como modulo.
+
+`ignoreHidden` (Laravel y React, default `true`) ignora todo archivo o carpeta oculto (nombre que
+empieza con `.`: `.git`, `.idea`, `.vscode`...), tanto como modulo como dentro de ellos. Equivale a
+agregar `"**/.*"` a `ignoredPaths`; con `ignoreHidden: false` se escanean como cualquier otro.
 
 ```js
 export default {
@@ -191,11 +198,13 @@ export default {
     namespaceRoot: "App\\Modules",
     phpExtensions: [".php", ".inc", ".lib.inc"],
     ignoredPaths: ["**/README.md", "**/vendor/**"],
+    ignoreHidden: true,
   },
   react: {
     modulesPath: "resources/js/react/modules",
     alias: "@modules",
     ignoredPaths: ["**/__tests__/**", "**/*.test.*"],
+    ignoreHidden: true,
   },
 };
 ```

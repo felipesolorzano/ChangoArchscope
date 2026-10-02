@@ -45,9 +45,18 @@ glob. Esto habilita proyectos PHP legacy que usan extensiones compuestas (`.lib.
 - Directorio inexistente o sin permisos: se devuelve `[]` (o lo recorrido), sin lanzar.
 - Patron glob invalido: se trata como patron literal de minimatch (no lanza).
 
+## `listDirectories(directory, ignoredPaths?)`: modulos con exclusiones
+
+- Devuelve las carpetas inmediatas de `directory` (los modulos), ordenadas, como antes.
+- Con `ignoredPaths`, descarta las carpetas cuyo nombre (ruta relativa a `directory`) coincide con
+  algun patron, con las mismas reglas de minimatch que `walkFiles` (`dot: true`). Asi `**/.*` deja
+  fuera `.git` o `.idea` como modulo y `legacy-old` o `**/vendor` excluyen ese modulo completo.
+- Sin `ignoredPaths` (o vacio) no filtra nada.
+
 ## Capas involucradas
 
-- `domain`: puerto `SourceTreeReader` (firma `walkFiles(directory, extensions, ignoredPaths?)`).
+- `domain`: puerto `SourceTreeReader` (firmas `walkFiles(directory, extensions, ignoredPaths?)` y
+  `listDirectories(directory, ignoredPaths?)`).
 - `infrastructure`: `NodeFsSourceTreeReader` (implementacion con `node:fs` + `minimatch`).
 
 ## Criterios de aceptacion
@@ -60,3 +69,5 @@ glob. Esto habilita proyectos PHP legacy que usan extensiones compuestas (`.lib.
 - `walkFiles(root, [".php"], ["**/*.test.php"])` excluye archivos `*.test.php` pero
   conserva el resto de `.php`.
 - `walkFiles(root, [".php"], [])` equivale a `walkFiles(root, [".php"])`.
+- `listDirectories(root, ["**/.*"])` omite `.git` y conserva `Users`; `listDirectories(root, ["Legacy"])`
+  omite `Legacy`; `listDirectories(root)` devuelve todas.

@@ -107,7 +107,7 @@ export function checkLaravelArchitecture(config, reader, onlyModule = null, fail
 }
 function laravelModules(config, reader, onlyModule) {
     return reader
-        .listDirectories(config.laravel.modulesPath)
+        .listDirectories(config.laravel.modulesPath, config.laravel.ignoredPaths)
         .map((modulePath) => [path.basename(modulePath), modulePath])
         .filter(([module]) => !onlyModule || studly(onlyModule) === module);
 }

@@ -53,6 +53,18 @@ function fakeReader(files: string[]): SourceTreeReader {
   };
 }
 
+function readerWithHiddenModule(root: string, files: string[]): SourceTreeReader {
+  return {
+    listDirectories: (dir, ignoredPaths = []) =>
+      dir === root
+        ? [`${root}/.git`, `${root}/Users`].filter((entry) => !ignoredPaths.some((pattern) => minimatch(relativePosix(dir, entry), pattern, { dot: true })))
+        : [],
+    walkFiles: (dir, extensions) => files.filter((file) => file.startsWith(`${dir}/`) && extensions.some((ext) => file.endsWith(ext))),
+    readText: () => "",
+    isFile: () => false,
+  };
+}
+
 function relativePosix(from: string, to: string): string {
   return path.relative(from, to).split(path.sep).join("/");
 }
@@ -114,5 +126,21 @@ describe("buildLaravelGraph", () => {
     const graph = buildLaravelGraph(buildConfig([".php"]), reader);
 
     expect(graph.nodes.some((node) => node.path === "Users/Domain/legacy.inc")).toBe(false);
+  });
+
+  it("no toma como modulo una carpeta que coincide con ignoredPaths (p. ej. .git)", () => {
+    const reader = readerWithHiddenModule("app/modules", ["app/modules/.git/hooks/x.php", "app/modules/Users/Domain/User.php"]);
+
+    const graph = buildLaravelGraph(buildConfig([".php"], ["**/.*"]), reader);
+
+    expect(graph.nodes.filter((node) => node.type === "module").map((node) => node.module)).toEqual(["Users"]);
+    expect(checkLaravelArchitecture(buildConfig([".php"], ["**/.*"]), reader).reports.map((report) => report.module)).toEqual(["Users"]);
+  });
+
+  it("con onlyModule (en kebab o studly) solo analiza ese modulo", () => {
+    const reader = readerWithHiddenModule("app/modules", ["app/modules/Users/Domain/User.php"]);
+
+    expect(checkLaravelArchitecture(buildConfig([".php"]), reader, "users").reports.map((report) => report.module)).toEqual(["Users"]);
+    expect(checkLaravelArchitecture(buildConfig([".php"]), reader, "Billing").reports).toEqual([]);
   });
 });

@@ -111,7 +111,7 @@ export function checkReactArchitecture(config, reader, onlyModule = null, failOn
 }
 function reactModules(config, reader, onlyModule) {
     return reader
-        .listDirectories(config.react.modulesPath)
+        .listDirectories(config.react.modulesPath, config.react.ignoredPaths)
         .map((modulePath) => [path.basename(modulePath), modulePath])
         .filter(([module]) => !onlyModule || onlyModule.toLowerCase() === module.toLowerCase());
 }

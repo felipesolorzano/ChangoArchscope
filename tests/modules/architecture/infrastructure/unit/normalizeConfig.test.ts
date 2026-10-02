@@ -20,4 +20,24 @@ describe("normalizeConfig", () => {
 
     expect(normalizeConfig({ ...defaultConfig, react }, "/project").react.testPaths).toEqual([]);
   });
+
+  it("ignoreHidden (default) agrega **/.* a ignoredPaths de cada stack, sin duplicarlo", () => {
+    const config = normalizeConfig(
+      { ...defaultConfig, laravel: { ...defaultConfig.laravel, ignoredPaths: ["**/vendor/**"] }, react: { ...defaultConfig.react, ignoredPaths: ["**/.*"] } },
+      "/project",
+    );
+
+    expect(config.laravel.ignoredPaths).toEqual(["**/vendor/**", "**/.*"]);
+    expect(config.react.ignoredPaths).toEqual(["**/.*"]);
+  });
+
+  it("ignoreHidden: true tambien agrega el patron; false deja ignoredPaths igual", () => {
+    const config = normalizeConfig(
+      { ...defaultConfig, laravel: { ...defaultConfig.laravel, ignoredPaths: [], ignoreHidden: true }, react: { ...defaultConfig.react, ignoredPaths: ["x"], ignoreHidden: false } },
+      "/project",
+    );
+
+    expect(config.laravel.ignoredPaths).toEqual(["**/.*"]);
+    expect(config.react.ignoredPaths).toEqual(["x"]);
+  });
 });
