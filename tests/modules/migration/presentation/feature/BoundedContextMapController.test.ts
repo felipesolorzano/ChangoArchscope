@@ -13,6 +13,8 @@ const source = {
   getSource: (target: string) => ({ target, root: "/abs/app/modules", extensions: [".php"], ignoredPaths: [], files: ["/abs/app/modules/A.php"] }),
 };
 
+const projectOf = (target: string) => (target === "react" ? "/abs/react" : "/abs/app/modules");
+
 function fakeResponse() {
   const json = vi.fn();
   const status = vi.fn(() => ({ json }));
@@ -22,12 +24,12 @@ function fakeResponse() {
 describe("BoundedContextMapController", () => {
   it("show devuelve un mapa vacio cuando no hay guardado (target laravel por defecto)", () => {
     const repo = repository(null);
-    const controller = new BoundedContextMapController({ repository: repo, source });
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
     const { status, json, response } = fakeResponse();
 
     controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
-    expect(repo.getMap).toHaveBeenCalledWith("laravel");
+    expect(repo.getMap).toHaveBeenCalledWith("laravel", "/abs/app/modules");
     expect(status).toHaveBeenCalledWith(200);
     expect(json.mock.calls[0][0]).toMatchObject({ modules: [] });
   });
@@ -35,18 +37,18 @@ describe("BoundedContextMapController", () => {
   it("show devuelve el mapa guardado y usa el target del query", () => {
     const saved: BoundedContextMap = { generatedAt: "t", modules: [{ key: "tours", name: "Tours", validated: true, layers: { domain: [], application: [], infrastructure: [], presentation: [] } }] };
     const repo = repository(saved);
-    const controller = new BoundedContextMapController({ repository: repo, source });
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
     const { json, response } = fakeResponse();
 
     controller.show({ query: { target: "myproj" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
-    expect(repo.getMap).toHaveBeenCalledWith("myproj");
+    expect(repo.getMap).toHaveBeenCalledWith("myproj", "/abs/app/modules");
     expect(json.mock.calls[0][0]).toBe(saved);
   });
 
   it("save normaliza el body, lo persiste y responde el mapa normalizado", () => {
     const repo = repository();
-    const controller = new BoundedContextMapController({ repository: repo, source });
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
     const { status, json, response } = fakeResponse();
 
     controller.save(
@@ -55,14 +57,14 @@ describe("BoundedContextMapController", () => {
       vi.fn() as unknown as NextFunction,
     );
 
-    expect(repo.saveMap).toHaveBeenCalledWith("laravel", expect.objectContaining({ modules: expect.any(Array) }));
+    expect(repo.saveMap).toHaveBeenCalledWith("laravel", "/abs/app/modules", expect.objectContaining({ modules: expect.any(Array) }));
     expect(status).toHaveBeenCalledWith(200);
     const saved = json.mock.calls[0][0] as BoundedContextMap;
     expect(saved.modules[0].layers.application).toEqual([]); // normalizado: 4 capas
   });
 
   it("source devuelve la raiz del proyecto y los archivos en alcance (para el agente)", () => {
-    const controller = new BoundedContextMapController({ repository: repository(), source });
+    const controller = new BoundedContextMapController({ repository: repository(), source, projectOf });
     const { status, json, response } = fakeResponse();
 
     controller.source({ query: { target: "laravel" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
@@ -73,7 +75,7 @@ describe("BoundedContextMapController", () => {
 
   it("save con body invalido delega a next sin persistir", () => {
     const repo = repository();
-    const controller = new BoundedContextMapController({ repository: repo, source });
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
@@ -82,5 +84,39 @@ describe("BoundedContextMapController", () => {
     expect(next).toHaveBeenCalled();
     expect(status).not.toHaveBeenCalled();
     expect(repo.saveMap).not.toHaveBeenCalled();
+  });
+
+  it("show y save usan el proyecto del target pedido", () => {
+    const repo = repository();
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
+    const body = { modules: [{ key: "x", name: "X", layers: {} }] };
+
+    controller.show({ query: { target: "react" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+    controller.save({ query: { target: "react" }, body } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+
+    expect(repo.getMap).toHaveBeenCalledWith("react", "/abs/react");
+    expect(repo.saveMap).toHaveBeenCalledWith("react", "/abs/react", expect.objectContaining({ modules: expect.any(Array) }));
+  });
+
+  it("un target vacio en el query cae a laravel", () => {
+    const repo = repository();
+    const controller = new BoundedContextMapController({ repository: repo, source, projectOf });
+
+    controller.show({ query: { target: "" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+
+    expect(repo.getMap).toHaveBeenCalledWith("laravel", "/abs/app/modules");
+  });
+
+  it("show y source delegan a next si algo falla", () => {
+    const boom = new Error("db caida");
+    const failing: BoundedContextMapRepository = { getMap: () => { throw boom; }, saveMap: vi.fn() };
+    const failingSource = { getSource: () => { throw boom; } };
+    const controller = new BoundedContextMapController({ repository: failing, source: failingSource, projectOf });
+    const next = vi.fn();
+
+    controller.show({ query: {} } as unknown as Request, fakeResponse().response, next as unknown as NextFunction);
+    controller.source({ query: {} } as unknown as Request, fakeResponse().response, next as unknown as NextFunction);
+
+    expect(next.mock.calls).toEqual([[boom], [boom]]);
   });
 });

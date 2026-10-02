@@ -27,7 +27,7 @@ export function mergeConfig(base, override) {
     }
     return merged;
 }
-function normalizeConfig(config, cwd) {
+export function normalizeConfig(config, cwd) {
     return {
         ...config,
         laravel: {
@@ -37,6 +37,7 @@ function normalizeConfig(config, cwd) {
         react: {
             ...config.react,
             modulesPath: path.resolve(cwd, config.react.modulesPath),
+            testPaths: (config.react.testPaths ?? []).map((testPath) => path.resolve(cwd, testPath)),
         },
     };
 }

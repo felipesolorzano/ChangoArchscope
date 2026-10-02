@@ -4,31 +4,23 @@ import type { MigrationExplorerDependencies } from "../../infrastructure/factory
 import type { BoundedContextMap, LayerKey } from "../../domain/value-objects/BoundedContextMap";
 import type { MigrationView } from "../../infrastructure/react-flow/mapToFlow";
 
-export function useMigrationController(dependencies: MigrationExplorerDependencies) {
+function errorMessage(caught: unknown, fallback: string): string {
+  return caught instanceof Error ? caught.message : fallback;
+}
+
+// Mapa cargado del backend, con guardado optimista.
+function useBoundedContextMap(dependencies: MigrationExplorerDependencies) {
   const [map, setMap] = useState<BoundedContextMap | null>(null);
-  const [view, setView] = useState<MigrationView>("overview");
-  const [focus, setFocus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    void (async () => {
-      try {
-        const loaded = await dependencies.mapProvider.getMap();
-        if (active) {
-          setMap(loaded);
-        }
-      } catch (caught) {
-        if (active) {
-          setError(caught instanceof Error ? caught.message : "Error inesperado");
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
+    dependencies.mapProvider
+      .getMap()
+      .then((loaded) => active && setMap(loaded))
+      .catch((caught) => active && setError(errorMessage(caught, "Error inesperado")))
+      .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
@@ -40,11 +32,19 @@ export function useMigrationController(dependencies: MigrationExplorerDependenci
       try {
         setMap(await dependencies.mapProvider.saveMap(next));
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "No se pudo guardar");
+        setError(errorMessage(caught, "No se pudo guardar"));
       }
     },
     [dependencies.mapProvider],
   );
+
+  return { map, loading, error, persist };
+}
+
+// Navegacion entre la vista general y la de un modulo.
+function useMigrationNavigation() {
+  const [view, setView] = useState<MigrationView>("overview");
+  const [focus, setFocus] = useState<string | null>(null);
 
   const drillTo = useCallback((key: string) => {
     setView("module");
@@ -56,35 +56,42 @@ export function useMigrationController(dependencies: MigrationExplorerDependenci
     setFocus(null);
   }, []);
 
+  return { view, focus, drillTo, back };
+}
+
+export function useMigrationController(dependencies: MigrationExplorerDependencies) {
+  const { map, loading, error, persist } = useBoundedContextMap(dependencies);
+  const navigation = useMigrationNavigation();
+
   const moveFile = useCallback(
     (moduleKey: string, fromLayer: LayerKey, path: string, toLayer: LayerKey) => {
-      if (map === null || fromLayer === toLayer) {
-        return;
+      if (map !== null && fromLayer !== toLayer) {
+        void persist(applyMoveFile(map, moduleKey, fromLayer, path, toLayer));
       }
-      void persist(applyMoveFile(map, moduleKey, fromLayer, path, toLayer));
     },
     [map, persist],
   );
 
   const toggleValidated = useCallback(
     (moduleKey: string) => {
-      if (map === null) {
-        return;
+      if (map !== null) {
+        void persist(toggleModuleValidated(map, moduleKey));
       }
-      void persist({
-        ...map,
-        modules: map.modules.map((module) =>
-          module.key === moduleKey ? { ...module, validated: !module.validated } : module,
-        ),
-      });
     },
     [map, persist],
   );
 
-  return { map, view, focus, loading, error, drillTo, back, moveFile, toggleValidated };
+  return { map, loading, error, ...navigation, moveFile, toggleValidated };
 }
 
-function applyMoveFile(
+export function toggleModuleValidated(map: BoundedContextMap, moduleKey: string): BoundedContextMap {
+  return {
+    ...map,
+    modules: map.modules.map((module) => (module.key === moduleKey ? { ...module, validated: !module.validated } : module)),
+  };
+}
+
+export function applyMoveFile(
   map: BoundedContextMap,
   moduleKey: string,
   fromLayer: LayerKey,
@@ -94,10 +101,7 @@ function applyMoveFile(
   return {
     ...map,
     modules: map.modules.map((module) => {
-      if (module.key !== moduleKey) {
-        return module;
-      }
-      const moved = module.layers[fromLayer].find((file) => file.path === path);
+      const moved = module.key === moduleKey ? module.layers[fromLayer].find((file) => file.path === path) : undefined;
       if (moved === undefined) {
         return module;
       }

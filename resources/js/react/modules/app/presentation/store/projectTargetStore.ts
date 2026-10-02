@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { searchWithTarget, targetFromSearch, type ProjectTarget } from "../../domain/projectTarget";
+import { browserLocation } from "../../infrastructure/browser/browserLocation";
 
 interface ProjectTargetState {
   target: ProjectTarget;
@@ -10,9 +11,9 @@ interface ProjectTargetState {
 // Stack analizado (laravel/react) compartido por todas las pestañas. Vive en la URL
 // (`?target=`) para sobrevivir a un reload y poder compartir el link.
 export const useProjectTargetStore = create<ProjectTargetState>((set) => ({
-  target: targetFromSearch(window.location.search),
+  target: targetFromSearch(browserLocation.search()),
   setTarget: (target) => {
-    window.history.replaceState(null, "", `${window.location.pathname}${searchWithTarget(window.location.search, target)}`);
+    browserLocation.replaceSearch(searchWithTarget(browserLocation.search(), target));
     set({ target });
   },
 }));

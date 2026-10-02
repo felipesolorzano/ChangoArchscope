@@ -1,12 +1,12 @@
 import { PLAN_TASK_STATES } from "../../domain/value-objects/Plan.js";
-export function updateTaskState(repository, target, taskKey, state) {
+export function updateTaskState(repository, target, project, taskKey, state) {
     if (!isPlanTaskState(state)) {
         throw new Error(`Invalid task state "${state}". Use one of: ${PLAN_TASK_STATES.join(", ")}.`);
     }
     if (taskKey.length === 0) {
         throw new Error("taskKey is required.");
     }
-    repository.setState(target, taskKey, state);
+    repository.setState(target, project, taskKey, state);
     return state;
 }
 function isPlanTaskState(value) {

@@ -14,6 +14,12 @@ function fileName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
+export function findingsCountLabel(findings: PlanTaskFindings): string {
+  return findings.total > findings.items.length
+    ? `Mostrando ${findings.items.length} de ${findings.total.toLocaleString("en-US")}`
+    : `${findings.total.toLocaleString("en-US")} hallazgos`;
+}
+
 export function PlanFindingsDrawer({ graph, focusedTaskKey, findings, loading, onClose }: PlanFindingsDrawerProps) {
   if (focusedTaskKey === null) {
     return null;
@@ -33,33 +39,31 @@ export function PlanFindingsDrawer({ graph, focusedTaskKey, findings, loading, o
         </button>
       </header>
 
-      {loading && <p className="plan-drawer__hint">Cargando hallazgos...</p>}
-
-      {!loading && findings && findings.items.length === 0 && (
-        <p className="plan-drawer__hint">Esta tarea no tiene hallazgos concretos asociados.</p>
-      )}
-
-      {!loading && findings && findings.items.length > 0 && (
-        <>
-          <p className="plan-drawer__count">
-            {findings.total > findings.items.length
-              ? `Mostrando ${findings.items.length} de ${findings.total.toLocaleString("en-US")}`
-              : `${findings.total.toLocaleString("en-US")} hallazgos`}
-          </p>
-          <ul className="plan-drawer__list">
-            {findings.items.map((item, index) => (
-              <li key={`${item.file}:${item.line}:${index}`} className="plan-drawer__item">
-                <span className={`plan-drawer__sev plan-drawer__sev--${item.severity}`}>{item.severity}</span>
-                <span className="plan-drawer__file" title={item.file}>
-                  {fileName(item.file)}
-                  {item.line > 0 && <span className="plan-drawer__line">:{item.line}</span>}
-                </span>
-                <span className="plan-drawer__msg">{item.message}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      {loading ? <p className="plan-drawer__hint">Cargando hallazgos...</p> : findings && <FindingsBody findings={findings} />}
     </aside>
+  );
+}
+
+function FindingsBody({ findings }: { findings: PlanTaskFindings }) {
+  if (findings.items.length === 0) {
+    return <p className="plan-drawer__hint">Esta tarea no tiene hallazgos concretos asociados.</p>;
+  }
+
+  return (
+    <>
+      <p className="plan-drawer__count">{findingsCountLabel(findings)}</p>
+      <ul className="plan-drawer__list">
+        {findings.items.map((item, index) => (
+          <li key={`${item.file}:${item.line}:${index}`} className="plan-drawer__item">
+            <span className={`plan-drawer__sev plan-drawer__sev--${item.severity}`}>{item.severity}</span>
+            <span className="plan-drawer__file" title={item.file}>
+              {fileName(item.file)}
+              {item.line > 0 && <span className="plan-drawer__line">:{item.line}</span>}
+            </span>
+            <span className="plan-drawer__msg">{item.message}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

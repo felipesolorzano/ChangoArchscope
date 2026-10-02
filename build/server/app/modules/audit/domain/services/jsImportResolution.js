@@ -16,8 +16,15 @@ export function resolveJsImport(fromFile, source, knownFiles) {
         base,
         ...RESOLVABLE_EXTENSIONS.map((extension) => `${base}${extension}`),
         ...RESOLVABLE_EXTENSIONS.map((extension) => `${base}/index${extension}`),
+        ...typeScriptCounterparts(base),
     ];
     return candidates.filter((candidate) => knownFiles.has(candidate)).slice(0, 1);
+}
+// Convencion ESM de TypeScript: `import "./App.js"` se escribe con .js pero apunta a App.ts/App.tsx.
+// Sin .js/.jsx final el stem es la base misma y los candidatos repiten los de arriba (inofensivo).
+function typeScriptCounterparts(base) {
+    const stem = base.replace(/\.jsx?$/, "");
+    return [`${stem}.ts`, `${stem}.tsx`];
 }
 // Cada `${}` es el nombre de un modulo (1+ caracteres sin `/`); siempre seguido de extension o de
 // `/index` + extension, como lo resolveria el bundler en runtime.

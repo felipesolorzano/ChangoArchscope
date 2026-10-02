@@ -99,9 +99,9 @@ describe("buildPlan", () => {
       setState: vi.fn(),
     };
 
-    const graph = buildPlan(snapshot(), repository);
+    const graph = buildPlan(snapshot(), repository, "/php");
 
-    expect(repository.getStates).toHaveBeenCalledWith("laravel");
+    expect(repository.getStates).toHaveBeenCalledWith("laravel", "/php");
     expect(graph.nodes.find((node) => node.id === "close-sql-injections")?.state).toBe("done");
     // hay tareas derivadas (sql, n+1, third-party, validate)
     expect(graph.nodes.length).toBeGreaterThan(0);

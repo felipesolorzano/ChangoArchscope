@@ -78,3 +78,20 @@ Criterios de aceptacion:
 - `auditCategoriesFor("laravel")` incluye `php_compatibility` y `database`, no `api_access`.
 - `auditCategoriesFor("react")` incluye `api_access`, no `php_compatibility` ni `database`.
 - `accentStroke("api_access")` es un color propio, distinto de `mixed` y de los demas acentos.
+
+## Contrato de render de los componentes (tests con `react-dom/server`)
+
+- `AuditCanvas`: "Cargando mapa de auditoria..." / el error / el lienzo de React Flow.
+- `AuditNodeCard`: label, hallazgos y "risk N" formateados (`1,234`), la mini-barra solo si hay
+  severidades, y los badges solo si hay.
+- `AuditDetailDrawer`: nada si no hay nodo enfocado; si hay: tipo, label, hallazgos y risk, leyenda
+  "High/Medium/Low N", seccion "Señales" solo con badges, seccion "Hallazgos" solo con findings (con
+  "mostrando N de TOTAL" si hay mas) y "Click para profundizar…" solo si `drill`.
+- `AuditFilters`: el selector "PHP objetivo" solo con `laravel`; el de categoria con "Todas las
+  categorias" + `auditCategoriesFor(target)`.
+- `AuditLegend`: un item por categoria del stack mas "Mixto".
+- `AuditExplorer`: miga (`AuditBreadcrumb`), boton "Escaneando…"/"Refrescar" segun carga, y el toggle
+  "Mapa por apps"/"Heatmap global" (`AuditViewToggle`) solo en overview/heatmap. La linea de resumen la
+  arma `summaryText(graph, view)` (pura): "N hallazgos · risk R · K <unidad>", con K = nodos menos la
+  raiz (todos en heatmap) y unidad apps/archivos/reglas segun la vista, mas " · click en un nodo para
+  profundizar" salvo en la vista archivo.

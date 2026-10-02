@@ -373,6 +373,86 @@ describe("auditProject", () => {
       expect(snapshot.summary.files_skipped).toBe(1);
     });
 
+    it("testRoots: sus archivos son evidencia de tests y no generan findings propios", () => {
+      const component: JsFileStructure = {
+        ...jsStructure("/src/pages/Card.tsx"),
+        securityIssues: [],
+        functions: [{ name: "Card", kind: "function", startLine: 1, endLine: 5, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
+      };
+      const testFile: JsFileStructure = {
+        ...jsStructure("/tests/pages/Card.test.tsx"),
+        imports: [{ source: "../../src/pages/Card.js", names: [], line: 1 }],
+        functions: [{ name: "big", kind: "function", startLine: 1, endLine: 400, parametersCount: 0, decisionPointsCount: 30, containsJsx: false }],
+      };
+      const scanFiles = vi.fn((root: string) => ({ files: root === "/tests" ? [testFile] : [component], skipped: [] }));
+
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: { ...jsInput, root: "/src", testRoots: ["/tests"], scanFiles },
+      });
+
+      expect(scanFiles).toHaveBeenCalledWith("/tests", [".js"], []);
+      expect(snapshot.findings.some((finding) => finding.rule === "untested-component")).toBe(false);
+      expect(snapshot.findings.some((finding) => finding.file.startsWith("/tests/"))).toBe(false);
+    });
+
+    it("un helper con componentes dentro de testRoots (sin .test.) no se reporta como componente sin test", () => {
+      const untested: JsFileStructure = {
+        ...jsStructure("/src/pages/Orphan.tsx"),
+        securityIssues: [],
+        functions: [{ name: "Orphan", kind: "function", startLine: 1, endLine: 5, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
+      };
+      const helper: JsFileStructure = {
+        ...jsStructure("/tests/support/Harness.tsx"),
+        securityIssues: [],
+        functions: [{ name: "Harness", kind: "function", startLine: 1, endLine: 5, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
+      };
+
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: {
+          ...jsInput,
+          root: "/src",
+          testRoots: ["/tests"],
+          scanFiles: (root: string) => ({ files: root === "/tests" ? [helper] : [untested], skipped: [] }),
+        },
+      });
+
+      // El helper de tests no se reporta; el componente real sin test, si.
+      expect(snapshot.findings.filter((finding) => finding.rule === "untested-component").map((finding) => finding.file)).toEqual([
+        "/src/pages/Orphan.tsx",
+      ]);
+    });
+
+    it("sin testRoots el componente queda sin test", () => {
+      const component: JsFileStructure = {
+        ...jsStructure("/src/pages/Card.tsx"),
+        functions: [{ name: "Card", kind: "function", startLine: 1, endLine: 5, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
+      };
+
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: { ...jsInput, root: "/src", scanFiles: () => ({ files: [component], skipped: [] }) },
+      });
+
+      expect(snapshot.findings.some((finding) => finding.rule === "untested-component")).toBe(true);
+    });
+
     it("agrupa byModule por la primera carpeta bajo js.root", () => {
       const snapshot = auditProject({
         checkResult: buildCheckResult({ target: "react", reports: [] }),

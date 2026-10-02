@@ -8,6 +8,8 @@ import { normalizeBoundedContextMap } from "../../domain/services/normalizeBound
 export type BoundedContextMapControllerDeps = {
   repository: BoundedContextMapRepository;
   source: SourceProvider;
+  /** Proyecto (raiz del stack) al que pertenece el mapa del target. */
+  projectOf: (target: string) => string;
 };
 
 export class BoundedContextMapController {
@@ -15,7 +17,8 @@ export class BoundedContextMapController {
 
   show = (request: Request, response: Response, next: NextFunction): void => {
     try {
-      const map = this.deps.repository.getMap(targetFromRequest(request)) ?? emptyMap();
+      const target = targetFromRequest(request);
+      const map = this.deps.repository.getMap(target, this.deps.projectOf(target)) ?? emptyMap();
       response.status(200).json(map);
     } catch (error) {
       next(error);
@@ -24,8 +27,9 @@ export class BoundedContextMapController {
 
   save = (request: Request, response: Response, next: NextFunction): void => {
     try {
+      const target = targetFromRequest(request);
       const map = normalizeBoundedContextMap(request.body);
-      this.deps.repository.saveMap(targetFromRequest(request), map);
+      this.deps.repository.saveMap(target, this.deps.projectOf(target), map);
       response.status(200).json(map);
     } catch (error) {
       next(error);

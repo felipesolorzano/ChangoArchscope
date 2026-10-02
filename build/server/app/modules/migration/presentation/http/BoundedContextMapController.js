@@ -6,7 +6,8 @@ export class BoundedContextMapController {
     }
     show = (request, response, next) => {
         try {
-            const map = this.deps.repository.getMap(targetFromRequest(request)) ?? emptyMap();
+            const target = targetFromRequest(request);
+            const map = this.deps.repository.getMap(target, this.deps.projectOf(target)) ?? emptyMap();
             response.status(200).json(map);
         }
         catch (error) {
@@ -15,8 +16,9 @@ export class BoundedContextMapController {
     };
     save = (request, response, next) => {
         try {
+            const target = targetFromRequest(request);
             const map = normalizeBoundedContextMap(request.body);
-            this.deps.repository.saveMap(targetFromRequest(request), map);
+            this.deps.repository.saveMap(target, this.deps.projectOf(target), map);
             response.status(200).json(map);
         }
         catch (error) {

@@ -57,6 +57,33 @@ describe("jsCouplingAnalyzer — accesos globales (agregados por archivo)", () =
     ]);
   });
 
+  it("los adaptadores de infrastructure/ y los entry points pueden usar window y document", () => {
+    const accesses = { globalAccesses: [{ kind: "window" as const, line: 1 }, { kind: "dom" as const, line: 2 }] };
+    const files = [
+      jsFile("/src/mod/infrastructure/api/HttpProvider.ts", accesses),
+      jsFile("/src/app/main.tsx", accesses),
+      jsFile("/src/index.js", accesses),
+      jsFile("/src/mod/presentation/store/store.ts", accesses),
+    ];
+
+    expect(jsCouplingAnalyzer(files).map((finding) => [finding.file, finding.rule])).toEqual([
+      ["/src/mod/presentation/store/store.ts", "direct-dom-access"],
+      ["/src/mod/presentation/store/store.ts", "global-window-access"],
+    ]);
+  });
+
+  it("jQuery se marca tambien en infrastructure/ (no es un global del navegador)", () => {
+    const files = [jsFile("/src/mod/infrastructure/legacy.js", { globalAccesses: [{ kind: "jquery", line: 3 }] })];
+
+    expect(jsCouplingAnalyzer(files).map((finding) => finding.rule)).toEqual(["jquery-usage"]);
+  });
+
+  it("una carpeta que solo contiene 'infrastructure' en el nombre no exime", () => {
+    const files = [jsFile("/src/myinfrastructure/x.js", { globalAccesses: [{ kind: "window", line: 1 }] })];
+
+    expect(jsCouplingAnalyzer(files).map((finding) => finding.rule)).toEqual(["global-window-access"]);
+  });
+
   it("sin accesos no hay findings", () => {
     expect(jsCouplingAnalyzer([jsFile("/src/a.js")])).toEqual([]);
   });

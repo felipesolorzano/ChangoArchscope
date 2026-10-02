@@ -27,8 +27,11 @@ vive en la URL (`?target=react`) para que sobreviva a un reload y se pueda compa
 ## Estado
 
 - Store Zustand `app/presentation/store/projectTargetStore.ts` con `target` y `setTarget(target)`;
-  el valor inicial sale de `targetFromSearch(window.location.search)`.
-- `setTarget` actualiza el store y la URL via `history.replaceState(searchWithTarget(...))`.
+  el valor inicial sale de `targetFromSearch(location.search())`.
+- `setTarget` actualiza el store y la URL con `location.replaceSearch(searchWithTarget(...))`.
+- El acceso a `window.location`/`window.history` vive en un adaptador
+  (`app/infrastructure/browser/browserLocation.ts`: `search()` y `replaceSearch(search)`, que conserva
+  el `pathname`); el store no toca globals del navegador.
 
 ## Propagacion
 

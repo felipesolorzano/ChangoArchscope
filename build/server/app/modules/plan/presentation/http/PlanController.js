@@ -8,8 +8,9 @@ export class PlanController {
     }
     show = async (request, response, next) => {
         try {
-            const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
-            response.status(200).json(buildPlan(snapshot, this.deps.repository));
+            const target = targetFromRequest(request);
+            const snapshot = await this.deps.snapshots.getSnapshot(target);
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target)));
         }
         catch (error) {
             next(error);
@@ -20,9 +21,10 @@ export class PlanController {
             // La ruta /plan/tasks/:key garantiza `key`; el estado se valida en updateTaskState.
             const target = targetFromRequest(request);
             const state = typeof request.body?.state === "string" ? request.body.state : "";
-            updateTaskState(this.deps.repository, target, String(request.params.key), state);
+            const project = this.deps.projectOf(target);
+            updateTaskState(this.deps.repository, target, project, String(request.params.key), state);
             const snapshot = await this.deps.snapshots.getSnapshot(target);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository));
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, project));
         }
         catch (error) {
             next(error);

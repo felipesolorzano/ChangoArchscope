@@ -1,17 +1,17 @@
 import path from "node:path";
+import { isJsEntryPoint } from "../../domain/services/jsEntryPoints.js";
 import { resolveJsImport } from "../../domain/services/jsImportResolution.js";
 import { jsFinding } from "./jsFinding.js";
 // Marca de copia manual al final del nombre (sin extension), con o sin " (N)": "x - copia (4)",
 // "x copy 2", "x_old", "x.devel", "x.bak".
 const MANUAL_COPY_PATTERN = /(?: - cop(?:y|ia)| cop(?:y|ia)(?: \d+)?|_cop(?:y|ia)|_old|\.devel|\.bak)(?: \(\d+\))?$/i;
-const ENTRY_POINT_NAME = "index";
 export function jsDeadCodeAnalyzer(files) {
     const imported = importedFiles(files);
     return files.flatMap((file) => {
         const name = path.posix.basename(file.file);
         const stem = path.posix.parse(name).name;
         const findings = [];
-        if (!imported.has(file.file) && stem !== ENTRY_POINT_NAME) {
+        if (!imported.has(file.file) && !isJsEntryPoint(file.file)) {
             findings.push(build(file.file, "possibly-unused-file", name, `Ningun archivo escaneado importa "${name}". Verificar antes de eliminar.`));
         }
         if (MANUAL_COPY_PATTERN.test(stem)) {

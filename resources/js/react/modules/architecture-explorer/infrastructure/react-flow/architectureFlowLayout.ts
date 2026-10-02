@@ -11,11 +11,16 @@ const layerOrder: Array<Exclude<ArchitectureLayer, null>> = [
   "Presentation",
 ];
 
+// Grupo de apilado de la grilla: modulo + capa (el modulo y sus archivos sin capa comparten grupo).
+function groupKey(node: ArchitectureGraphNode): string {
+  return `${node.module}:${node.layer}`;
+}
+
 export function groupNodes(nodes: ArchitectureGraphNode[]) {
   const indexes = new Map<string, number>();
 
   nodes.forEach((node) => {
-    const key = `${node.module}:${node.layer ?? "module"}`;
+    const key = groupKey(node);
     indexes.set(key, 0);
   });
 
@@ -28,9 +33,9 @@ export function positionFor(
 ): { x: number; y: number } {
   const modules = Array.from(new Set(Array.from(grouped.keys()).map((key) => key.split(":")[0]))).sort();
   const moduleIndex = Math.max(0, modules.indexOf(node.module));
-  const layerIndex =
-    node.type === "module" ? 0 : Math.max(0, layerOrder.indexOf(node.layer as Exclude<ArchitectureLayer, null>) + 1);
-  const key = `${node.module}:${node.layer ?? "module"}`;
+  // Modulos y archivos sin capa: indexOf(null) = -1 -> columna 0.
+  const layerIndex = layerOrder.indexOf(node.layer as Exclude<ArchitectureLayer, null>) + 1;
+  const key = groupKey(node);
   const current = grouped.get(key) ?? 0;
 
   grouped.set(key, current + 1);
@@ -47,7 +52,31 @@ export function focusPositionsFor(
   focusedNodeId: string
 ): Map<string, { x: number; y: number }> {
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const focusedNode = nodeMap.get(focusedNodeId);
+  const { incomingIds, outgoingIds } = focusNeighbourIds(edges, focusedNodeId);
+  const nodesFor = (ids: string[]) => sortFocusNodes(ids.map((id) => nodeMap.get(id)).filter((node): node is ArchitectureGraphNode => Boolean(node)));
+
+  const incoming = nodesFor(Array.from(incomingIds));
+  const outgoing = nodesFor(Array.from(outgoingIds).filter((id) => !incomingIds.has(id)));
+  const shared = nodesFor(Array.from(outgoingIds).filter((id) => incomingIds.has(id)));
+  const positions = new Map<string, { x: number; y: number }>();
+  const top = 80;
+  const rowGap = 112;
+  const centerY = Math.max(top + Math.floor(Math.max(incoming.length, outgoing.length, shared.length) / 2) * rowGap, 240);
+
+  // Los compartidos tambien son entrantes: se ubican al final para quedar debajo del foco.
+  placeColumn(incoming, 80, top, rowGap, positions);
+  placeColumn(outgoing, 840, top, rowGap, positions);
+  placeColumn(shared, 460, centerY + 130, rowGap, positions);
+
+  if (nodeMap.has(focusedNodeId)) {
+    positions.set(focusedNodeId, { x: 460, y: centerY });
+  }
+
+  return positions;
+}
+
+// Vecinos directos del nodo enfocado, sin contarse a si mismo.
+function focusNeighbourIds(edges: ArchitectureGraphEdge[], focusedNodeId: string) {
   const incomingIds = new Set<string>();
   const outgoingIds = new Set<string>();
 
@@ -61,37 +90,7 @@ export function focusPositionsFor(
     }
   });
 
-  const incoming = sortFocusNodes(
-    Array.from(incomingIds)
-      .map((id) => nodeMap.get(id))
-      .filter((node): node is ArchitectureGraphNode => Boolean(node))
-  );
-  const outgoing = sortFocusNodes(
-    Array.from(outgoingIds)
-      .filter((id) => !incomingIds.has(id))
-      .map((id) => nodeMap.get(id))
-      .filter((node): node is ArchitectureGraphNode => Boolean(node))
-  );
-  const shared = sortFocusNodes(
-    Array.from(outgoingIds)
-      .filter((id) => incomingIds.has(id))
-      .map((id) => nodeMap.get(id))
-      .filter((node): node is ArchitectureGraphNode => Boolean(node))
-  );
-  const positions = new Map<string, { x: number; y: number }>();
-  const top = 80;
-  const rowGap = 112;
-  const centerY = Math.max(top + Math.floor(Math.max(incoming.length, outgoing.length, shared.length) / 2) * rowGap, 240);
-
-  placeColumn(incoming, 80, top, rowGap, positions);
-  placeColumn(shared, 460, centerY + 130, rowGap, positions);
-  placeColumn(outgoing, 840, top, rowGap, positions);
-
-  if (focusedNode) {
-    positions.set(focusedNode.id, { x: 460, y: centerY });
-  }
-
-  return positions;
+  return { incomingIds, outgoingIds };
 }
 
 function placeColumn(
@@ -108,8 +107,9 @@ function placeColumn(
 
 function sortFocusNodes(nodes: ArchitectureGraphNode[]): ArchitectureGraphNode[] {
   return [...nodes].sort((a, b) => {
-    const layerA = a.type === "module" ? -1 : layerOrder.indexOf(a.layer as Exclude<ArchitectureLayer, null>);
-    const layerB = b.type === "module" ? -1 : layerOrder.indexOf(b.layer as Exclude<ArchitectureLayer, null>);
+    // Los modulos tienen capa null: indexOf da -1 y quedan primero.
+    const layerA = layerOrder.indexOf(a.layer as Exclude<ArchitectureLayer, null>);
+    const layerB = layerOrder.indexOf(b.layer as Exclude<ArchitectureLayer, null>);
 
     return (
       layerA - layerB ||

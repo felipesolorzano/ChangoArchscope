@@ -7,6 +7,9 @@ export default {
     "resources/js/react/modules/app/domain/projectTarget.ts",
     "resources/js/react/modules/audit-explorer/presentation/constants/auditCategories.ts",
     "resources/js/react/modules/migration-explorer/infrastructure/react-flow/fileCardHeight.ts",
+    "resources/js/react/modules/architecture-explorer/infrastructure/react-flow/architectureFlowMapping.ts",
+    "resources/js/react/modules/architecture-explorer/infrastructure/react-flow/architectureFlowLayout.ts",
+    "resources/js/react/modules/architecture-explorer/presentation/utils/selectedNodeFor.ts",
     "!resources/js/react/tests/**/*.test.{ts,tsx}",
   ],
   vitest: {

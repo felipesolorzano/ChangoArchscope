@@ -31,6 +31,8 @@ export type ReactArchitectureConfig = {
   layers: Record<string, string>;
   /** Arbol plano legacy: carpetas de primer nivel de arriba hacia abajo (ver folderOrder.ts). */
   folderOrder?: Array<string | string[]>;
+  /** Carpetas de tests fuera de modulesPath: el audit las usa solo como evidencia de testing. */
+  testPaths?: string[];
   ignoredPaths: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;

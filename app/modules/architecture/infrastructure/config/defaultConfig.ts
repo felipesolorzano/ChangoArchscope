@@ -62,6 +62,7 @@ export const defaultConfig: ArchitectureConfig = {
     alias: "@modules",
     ignoredPaths: [],
     folderOrder: [],
+    testPaths: [],
     layers: {
       domain: "Domain",
       application: "Application",

@@ -9,10 +9,12 @@ export default {
     ignoredPaths: ["**/README.md", "**/vendor/**"],
   },
   react: {
-    modulesPath: "/home/felipe/Desktop/MSRepos/src/brandsites/react_/src",
+    modulesPath: "resources/js/react/modules",
     alias: "@modules",
     // Carpetas/archivos React a excluir dentro de modulesPath (patrones glob).
     ignoredPaths: ["**/__tests__/**", "**/*.test.*"],
+    // Tests fuera de modulesPath: el audit los usa solo como evidencia de testing.
+    testPaths: ["resources/js/react/tests"],
     // Arbol plano legacy: carpetas de arriba (entrada) hacia abajo (base). Importar una carpeta de
     // mas arriba es una violacion de arquitectura. Un array agrupa carpetas del mismo nivel.
     folderOrder: ["routes", "pages", "partials", ["components", "stripes", "customStripe"], "globals", "languages", "configs"],

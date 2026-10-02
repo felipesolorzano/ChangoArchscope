@@ -4,6 +4,7 @@ import type { PlanTaskStateRepository } from "../contracts/PlanTaskStateReposito
 export function updateTaskState(
   repository: PlanTaskStateRepository,
   target: string,
+  project: string,
   taskKey: string,
   state: string,
 ): PlanTaskState {
@@ -15,7 +16,7 @@ export function updateTaskState(
     throw new Error("taskKey is required.");
   }
 
-  repository.setState(target, taskKey, state);
+  repository.setState(target, project, taskKey, state);
 
   return state;
 }

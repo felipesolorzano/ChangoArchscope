@@ -29,14 +29,16 @@ function fakeResponse() {
   return { status, json, response: { status } as unknown as Response };
 }
 
+const projectOf = (target: string) => (target === "react" ? "/react" : "/php");
+
 function repository(): PlanTaskStateRepository {
-  return { getStates: () => ({}), setState: vi.fn() };
+  return { getStates: vi.fn(() => ({})), setState: vi.fn() };
 }
 
 describe("PlanController", async () => {
   it("show responde 200 con el grafo del plan y usa target laravel por defecto", async () => {
     const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
-    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
+    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository(), projectOf });
     const { status, json, response } = fakeResponse();
 
     await controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
@@ -49,7 +51,7 @@ describe("PlanController", async () => {
 
   it("update persiste el estado y responde el plan actualizado", async () => {
     const repo = repository();
-    const controller = new PlanController({ snapshots, repository: repo });
+    const controller = new PlanController({ snapshots, repository: repo, projectOf });
     const { status, response } = fakeResponse();
 
     await controller.update(
@@ -58,13 +60,13 @@ describe("PlanController", async () => {
       vi.fn() as unknown as NextFunction,
     );
 
-    expect(repo.setState).toHaveBeenCalledWith("laravel", "close-sql-injections", "done");
+    expect(repo.setState).toHaveBeenCalledWith("laravel", "/php", "close-sql-injections", "done");
     expect(status).toHaveBeenCalledWith(200);
   });
 
   it("show pasa el target del query al provider (react)", async () => {
     const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
-    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository() });
+    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repository(), projectOf });
     const { response } = fakeResponse();
 
     await controller.show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
@@ -72,9 +74,18 @@ describe("PlanController", async () => {
     expect(getSnapshot).toHaveBeenCalledWith("react");
   });
 
+  it("show lee los estados del proyecto del target", async () => {
+    const repo = repository();
+    const controller = new PlanController({ snapshots, repository: repo, projectOf });
+
+    await controller.show({ query: { target: "react" } } as unknown as Request, fakeResponse().response, vi.fn() as unknown as NextFunction);
+
+    expect(repo.getStates).toHaveBeenCalledWith("laravel", "/react");
+  });
+
   it("show delega a next si el provider lanza", async () => {
     const boom = new Error("sin snapshot");
-    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw boom; } }, repository: repository() });
+    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw boom; } }, repository: repository(), projectOf });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
@@ -87,7 +98,7 @@ describe("PlanController", async () => {
   it("update usa el target del query (react) al persistir y al reconstruir el plan", async () => {
     const getSnapshot = vi.fn(async (_target: "laravel" | "react") => snapshot());
     const repo = repository();
-    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repo });
+    const controller = new PlanController({ snapshots: { getSnapshot }, repository: repo, projectOf });
     const { response } = fakeResponse();
 
     await controller.update(
@@ -97,12 +108,12 @@ describe("PlanController", async () => {
     );
 
     expect(getSnapshot).toHaveBeenCalledWith("react");
-    expect(repo.setState).toHaveBeenCalledWith("react", "close-sql-injections", "done");
+    expect(repo.setState).toHaveBeenCalledWith("react", "/react", "close-sql-injections", "done");
   });
 
   it("update sin state en el body delega a next sin persistir", async () => {
     const repo = repository();
-    const controller = new PlanController({ snapshots, repository: repo });
+    const controller = new PlanController({ snapshots, repository: repo, projectOf });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
@@ -120,7 +131,7 @@ describe("PlanController", async () => {
 
   it("update sin body (ni state) responde el mismo error de validacion", async () => {
     const repo = repository();
-    const controller = new PlanController({ snapshots, repository: repo });
+    const controller = new PlanController({ snapshots, repository: repo, projectOf });
     const next = vi.fn();
 
     await controller.update(
@@ -135,7 +146,7 @@ describe("PlanController", async () => {
 
   it("update con un state que no es string lo trata como vacio", async () => {
     const next = vi.fn();
-    const controller = new PlanController({ snapshots, repository: repository() });
+    const controller = new PlanController({ snapshots, repository: repository(), projectOf });
 
     await controller.update(
       { params: { key: "close-sql-injections" }, body: { state: ["done"] }, query: {} } as unknown as Request,
@@ -147,7 +158,7 @@ describe("PlanController", async () => {
   });
 
   it("findings responde 200 con los hallazgos concretos de la tarea", async () => {
-    const controller = new PlanController({ snapshots, repository: repository() });
+    const controller = new PlanController({ snapshots, repository: repository(), projectOf });
     const { status, json, response } = fakeResponse();
 
     await controller.findings(
@@ -163,7 +174,7 @@ describe("PlanController", async () => {
   });
 
   it("findings delega a next si el provider lanza", async () => {
-    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw new Error("x"); } }, repository: repository() });
+    const controller = new PlanController({ snapshots: { getSnapshot: async () => { throw new Error("x"); } }, repository: repository(), projectOf });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 
@@ -175,7 +186,7 @@ describe("PlanController", async () => {
 
   it("update con estado invalido delega a next sin responder", async () => {
     const repo = repository();
-    const controller = new PlanController({ snapshots, repository: repo });
+    const controller = new PlanController({ snapshots, repository: repo, projectOf });
     const { status, response } = fakeResponse();
     const next = vi.fn();
 

@@ -60,6 +60,7 @@ export const defaultConfig = {
         alias: "@modules",
         ignoredPaths: [],
         folderOrder: [],
+        testPaths: [],
         layers: {
             domain: "Domain",
             application: "Application",

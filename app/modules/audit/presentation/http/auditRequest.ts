@@ -72,7 +72,13 @@ export async function resolveAuditSnapshot(
   const phpRoot = target === "laravel" ? config.laravel.modulesPath : null;
   const js: AuditJsInput | undefined =
     target === "react" && deps.jsParser !== undefined
-      ? { root: config.react.modulesPath, extensions: JS_SOURCE_EXTENSIONS, ignoredPaths: config.react.ignoredPaths, parser: deps.jsParser }
+      ? {
+          root: config.react.modulesPath,
+          extensions: JS_SOURCE_EXTENSIONS,
+          ignoredPaths: config.react.ignoredPaths,
+          parser: deps.jsParser,
+          testRoots: config.react.testPaths ?? [],
+        }
       : undefined;
   // Lo que se escanea de verdad para este target (null = react sin parser JS: nada que escanear).
   const scanned =
@@ -82,9 +88,16 @@ export async function resolveAuditSnapshot(
 
   // Fingerprint barato (mtime+size). Invalida tanto el cache de snapshot como el de compat,
   // para que ambos refresquen de forma consistente cuando se edita un archivo del repo.
+  // Con testRoots (react) tambien entran sus huellas: agregar o editar un test invalida el snapshot.
+  const fingerprintOf = deps.fingerprint;
   const fingerprint =
-    deps.fingerprint !== undefined && scanned !== null
-      ? await deps.fingerprint(scanned.root, scanned.extensions, scanned.ignoredPaths)
+    fingerprintOf !== undefined && scanned !== null
+      ? (
+          await Promise.all([
+            fingerprintOf(scanned.root, scanned.extensions, scanned.ignoredPaths),
+            ...(js?.testRoots ?? []).map((testRoot) => fingerprintOf(testRoot, js!.extensions, [])),
+          ])
+        ).join("|")
       : null;
 
   // Lo caro de hoy: check de arquitectura + scan de compat + parseo/analisis de todos los

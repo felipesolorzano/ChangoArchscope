@@ -25,41 +25,39 @@ export function filterArchitectureGraph(
   }
 
   if (options.focusedNodeId && graph.nodes.some((node) => node.id === options.focusedNodeId)) {
-    const connectedEdges = graph.edges.filter(
-      (edge) => edge.source === options.focusedNodeId || edge.target === options.focusedNodeId
-    );
-    const connectedIds = new Set<string>([options.focusedNodeId]);
-
-    connectedEdges.forEach((edge) => {
-      connectedIds.add(edge.source);
-      connectedIds.add(edge.target);
-    });
-
-    return {
-      nodes: graph.nodes.filter((node) => connectedIds.has(node.id)),
-      edges: connectedEdges,
-    };
+    return focusSubgraph(graph, options.focusedNodeId);
   }
 
-  const normalizedQuery = options.query.trim().toLowerCase();
-  const visibleNodes = graph.nodes.filter((node) => {
-    const matchesModule = !options.selectedModule || node.module === options.selectedModule;
-    const matchesLayer =
-      !options.selectedLayer ||
-      node.type === "module" ||
-      node.layer === options.selectedLayer;
-    const matchesQuery =
-      !normalizedQuery ||
-      node.label.toLowerCase().includes(normalizedQuery) ||
-      node.path.toLowerCase().includes(normalizedQuery);
-
-    return matchesModule && matchesLayer && matchesQuery;
-  });
-
+  const visibleNodes = graph.nodes.filter(nodeFilter(options));
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
 
   return {
     nodes: visibleNodes,
     edges: graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)),
   };
+}
+
+// El nodo enfocado, sus vecinos directos y solo los edges que lo tocan.
+function focusSubgraph(graph: ArchitectureGraph, focusedNodeId: string): FilteredArchitectureGraph {
+  const connectedEdges = graph.edges.filter((edge) => edge.source === focusedNodeId || edge.target === focusedNodeId);
+  const connectedIds = new Set<string>([focusedNodeId]);
+
+  connectedEdges.forEach((edge) => {
+    connectedIds.add(edge.source);
+    connectedIds.add(edge.target);
+  });
+
+  return { nodes: graph.nodes.filter((node) => connectedIds.has(node.id)), edges: connectedEdges };
+}
+
+// Filtro por modulo, capa (los nodos modulo siempre pasan) y busqueda en label/path.
+function nodeFilter(options: FilterArchitectureGraphOptions): (node: ArchitectureGraphNode) => boolean {
+  const normalizedQuery = options.query.trim().toLowerCase();
+  const matchesQuery = (node: ArchitectureGraphNode) =>
+    !normalizedQuery || node.label.toLowerCase().includes(normalizedQuery) || node.path.toLowerCase().includes(normalizedQuery);
+
+  return (node) =>
+    (!options.selectedModule || node.module === options.selectedModule) &&
+    (!options.selectedLayer || node.type === "module" || node.layer === options.selectedLayer) &&
+    matchesQuery(node);
 }

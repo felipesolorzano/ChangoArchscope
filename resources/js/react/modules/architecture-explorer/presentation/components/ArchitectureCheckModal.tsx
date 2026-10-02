@@ -1,5 +1,5 @@
 import { AlertCircle, RefreshCcw, X } from "lucide-react";
-import type { ArchitectureCheck, ArchitectureCheckIssue } from "../../domain/value-objects/ArchitectureCheck";
+import type { ArchitectureCheck, ArchitectureCheckIssue, ArchitectureCheckReport } from "../../domain/value-objects/ArchitectureCheck";
 import { Stat } from "./Stat";
 
 interface ArchitectureCheckModalProps {
@@ -11,14 +11,7 @@ interface ArchitectureCheckModalProps {
   onRefresh: () => void;
 }
 
-export function ArchitectureCheckModal({
-  result,
-  loading,
-  error,
-  selectedModule,
-  onClose,
-  onRefresh,
-}: ArchitectureCheckModalProps) {
+export function ArchitectureCheckModal({ result, loading, error, selectedModule, onClose, onRefresh }: ArchitectureCheckModalProps) {
   return (
     <div className="architecture-modal-backdrop" role="presentation">
       <section className="architecture-modal" role="dialog" aria-modal="true" aria-labelledby="architecture-check-title">
@@ -46,43 +39,50 @@ export function ArchitectureCheckModal({
           </div>
         )}
 
-        {!loading && !error && result && (
-          <div className="architecture-check">
-            <div className={`architecture-check-status${result.passed ? " architecture-check-status--pass" : ""}`}>
-              <strong>{result.passed ? "PASS" : "REVISAR"}</strong>
-              <span>{new Date(result.checked_at).toLocaleString()}</span>
-            </div>
-
-            <div className="architecture-check-summary">
-              <Stat label="Módulos" value={result.summary.modules} />
-              <Stat label="Archivos" value={result.summary.files_scanned} />
-              <Stat label="Violaciones" value={result.summary.violations_count} />
-              <Stat label="Acoplamientos" value={result.summary.couplings_count} />
-            </div>
-
-            <div className="architecture-check-reports">
-              {result.reports.map((report) => (
-                <article
-                  className={`architecture-check-report${report.passed ? " architecture-check-report--pass" : " architecture-check-report--review"}`}
-                  key={report.module}
-                >
-                  <header>
-                    <div>
-                      <strong>{report.module}</strong>
-                      <span>{report.files_scanned} archivos revisados</span>
-                    </div>
-                    <b className={report.passed ? "is-pass" : ""}>{report.passed ? "PASS" : "REVISAR"}</b>
-                  </header>
-
-                  <IssueList title="Violaciones" issues={report.violations} />
-                  <IssueList title="Acoplamientos" issues={report.couplings} />
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
+        {!loading && !error && result && <CheckResult result={result} />}
       </section>
     </div>
+  );
+}
+
+function CheckResult({ result }: { result: ArchitectureCheck }) {
+  return (
+    <div className="architecture-check">
+      <div className={`architecture-check-status${result.passed ? " architecture-check-status--pass" : ""}`}>
+        <strong>{result.passed ? "PASS" : "REVISAR"}</strong>
+        <span>{new Date(result.checked_at).toLocaleString()}</span>
+      </div>
+
+      <div className="architecture-check-summary">
+        <Stat label="Módulos" value={result.summary.modules} />
+        <Stat label="Archivos" value={result.summary.files_scanned} />
+        <Stat label="Violaciones" value={result.summary.violations_count} />
+        <Stat label="Acoplamientos" value={result.summary.couplings_count} />
+      </div>
+
+      <div className="architecture-check-reports">
+        {result.reports.map((report) => (
+          <ReportCard key={report.module} report={report} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReportCard({ report }: { report: ArchitectureCheckReport }) {
+  return (
+    <article className={`architecture-check-report${report.passed ? " architecture-check-report--pass" : " architecture-check-report--review"}`}>
+      <header>
+        <div>
+          <strong>{report.module}</strong>
+          <span>{report.files_scanned} archivos revisados</span>
+        </div>
+        <b className={report.passed ? "is-pass" : ""}>{report.passed ? "PASS" : "REVISAR"}</b>
+      </header>
+
+      <IssueList title="Violaciones" issues={report.violations} />
+      <IssueList title="Acoplamientos" issues={report.couplings} />
+    </article>
   );
 }
 
@@ -105,7 +105,9 @@ function IssueList({ title, issues }: { title: string; issues: ArchitectureCheck
             {issue.layer}
             {issue.target_module ? ` -> ${issue.target_module}` : ""}
           </strong>
-          <code>{issue.file}:{issue.line}</code>
+          <code>
+            {issue.file}:{issue.line}
+          </code>
           <p>{issue.message}</p>
           <small>{issue.import}</small>
           {issue.recommendation && <em>{issue.recommendation}</em>}

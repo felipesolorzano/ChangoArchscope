@@ -1,28 +1,39 @@
 import { REACT_BASE_CLASSES } from "../../domain/services/jsComponents.js";
+import { isJsEntryPoint } from "../../domain/services/jsEntryPoints.js";
 import { jsFinding } from "./jsFinding.js";
+const INFRASTRUCTURE_SEGMENT = "/infrastructure/";
 // En orden de reporte. Agregado por archivo: un archivo legacy puede tener cientos de `$(...)`.
 const GLOBAL_RULES = [
-    { kind: "jquery", rule: "jquery-usage", severity: "medium", message: (count) => `Usa jQuery ${count} veces: manipula el DOM por fuera de React.` },
+    {
+        kind: "jquery",
+        rule: "jquery-usage",
+        severity: "medium",
+        message: (count) => `Usa jQuery ${count} veces: manipula el DOM por fuera de React.`,
+        browserGlobal: false,
+    },
     {
         kind: "dom",
         rule: "direct-dom-access",
         severity: "medium",
         message: (count) => `Accede a document ${count} veces: acceso directo al DOM desde el componente.`,
+        browserGlobal: true,
     },
     {
         kind: "window",
         rule: "global-window-access",
         severity: "low",
         message: (count) => `Accede a window ${count} veces: depende de estado global del navegador.`,
+        browserGlobal: true,
     },
 ];
 export function jsCouplingAnalyzer(files) {
     return files.flatMap((file) => [...globalAccessFindings(file), ...inheritanceFindings(file)]);
 }
 function globalAccessFindings(file) {
-    return GLOBAL_RULES.flatMap(({ kind, rule, severity, message }) => {
+    const allowsBrowserGlobals = file.file.includes(INFRASTRUCTURE_SEGMENT) || isJsEntryPoint(file.file);
+    return GLOBAL_RULES.flatMap(({ kind, rule, severity, message, browserGlobal }) => {
         const lines = file.globalAccesses.filter((access) => access.kind === kind).map((access) => access.line);
-        if (lines.length === 0)
+        if (lines.length === 0 || (browserGlobal && allowsBrowserGlobals))
             return [];
         return [
             jsFinding({

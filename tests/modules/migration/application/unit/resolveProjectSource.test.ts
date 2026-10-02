@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  projectRootFor,
   resolveProjectSource,
   type ProjectStacks,
 } from "../../../../../app/modules/migration/application/use-cases/resolveProjectSource.js";
@@ -54,5 +55,17 @@ describe("resolveProjectSource", () => {
       ignoredPaths: ["**/vendor/**"],
       files: ["/abs/php/a", "/abs/php/b"],
     });
+  });
+});
+
+describe("projectRootFor", () => {
+  it.each([
+    ["react", "/abs/src"],
+    ["react-design", "/abs/src"],
+    ["laravel", "/abs/php"],
+    ["design", "/abs/php"],
+    ["otro", "/abs/php"],
+  ])("%s -> %s", (target, root) => {
+    expect(projectRootFor(target, stacks)).toBe(root);
   });
 });

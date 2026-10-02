@@ -48,8 +48,8 @@ describe("jsDeadCodeAnalyzer — possibly-unused-file", () => {
     expect(jsDeadCodeAnalyzer(files).map((finding) => finding.file)).toEqual(["/src/a.js"]);
   });
 
-  it("index con cualquier extension es entry point", () => {
-    const files = [jsFile("/src/index.tsx"), jsFile("/src/app/index.jsx")];
+  it("index y main con cualquier extension son entry points", () => {
+    const files = [jsFile("/src/index.tsx"), jsFile("/src/app/index.jsx"), jsFile("/src/app/main.tsx")];
 
     expect(jsDeadCodeAnalyzer(files)).toEqual([]);
   });

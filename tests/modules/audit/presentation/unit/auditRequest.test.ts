@@ -86,6 +86,60 @@ describe("resolveAuditSnapshot — compatibilidad PHP", () => {
   });
 });
 
+describe("resolveAuditSnapshot — react.testPaths", () => {
+  const jsParser = {
+    parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+  };
+  const withTests = (): ArchitectureConfig => ({ ...config(), react: { ...config().react, testPaths: ["/react-tests"] } });
+
+  it("escanea los testPaths con las extensiones JS y sin ignoredPaths", async () => {
+    const walkFiles = vi.fn(() => []);
+    await resolveAuditSnapshot(
+      deps({ getConfig: withTests, jsParser, reader: { listDirectories: () => [], walkFiles, readText: () => "", isFile: () => false } }),
+      "react",
+      null,
+    );
+
+    expect(walkFiles).toHaveBeenCalledWith("/react-tests", [".ts", ".tsx", ".js", ".jsx"], []);
+  });
+
+  it("el fingerprint combina la raiz y cada testPath: cambiar un test invalida el cache", async () => {
+    let testsFp = "t1";
+    const fingerprint = vi.fn(async (root: string) => (root === "/react-tests" ? testsFp : "src"));
+    const d = deps({ getConfig: withTests, jsParser, fingerprint, snapshotCache: createAuditSnapshotCache() });
+
+    await resolveAuditSnapshot(d, "react", null);
+    await resolveAuditSnapshot(d, "react", null);
+    testsFp = "t2";
+    await resolveAuditSnapshot(d, "react", null);
+
+    expect(fingerprint).toHaveBeenCalledWith("/react-tests", [".ts", ".tsx", ".js", ".jsx"], []);
+    expect(d.check).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("resolveAuditSnapshot — fingerprint combinado", () => {
+  it("las huellas se separan: (ab, c) y (a, bc) no colisionan", async () => {
+    const jsParser = {
+      parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+    };
+    let prints = { src: "ab", tests: "c" };
+    const fingerprint = vi.fn(async (root: string) => (root === "/react-tests" ? prints.tests : prints.src));
+    const d = deps({
+      getConfig: () => ({ ...config(), react: { ...config().react, testPaths: ["/react-tests"] } }),
+      jsParser,
+      fingerprint,
+      snapshotCache: createAuditSnapshotCache(),
+    });
+
+    await resolveAuditSnapshot(d, "react", null);
+    prints = { src: "a", tests: "bc" };
+    await resolveAuditSnapshot(d, "react", null);
+
+    expect(d.check).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("resolveAuditSnapshot — cache", () => {
   it("con fingerprint pero sin snapshotCache computa siempre", async () => {
     const d = deps({ fingerprint: async () => "fp" });

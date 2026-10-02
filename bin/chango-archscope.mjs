@@ -75,7 +75,13 @@ try {
       compatibilityScan,
       js:
         target === "react"
-          ? { root: config.react.modulesPath, extensions: JS_SOURCE_EXTENSIONS, ignoredPaths: config.react.ignoredPaths, parser: new BabelJsParser() }
+          ? {
+              root: config.react.modulesPath,
+              extensions: JS_SOURCE_EXTENSIONS,
+              ignoredPaths: config.react.ignoredPaths,
+              parser: new BabelJsParser(),
+              testRoots: config.react.testPaths ?? [],
+            }
           : undefined,
     });
 

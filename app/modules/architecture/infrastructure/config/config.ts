@@ -42,7 +42,7 @@ export function mergeConfig<T>(base: T, override: unknown): T {
   return merged as T;
 }
 
-function normalizeConfig(config: ArchitectureConfig, cwd: string): ArchitectureConfig {
+export function normalizeConfig(config: ArchitectureConfig, cwd: string): ArchitectureConfig {
   return {
     ...config,
     laravel: {
@@ -52,6 +52,7 @@ function normalizeConfig(config: ArchitectureConfig, cwd: string): ArchitectureC
     react: {
       ...config.react,
       modulesPath: path.resolve(cwd, config.react.modulesPath),
+      testPaths: (config.react.testPaths ?? []).map((testPath) => path.resolve(cwd, testPath)),
     },
   };
 }

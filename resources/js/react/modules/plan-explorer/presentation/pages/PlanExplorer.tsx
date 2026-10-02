@@ -27,7 +27,6 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
   const flowNodes = useMemo(() => toPlanFlowNodes(graph?.nodes ?? []), [graph]);
   const flowEdges = useMemo(() => toPlanFlowEdges(graph?.edges ?? []), [graph]);
 
-  const byState = graph?.summary.by_state ?? {};
   const total = graph?.summary.tasks ?? 0;
 
   return (
@@ -39,14 +38,7 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
             {total} tareas derivadas de la auditoria · click en un estado para marcar avance (se guarda)
           </p>
         </div>
-        <div className="plan-progress">
-          {PLAN_STATE_OPTIONS.map((option) => (
-            <span key={option.state} className="plan-progress__item">
-              <span className="plan-progress__dot" style={{ background: stateColor(option.state) }} />
-              {stateLabel(option.state)}: <strong>{byState[option.state] ?? 0}</strong>
-            </span>
-          ))}
-        </div>
+        <PlanProgress byState={graph?.summary.by_state ?? {}} />
       </header>
 
       <PlanCanvas
@@ -66,5 +58,18 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
         onClose={closeTask}
       />
     </main>
+  );
+}
+
+function PlanProgress({ byState }: { byState: Record<string, number> }) {
+  return (
+    <div className="plan-progress">
+      {PLAN_STATE_OPTIONS.map((option) => (
+        <span key={option.state} className="plan-progress__item">
+          <span className="plan-progress__dot" style={{ background: stateColor(option.state) }} />
+          {stateLabel(option.state)}: <strong>{byState[option.state] ?? 0}</strong>
+        </span>
+      ))}
+    </div>
   );
 }

@@ -71,15 +71,20 @@ Fuente UNICA de `duplicatePairs` (metrica) y de los items de `resolve-duplicate-
 - `exclude-third-party`: los `skippedFiles`. `resolve-duplicate-migrations`: los pares `_new`.
 - Tarea desconocida: vacio.
 
-## Estado por target
+## Estado por target y proyecto
 
-El estado de cada tarea (`pending | in_progress | done | blocked`) se guarda por `(target, taskKey)`:
-marcar una tarea en React no la marca en Laravel.
+El estado de cada tarea (`pending | in_progress | done | blocked`) se guarda por
+`(target, project, taskKey)`: marcar una tarea en React no la marca en Laravel, y el avance de un
+proyecto no aparece en otro al cambiar `modulesPath` (proyecto = raiz del stack, como en
+`app/modules/migration/specs/map-persistence.md`).
 
-- `PlanTaskStateRepository.getStates(target)` / `setState(target, taskKey, state)`.
-- `updateTaskState(repository, target, taskKey, state)` valida estado y `taskKey` como antes.
-- `buildPlan(snapshot, repository)` usa `repository.getStates(snapshot.target)`.
-- `PlanController.update` persiste con el `target` del query (default `laravel`).
+- `PlanTaskStateRepository.getStates(target, project)` / `setState(target, project, taskKey, state)`.
+- `updateTaskState(repository, target, project, taskKey, state)` valida estado y `taskKey` como antes.
+- `buildPlan(snapshot, repository, project)` usa `repository.getStates(snapshot.target, project)`.
+- `PlanController` resuelve el proyecto con `deps.projectOf(target)` (target del query, default
+  `laravel`) en show/update.
+- Migracion `006_project_scoped_state.sql`: tabla `plan_task_states_by_project` con PK
+  `(target, project, task_key)`; copia los estados de `plan_task_states_by_target` con `project = ''`.
 - Migracion `005_plan_task_states_by_target.sql`: tabla `plan_task_states_by_target` con PK
   `(target, task_key)`; copia los estados existentes como `target = 'laravel'` (no se pierde el avance
   ya marcado). La tabla vieja queda sin uso.

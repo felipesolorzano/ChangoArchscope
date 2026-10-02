@@ -5,8 +5,8 @@ import { generatePlan } from "../../domain/services/generatePlan.js";
 import type { PlanTaskStateRepository } from "../contracts/PlanTaskStateRepository.js";
 import { auditSnapshotToSignals } from "../services/auditSnapshotToSignals.js";
 
-export function buildPlan(snapshot: AuditSnapshot, repository: PlanTaskStateRepository): PlanGraph {
+export function buildPlan(snapshot: AuditSnapshot, repository: PlanTaskStateRepository, project: string): PlanGraph {
   const tasks = generatePlan(auditSnapshotToSignals(snapshot));
 
-  return buildPlanGraph(tasks, repository.getStates(snapshot.target), new Date().toISOString());
+  return buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString());
 }

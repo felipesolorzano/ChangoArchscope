@@ -37,6 +37,20 @@ describe("resolveJsImport", () => {
     expect(resolveJsImport("/src/pages/page.home.js", source, known)).toEqual([expected]);
   });
 
+  it("convencion ESM de TypeScript: un import .js/.jsx apunta al .ts/.tsx", () => {
+    const files = new Set(["/src/app/App.tsx", "/src/app/store.ts", "/src/app/Card.tsx", "/src/app/real.js", "/src/app/real.ts"]);
+
+    expect(resolveJsImport("/src/app/main.tsx", "./App.js", files)).toEqual(["/src/app/App.tsx"]);
+    expect(resolveJsImport("/src/app/main.tsx", "./store.js", files)).toEqual(["/src/app/store.ts"]);
+    expect(resolveJsImport("/src/app/main.tsx", "./Card.jsx", files)).toEqual(["/src/app/Card.tsx"]);
+    expect(resolveJsImport("/src/app/main.tsx", "./real.js", files)).toEqual(["/src/app/real.js"]);
+    expect(resolveJsImport("/src/app/main.tsx", "./missing.js", files)).toEqual([]);
+  });
+
+  it("solo reemplaza un .js/.jsx FINAL", () => {
+    expect(resolveJsImport("/src/main.ts", "./legacy.js.bak", new Set(["/src/legacy.bak.ts"]))).toEqual([]);
+  });
+
   it("prefiere el archivo a la carpeta con index", () => {
     const files = new Set(["/src/a.js", "/src/a/index.js"]);
 

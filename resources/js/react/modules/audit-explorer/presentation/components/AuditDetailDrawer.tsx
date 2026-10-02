@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 
-import type { AuditGraph } from "../../domain/value-objects/AuditGraph";
+import type { AuditGraph, AuditGraphNode } from "../../domain/value-objects/AuditGraph";
 import { accentStroke, severityBarSegments, toneFill } from "../constants/auditView";
 
 interface AuditDetailDrawerProps {
@@ -20,8 +20,6 @@ export function AuditDetailDrawer({ graph, focusedNodeId, onClose }: AuditDetail
     return null;
   }
 
-  const segments = severityBarSegments(node.severityMix);
-
   return (
     <aside className="audit-drawer" style={{ borderColor: accentStroke(node.accent) }}>
       <header className="audit-drawer__head">
@@ -35,60 +33,87 @@ export function AuditDetailDrawer({ graph, focusedNodeId, onClose }: AuditDetail
       </header>
 
       <div className="audit-drawer__metrics">
-        <div>
-          <span className="audit-drawer__metric-value">{formatNumber(node.metrics.findings)}</span>
-          <span className="audit-drawer__metric-label">hallazgos</span>
-        </div>
-        <div>
-          <span className="audit-drawer__metric-value">{formatNumber(node.metrics.risk)}</span>
-          <span className="audit-drawer__metric-label">risk score</span>
-        </div>
+        <Metric value={node.metrics.findings} label="hallazgos" />
+        <Metric value={node.metrics.risk} label="risk score" />
       </div>
 
-      <div className="audit-drawer__section">
-        <span className="audit-drawer__section-title">Mezcla de severidad</span>
-        <div className="audit-drawer__bar">
-          {segments.map((segment) => (
-            <span key={segment.key} className="audit-drawer__bar-seg" style={{ width: `${segment.percent}%`, background: segment.color }} />
-          ))}
-        </div>
-        <div className="audit-drawer__sev-legend">
-          <span>High {node.severityMix.high}</span>
-          <span>Medium {node.severityMix.medium}</span>
-          <span>Low {node.severityMix.low}</span>
-        </div>
-      </div>
-
-      {node.badges.length > 0 && (
-        <div className="audit-drawer__section">
-          <span className="audit-drawer__section-title">Señales</span>
-          <div className="audit-drawer__badges">
-            {node.badges.map((badge) => (
-              <span key={badge} className="audit-drawer__badge">{badge}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {node.findings && node.findings.length > 0 && (
-        <div className="audit-drawer__section">
-          <span className="audit-drawer__section-title">
-            Hallazgos
-            {node.metrics.findings > node.findings.length && ` · mostrando ${node.findings.length} de ${formatNumber(node.metrics.findings)}`}
-          </span>
-          <ul className="audit-drawer__findings">
-            {node.findings.map((item, index) => (
-              <li key={`${item.line}:${index}`} className="audit-drawer__finding">
-                <span className={`audit-drawer__sev audit-drawer__sev--${item.severity}`}>{item.severity}</span>
-                <span className="audit-drawer__line">L{item.line}</span>
-                <span className="audit-drawer__msg">{item.message}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <SeveritySection node={node} />
+      <BadgesSection badges={node.badges} />
+      <FindingsSection node={node} />
 
       {node.drill && <p className="audit-drawer__drill">Click para profundizar en este nodo.</p>}
     </aside>
+  );
+}
+
+function Metric({ value, label }: { value: number; label: string }) {
+  return (
+    <div>
+      <span className="audit-drawer__metric-value">{formatNumber(value)}</span>
+      <span className="audit-drawer__metric-label">{label}</span>
+    </div>
+  );
+}
+
+function SeveritySection({ node }: { node: AuditGraphNode }) {
+  return (
+    <div className="audit-drawer__section">
+      <span className="audit-drawer__section-title">Mezcla de severidad</span>
+      <div className="audit-drawer__bar">
+        {severityBarSegments(node.severityMix).map((segment) => (
+          <span key={segment.key} className="audit-drawer__bar-seg" style={{ width: `${segment.percent}%`, background: segment.color }} />
+        ))}
+      </div>
+      <div className="audit-drawer__sev-legend">
+        <span>High {node.severityMix.high}</span>
+        <span>Medium {node.severityMix.medium}</span>
+        <span>Low {node.severityMix.low}</span>
+      </div>
+    </div>
+  );
+}
+
+function BadgesSection({ badges }: { badges: string[] }) {
+  if (badges.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="audit-drawer__section">
+      <span className="audit-drawer__section-title">Señales</span>
+      <div className="audit-drawer__badges">
+        {badges.map((badge) => (
+          <span key={badge} className="audit-drawer__badge">
+            {badge}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FindingsSection({ node }: { node: AuditGraphNode }) {
+  const findings = node.findings ?? [];
+
+  if (findings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="audit-drawer__section">
+      <span className="audit-drawer__section-title">
+        Hallazgos
+        {node.metrics.findings > findings.length && ` · mostrando ${findings.length} de ${formatNumber(node.metrics.findings)}`}
+      </span>
+      <ul className="audit-drawer__findings">
+        {findings.map((item, index) => (
+          <li key={`${item.line}:${index}`} className="audit-drawer__finding">
+            <span className={`audit-drawer__sev audit-drawer__sev--${item.severity}`}>{item.severity}</span>
+            <span className="audit-drawer__line">L{item.line}</span>
+            <span className="audit-drawer__msg">{item.message}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -45,3 +45,9 @@ el mapa de bounded contexts, tanto para el target Laravel/PHP como para el targe
 - `react-design` usa el mismo stack react, pero responde `target: "react-design"`.
 - `laravel`, `design` y un target desconocido usan el stack laravel.
 - `listFiles` se llama con exactamente `(root, extensions, ignoredPaths)` del stack elegido.
+
+## Raiz del proyecto (`projectRootFor`)
+
+`projectRootFor(target, stacks)` devuelve solo la raiz del stack que corresponde al target (misma regla
+que arriba), sin listar archivos. La usan los mapas y el plan como clave de proyecto
+(`map-persistence.md`).

@@ -35,6 +35,8 @@ export type AuditJsInput = {
   ignoredPaths: string[];
   parser: JsSourceParser;
   scanFiles?: ScanJsFilesFn;
+  /** Carpetas de tests fuera de `root`: solo evidencia para el analizador de testing. */
+  testRoots?: string[];
 };
 
 export type AuditProjectInput = {
@@ -73,14 +75,15 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     ...phpTestingAnalyzer(files),
   ];
 
-  const jsScan: JsScanResult =
-    js === undefined
-      ? { files: [], skipped: [] }
-      : (js.scanFiles ?? ((root, exts, ignored) => scanJsFiles(reader, js.parser, root, exts, ignored)))(
-          js.root,
-          js.extensions,
-          js.ignoredPaths,
-        );
+  const scanJs = (root: string, ignored: string[]): JsScanResult =>
+    (js!.scanFiles ?? ((scanRoot, exts, ignoredPaths) => scanJsFiles(reader, js!.parser, scanRoot, exts, ignoredPaths)))(
+      root,
+      js!.extensions,
+      ignored,
+    );
+  const jsScan: JsScanResult = js === undefined ? { files: [], skipped: [] } : scanJs(js.root, js.ignoredPaths);
+  // Los tests de fuera de la raiz se escanean completos (sin ignoredPaths) y solo cuentan como evidencia.
+  const testFiles = (js?.testRoots ?? []).flatMap((testRoot) => scanJs(testRoot, []).files);
 
   const jsFindings: AuditFinding[] = [
     ...jsComplexityAnalyzer(jsScan.files),
@@ -88,7 +91,7 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     ...jsDeadCodeAnalyzer(jsScan.files),
     ...jsSecurityAnalyzer(jsScan.files),
     ...jsApiAnalyzer(jsScan.files),
-    ...jsTestingAnalyzer(jsScan.files),
+    ...jsTestingAnalyzer([...jsScan.files, ...testFiles]).filter((finding) => !testFiles.some((file) => file.file === finding.file)),
   ];
 
   const compatibilityFindings =

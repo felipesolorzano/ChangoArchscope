@@ -34,8 +34,9 @@ Umbrales calibrados contra un proyecto CRA legacy real (259 archivos): ver `docs
 
 - Solo imports relativos (`./`, `../`); paquetes y alias → `[]`.
 - Base = `fromFile` dirname + `source` (posix). Candidatos en orden: la base exacta; base + `.js`,
-  `.jsx`, `.ts`, `.tsx`; `base/index` + esas extensiones. Devuelve `[primero que este en
-  knownFiles]`, o `[]`.
+  `.jsx`, `.ts`, `.tsx`; `base/index` + esas extensiones; y, si la base termina en `.js`/`.jsx`, la
+  misma ruta con `.ts`/`.tsx` (convencion ESM de TypeScript: `import "./App.js"` apunta a `App.tsx`).
+  Devuelve `[primero que este en knownFiles]`, o `[]`.
 - Import dinamico (`source` con `${}`): cada `${}` matchea uno o mas caracteres sin `/` (el nombre
   de un modulo); devuelve TODOS los `knownFiles` que matchean base + extension o `base/index` +
   extension (sin la base exacta: `./config.${}` no matchea `config.js` ni `config.notes.txt`), en
@@ -71,7 +72,10 @@ nivel superior, salvo `large-component` de una funcion, que usa su nombre).
 ## `coupling_low_level` — `jsCouplingAnalyzer(files)`
 
 Agregado por archivo (un finding por archivo y regla, no por ocurrencia), `line` = primera
-ocurrencia, `details: { count }`:
+ocurrencia, `details: { count }`. `direct-dom-access` y `global-window-access` NO aplican a archivos en
+una carpeta `infrastructure/` (en un diseño hexagonal los adaptadores son el lugar correcto para los
+globals del navegador) ni a entry points (`index.*` / `main.*`, que montan la app en el DOM). Un arbol
+legacy plano no tiene `infrastructure/`, asi que ahi se siguen marcando todos:
 
 | Regla | Condicion | Severidad |
 |---|---|---|
@@ -91,7 +95,7 @@ Por clase:
 
 | Regla | Condicion | Severidad |
 |---|---|---|
-| `possibly-unused-file` | ningun otro archivo escaneado lo importa (via `resolveJsImport` de sus `imports`) y no es un entry point (nombre sin extension = `index`) | low |
+| `possibly-unused-file` | ningun otro archivo escaneado lo importa (via `resolveJsImport` de sus `imports`) y no es un entry point (nombre sin extension = `index` o `main`, p. ej. el `main.tsx` de Vite) | low |
 | `manual-copy-file` | nombre (sin la extension) que TERMINA con una marca de copia manual: ` - copia`, ` - copy`, ` copy`, ` copy N`, `_copia`, `_copy`, `_old`, `.devel`, `.bak` (con o sin ` (N)`); sin distinguir mayusculas | low |
 
 `line: 1`, `class: null`, `details: { name: basename }`. Un archivo que se importa a si mismo no
@@ -130,17 +134,24 @@ llamada, `details: { client, endpoint }`:
 | `untested-component` | componente de un archivo que no es test ni esta testeado | high si `cyclomaticComplexity > 10`, si no medium |
 
 `class` = componente, `line` = su `startLine`, `details: { name, cyclomaticComplexity }`.
-Limitacion: si `react.ignoredPaths` excluye los tests, todo componente queda como no testeado.
+Limitacion: si `react.ignoredPaths` excluye los tests, todo componente queda como no testeado —
+salvo que se declaren en `react.testPaths` (ver Integracion).
 
 ## Integracion
 
-- `auditProject` acepta `js?: { root, extensions, ignoredPaths, parser }`. Si viene, escanea con
+- `react.testPaths: string[]` (config, default `[]`; relativas al proyecto como `modulesPath`):
+  carpetas de tests FUERA de `modulesPath` (p. ej. `resources/js/react/tests`). Se escanean con las
+  mismas extensiones (sin `ignoredPaths`) y sus archivos se pasan SOLO a `jsTestingAnalyzer` como
+  evidencia; no generan findings propios ni cuentan como uso para `dead_code`.
+- `auditProject` acepta `js?: { root, extensions, ignoredPaths, parser, testRoots? }`. Si viene, escanea con
   `scanJsFiles` (o el `scanJsFiles` inyectado) y suma los findings de los 6 analizadores; los
   archivos que no parsean van a `skippedFiles`; `riskBreakdown` deriva modulos desde `js.root`
   cuando no hay raiz PHP.
 - HTTP (`resolveAuditSnapshot`) y CLI (`audit --target react`) pasan `js` con
-  `config.react.modulesPath`, las extensiones `.ts/.tsx/.js/.jsx`, `config.react.ignoredPaths` y
-  `BabelJsParser`. Con `target=laravel` no cambia nada.
+  `config.react.modulesPath`, las extensiones `.ts/.tsx/.js/.jsx`, `config.react.ignoredPaths`,
+  `testRoots = config.react.testPaths` y `BabelJsParser`. Con `target=laravel` no cambia nada.
+- El fingerprint del cache (HTTP) combina la raiz y cada `testPath`: agregar o editar un test invalida
+  el snapshot.
 
 ## Criterios de aceptacion
 

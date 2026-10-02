@@ -47,6 +47,10 @@ const graph: ArchitectureGraph = {
   ],
 };
 
+const baseGraph = (): ArchitectureGraph => ({ ...graph, nodes: [], edges: [] });
+const nodeOf = (id: string, module: string, layer: "Domain" | null, path: string, label = id) =>
+  ({ id, type: "file", label, module, layer, path, role: null, role_label: null }) as ArchitectureGraph["nodes"][number];
+
 describe("filterArchitectureGraph", () => {
   it("returns an empty graph when no graph is loaded", () => {
     expect(filterArchitectureGraph(null, {
@@ -109,5 +113,28 @@ describe("filterArchitectureGraph", () => {
     });
 
     expect(result.nodes.map((node) => node.id)).toEqual(["file:A/domain/Thing.ts"]);
+  });
+
+  it("un foco que no existe en el grafo se ignora y aplica el filtro normal", () => {
+    const graph = { ...baseGraph(), nodes: [nodeOf("a", "Users", "Domain", "A.ts"), nodeOf("b", "Users", "Domain", "B.ts")], edges: [] };
+
+    expect(filterArchitectureGraph(graph, { focusedNodeId: "ghost", selectedModule: "", selectedLayer: "", query: "" }).nodes).toHaveLength(2);
+  });
+
+  it("un nodo enfocado sin edges queda solo", () => {
+    const graph = { ...baseGraph(), nodes: [nodeOf("a", "Users", "Domain", "A.ts"), nodeOf("b", "Users", "Domain", "B.ts")], edges: [] };
+
+    expect(filterArchitectureGraph(graph, { focusedNodeId: "a", selectedModule: "", selectedLayer: "", query: "" }).nodes.map((node) => node.id)).toEqual(["a"]);
+  });
+
+  it("la busqueda coincide por label o por path (cualquiera de los dos)", () => {
+    const graph = {
+      ...baseGraph(),
+      nodes: [nodeOf("label", "Users", "Domain", "x/one.ts", "UserService"), nodeOf("path", "Users", "Domain", "users/two.ts", "Two")],
+      edges: [],
+    };
+
+    expect(filterArchitectureGraph(graph, { focusedNodeId: null, selectedModule: "", selectedLayer: "", query: "userservice" }).nodes.map((node) => node.id)).toEqual(["label"]);
+    expect(filterArchitectureGraph(graph, { focusedNodeId: null, selectedModule: "", selectedLayer: "", query: "users/" }).nodes.map((node) => node.id)).toEqual(["path"]);
   });
 });

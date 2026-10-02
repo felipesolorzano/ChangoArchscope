@@ -23,6 +23,11 @@ export function planApiRoutes(): Router {
   const controller = new PlanController({
     snapshots,
     repository: new SqlitePlanTaskStateRepository(createDrizzleDatabase(getSqliteDatabaseConnection())),
+    // Proyecto = raiz del stack del target (misma clave que los mapas de migracion).
+    projectOf: (target) => {
+      const config = auditDeps.getConfig();
+      return target === "react" ? config.react.modulesPath : config.laravel.modulesPath;
+    },
   });
 
   router.get("/plan.json", controller.show);

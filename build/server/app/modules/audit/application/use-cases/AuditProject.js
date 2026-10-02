@@ -28,16 +28,17 @@ export function auditProject(input) {
         ...phpDatabaseAnalyzer(files),
         ...phpTestingAnalyzer(files),
     ];
-    const jsScan = js === undefined
-        ? { files: [], skipped: [] }
-        : (js.scanFiles ?? ((root, exts, ignored) => scanJsFiles(reader, js.parser, root, exts, ignored)))(js.root, js.extensions, js.ignoredPaths);
+    const scanJs = (root, ignored) => (js.scanFiles ?? ((scanRoot, exts, ignoredPaths) => scanJsFiles(reader, js.parser, scanRoot, exts, ignoredPaths)))(root, js.extensions, ignored);
+    const jsScan = js === undefined ? { files: [], skipped: [] } : scanJs(js.root, js.ignoredPaths);
+    // Los tests de fuera de la raiz se escanean completos (sin ignoredPaths) y solo cuentan como evidencia.
+    const testFiles = (js?.testRoots ?? []).flatMap((testRoot) => scanJs(testRoot, []).files);
     const jsFindings = [
         ...jsComplexityAnalyzer(jsScan.files),
         ...jsCouplingAnalyzer(jsScan.files),
         ...jsDeadCodeAnalyzer(jsScan.files),
         ...jsSecurityAnalyzer(jsScan.files),
         ...jsApiAnalyzer(jsScan.files),
-        ...jsTestingAnalyzer(jsScan.files),
+        ...jsTestingAnalyzer([...jsScan.files, ...testFiles]).filter((finding) => !testFiles.some((file) => file.file === finding.file)),
     ];
     const compatibilityFindings = compatibilityScan === undefined ? [] : phpCompatibilityAnalyzer(compatibilityScan);
     return buildAuditSnapshot([...architectureFindings(checkResult), ...nativeFindings, ...jsFindings, ...compatibilityFindings], {

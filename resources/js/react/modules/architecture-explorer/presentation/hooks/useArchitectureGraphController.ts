@@ -3,87 +3,80 @@ import type { ArchitectureProviders } from "../../application/contracts/Architec
 import { loadArchitectureGraph } from "../../application/use-cases/loadArchitectureGraph";
 import type { ArchitectureGraph } from "../../domain/value-objects/ArchitectureGraph";
 import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget";
-import {
-  filterArchitectureGraph,
-  type FilteredArchitectureGraph,
-} from "../utils/filterArchitectureGraph";
+import { filterArchitectureGraph } from "../utils/filterArchitectureGraph";
+import { selectedNodeFor } from "../utils/selectedNodeFor";
 
-export function useArchitectureGraphController(dependencies: ArchitectureProviders, target: ArchitectureTarget) {
+// Carga del grafo (opcionalmente de un modulo) con su estado de carga/error.
+function useArchitectureGraphData(dependencies: ArchitectureProviders, target: ArchitectureTarget, onReload: () => void) {
   const [graph, setGraph] = useState<ArchitectureGraph | null>(null);
-  const [selectedModule, setSelectedModule] = useState("");
-  const [selectedLayer, setSelectedLayer] = useState("");
-  const [query, setQuery] = useState("");
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(
-    async (module = selectedModule, nextTarget = target) => {
+  const load = useCallback(
+    async (module: string) => {
       setLoading(true);
       setError(null);
-      setFocusedNodeId(null);
+      onReload();
 
       try {
-        setGraph(await loadArchitectureGraph(dependencies.graphProvider, module || undefined, nextTarget));
+        setGraph(await loadArchitectureGraph(dependencies.graphProvider, module || undefined, target));
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo cargar el grafo");
       } finally {
         setLoading(false);
       }
     },
-    [dependencies.graphProvider, selectedModule, target]
+    [dependencies.graphProvider, target, onReload],
   );
+
+  return { graph, loading, error, load };
+}
+
+// Filtros del explorador (modulo, capa, busqueda) y nodo enfocado. Cambiar capa o busqueda quita el foco.
+function useGraphFilters() {
+  const [selectedModule, setSelectedModule] = useState("");
+  const [selectedLayer, setSelectedLayer] = useState("");
+  const [query, setQuery] = useState("");
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const clearFocus = useCallback(() => setFocusedNodeId(null), []);
+
+  return {
+    selectedModule,
+    setSelectedModule,
+    selectedLayer,
+    query,
+    focusedNodeId,
+    setFocusedNodeId,
+    clearFocus,
+    changeLayer: (layer: string) => {
+      setSelectedLayer(layer);
+      clearFocus();
+    },
+    changeQuery: (nextQuery: string) => {
+      setQuery(nextQuery);
+      clearFocus();
+    },
+  };
+}
+
+export function useArchitectureGraphController(dependencies: ArchitectureProviders, target: ArchitectureTarget) {
+  const filters = useGraphFilters();
+  const { selectedModule, selectedLayer, query, focusedNodeId } = filters;
+  const { graph, loading, error, load } = useArchitectureGraphData(dependencies, target, filters.clearFocus);
+
+  const refresh = useCallback((module = selectedModule) => load(module), [load, selectedModule]);
 
   useEffect(() => {
-    refresh("", target);
-  }, [refresh, target]);
+    void load("");
+  }, [load]);
 
-  const modules = useMemo(() => {
-    if (!graph) return [];
-
-    return Array.from(new Set(graph.nodes.map((node) => node.module))).sort();
-  }, [graph]);
-
-  const filteredGraph: FilteredArchitectureGraph = useMemo(
-    () =>
-      filterArchitectureGraph(graph, {
-        focusedNodeId,
-        selectedModule,
-        selectedLayer,
-        query,
-      }),
-    [focusedNodeId, graph, query, selectedLayer, selectedModule]
+  const modules = useMemo(() => (graph ? Array.from(new Set(graph.nodes.map((node) => node.module))).sort() : []), [graph]);
+  const filteredGraph = useMemo(
+    () => filterArchitectureGraph(graph, { focusedNodeId, selectedModule, selectedLayer, query }),
+    [focusedNodeId, graph, query, selectedLayer, selectedModule],
   );
-
-  const focusedNode = useMemo(() => {
-    if (!focusedNodeId || !graph) return null;
-
-    return graph.nodes.find((node) => node.id === focusedNodeId) ?? null;
-  }, [focusedNodeId, graph]);
-
-  const selectedNode = useMemo(() => {
-    if (focusedNode) return focusedNode;
-    if (!query.trim()) return null;
-
-    return filteredGraph.nodes.find((node) =>
-      node.path.toLowerCase().includes(query.trim().toLowerCase())
-    ) ?? null;
-  }, [filteredGraph.nodes, focusedNode, query]);
-
-  function changeModule(module: string) {
-    setSelectedModule(module);
-    refresh(module, target);
-  }
-
-  function changeLayer(layer: string) {
-    setSelectedLayer(layer);
-    setFocusedNodeId(null);
-  }
-
-  function changeQuery(nextQuery: string) {
-    setQuery(nextQuery);
-    setFocusedNodeId(null);
-  }
+  const focusedNode = useMemo(() => graph?.nodes.find((node) => node.id === focusedNodeId) ?? null, [focusedNodeId, graph]);
+  const selectedNode = useMemo(() => selectedNodeFor(filteredGraph.nodes, focusedNode, query), [filteredGraph.nodes, focusedNode, query]);
 
   return {
     target,
@@ -99,9 +92,12 @@ export function useArchitectureGraphController(dependencies: ArchitectureProvide
     focusedNode,
     selectedNode,
     refresh,
-    setFocusedNodeId,
-    changeModule,
-    changeLayer,
-    changeQuery,
+    setFocusedNodeId: filters.setFocusedNodeId,
+    changeModule: (module: string) => {
+      filters.setSelectedModule(module);
+      void load(module);
+    },
+    changeLayer: filters.changeLayer,
+    changeQuery: filters.changeQuery,
   };
 }

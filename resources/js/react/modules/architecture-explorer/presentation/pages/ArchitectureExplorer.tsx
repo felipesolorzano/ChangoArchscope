@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import "@xyflow/react/dist/style.css";
-import "../../infrastructure/react-flow/reactFlowFallback.css";
 import type { ArchitectureProviders } from "../../application/contracts/ArchitectureProviders";
 import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget";
 import { useArchitectureFlowGraph } from "../../infrastructure/react-flow/useArchitectureFlowGraph";
 import { ArchitectureCanvas } from "../components/ArchitectureCanvas";
 import { ArchitectureCheckModal } from "../components/ArchitectureCheckModal";
-import { ArchitectureSidebar } from "../components/ArchitectureSidebar";
+import { ArchitectureSidebar, type ArchitectureSidebarProps } from "../components/ArchitectureSidebar";
 import { useArchitectureCheckController } from "../hooks/useArchitectureCheckController";
 import { useArchitectureGraphController } from "../hooks/useArchitectureGraphController";
 
@@ -18,6 +17,29 @@ interface ArchitectureExplorerProps {
 }
 
 export type { ArchitectureProviders };
+
+type GraphController = ReturnType<typeof useArchitectureGraphController>;
+
+// Props del sidebar a partir del controlador del grafo.
+function sidebarPropsFor(controller: GraphController, onClose: () => void, onOpenCheck: () => void): ArchitectureSidebarProps {
+  return {
+    graph: controller.graph,
+    modules: controller.modules,
+    filteredGraph: controller.filteredGraph,
+    selectedModule: controller.selectedModule,
+    selectedLayer: controller.selectedLayer,
+    query: controller.query,
+    focusedNode: controller.focusedNode,
+    selectedNode: controller.selectedNode,
+    onClose,
+    onModuleChange: controller.changeModule,
+    onLayerChange: controller.changeLayer,
+    onQueryChange: controller.changeQuery,
+    onClearFocus: () => controller.setFocusedNodeId(null),
+    onRefresh: () => void controller.refresh(),
+    onOpenCheck,
+  };
+}
 
 export default function ArchitectureExplorer({ dependencies, target }: ArchitectureExplorerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -35,23 +57,7 @@ export default function ArchitectureExplorer({ dependencies, target }: Architect
 
   return (
     <main className={`architecture-explorer${sidebarOpen ? "" : " architecture-explorer--sidebar-closed"}`}>
-      <ArchitectureSidebar
-        graph={graphController.graph}
-        modules={graphController.modules}
-        filteredGraph={graphController.filteredGraph}
-        selectedModule={graphController.selectedModule}
-        selectedLayer={graphController.selectedLayer}
-        query={graphController.query}
-        focusedNode={graphController.focusedNode}
-        selectedNode={graphController.selectedNode}
-        onClose={() => setSidebarOpen(false)}
-        onModuleChange={graphController.changeModule}
-        onLayerChange={graphController.changeLayer}
-        onQueryChange={graphController.changeQuery}
-        onClearFocus={() => graphController.setFocusedNodeId(null)}
-        onRefresh={() => graphController.refresh()}
-        onOpenCheck={openArchitectureCheck}
-      />
+      <ArchitectureSidebar {...sidebarPropsFor(graphController, () => setSidebarOpen(false), openArchitectureCheck)} />
 
       <ArchitectureCanvas
         sidebarOpen={sidebarOpen}
