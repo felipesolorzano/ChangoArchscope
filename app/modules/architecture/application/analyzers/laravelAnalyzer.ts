@@ -7,6 +7,7 @@ import type { ArchitectureCheckResult } from "../../domain/value-objects/Archite
 import type { ArchitectureEdge, ArchitectureGraph, ArchitectureNode } from "../../domain/value-objects/ArchitectureGraph.js";
 import { nowIso, relativePosix } from "../../domain/services/architecturePathUtils.js";
 import { phpImports, type ImportReference } from "./phpImports.js";
+import { resolvePhpIncludes, type IncludeStats } from "./phpIncludes.js";
 import { checkResponse, issue, report } from "./reports.js";
 
 type LaravelTarget = {
@@ -94,7 +95,40 @@ export function buildLaravelGraph(
     }
   }
 
-  return graphResponse(modules, nodes, edges);
+  const includes = includeEdges(config, reader, nodes);
+  return graphResponse(modules, nodes, [...edges, ...includes.edges], includes.stats);
+}
+
+// XRay X1b: include/require resueltos entre archivos del grafo, como edges import.
+function includeEdges(config: ArchitectureConfig, reader: SourceTreeReader, nodes: ArchitectureNode[]): { edges: ArchitectureEdge[]; stats: IncludeStats } {
+  const modulesPath = config.laravel.modulesPath;
+  const files = nodes.filter((node) => node.type === "file");
+  const moduleOf = new Map(files.map((node) => [path.join(modulesPath, node.path), node.module]));
+  const { links, stats } = resolvePhpIncludes({
+    files: [...moduleOf].map(([file, module]) => ({ file, module })),
+    modulesPath,
+    reader,
+    includeConstants: config.laravel.includeConstants ?? {},
+    // Stryker disable next-line ArrayDeclaration: una ruta de include inventada nunca existe, mutante equivalente (normalizeConfig ya pone []).
+    includePaths: config.laravel.includePaths ?? [],
+  });
+
+  const edges = links.map((link, index): ArchitectureEdge => {
+    const source = `file:${relativePosix(modulesPath, link.from)}`;
+    const target = `file:${relativePosix(modulesPath, link.to)}`;
+    return {
+      id: `includes:${hash(`${source}:${target}:${link.line}:${index}`)}`,
+      source,
+      target,
+      type: "import",
+      label: path.basename(link.to),
+      import: link.expression,
+      line: link.line,
+      crossModule: moduleOf.get(link.from) !== moduleOf.get(link.to),
+    };
+  });
+
+  return { edges, stats };
 }
 
 export function checkLaravelArchitecture(
@@ -289,6 +323,7 @@ function graphResponse(
   modules: Array<[string, string]>,
   nodes: ArchitectureNode[],
   edges: ArchitectureEdge[],
+  includes: IncludeStats,
 ): ArchitectureGraph {
   return {
     generated_at: nowIso(),
@@ -297,6 +332,7 @@ function graphResponse(
       nodes: nodes.length,
       edges: edges.length,
       cross_module_edges: edges.filter((edge) => edge.crossModule).length,
+      includes,
     },
     nodes,
     edges,

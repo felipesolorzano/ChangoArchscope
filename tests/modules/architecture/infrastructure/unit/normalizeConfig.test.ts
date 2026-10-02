@@ -40,4 +40,24 @@ describe("normalizeConfig", () => {
     expect(config.laravel.ignoredPaths).toEqual(["**/.*"]);
     expect(config.react.ignoredPaths).toEqual(["x"]);
   });
+
+  it("includeConstants relativas a modulesPath (conservando la / final) e includePaths relativas al proyecto", () => {
+    const config = normalizeConfig(
+      {
+        ...defaultConfig,
+        laravel: { ...defaultConfig.laravel, modulesPath: "src", includeConstants: { _PRIVATE_DIR: "admin/private_html/", _ABS: "/usr/lib/php", _ROOT: "" }, includePaths: ["vendor-php", "/usr/share/php"] },
+      },
+      "/project",
+    );
+
+    expect(config.laravel.includeConstants).toEqual({ _PRIVATE_DIR: "/project/src/admin/private_html/", _ABS: "/usr/lib/php", _ROOT: "/project/src" });
+    expect(config.laravel.includePaths).toEqual(["/project/vendor-php", "/usr/share/php"]);
+  });
+
+  it("sin includeConstants ni includePaths quedan vacios", () => {
+    const config = normalizeConfig(defaultConfig, "/project");
+
+    expect(config.laravel.includeConstants).toEqual({});
+    expect(config.laravel.includePaths).toEqual([]);
+  });
 });

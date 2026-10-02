@@ -15,7 +15,7 @@ estado), Migracion/Diseño (bounded contexts).
 | Fase | Entrega | Estado |
 |---|---|---|
 | **X1 Ciclos y salud de arquitectura** | Ciclos de imports (SCC) y KPIs del grafo (imports entre modulos, pares de modulos, archivos mas importados / que mas importan) en `/graph.json`; ciclos en el check → hallazgos `import-cycle` en Auditoria → tarea `break-import-cycles` en Plan; panel "Salud" en Arquitectura. Spec: `app/modules/architecture/specs/architecture-health.md` | Completa |
-| **X1b Grafo de includes PHP** | Resolver `include`/`require` del PHP legacy (rutas literales, relativas y con constantes declaradas en la config: `_PRIVATE_DIR`, `_COMPUMATIC_DIR`...) para que mc tenga grafo, ciclos y hubs | Pendiente |
+| **X1b Grafo de includes PHP** | Resolver `include`/`require` del PHP legacy (rutas literales, relativas y con constantes declaradas en la config: `_PRIVATE_DIR`, `_COMPUMATIC_DIR`...) para que mc tenga grafo, ciclos y hubs. Spec: `app/modules/architecture/specs/php-includes.md` | Completa |
 | **X2 Exports muertos** | Exports que nadie importa (estilo Knip) | Pendiente |
 | **X3 Linea base de proteccion** | Leer reportes que el proyecto ya genera (coverage, Stryker, Playwright) → KPI "Legacy Protection" | Pendiente |
 | **X4 Objetivos de caracterizacion** | Ranking de componentes/flujos a proteger (riesgo × sin tests × uso) + esqueletos MSW/RTL/Playwright descargables | Pendiente |
@@ -37,4 +37,15 @@ estado), Migracion/Diseño (bounded contexts).
   archivos cada uno. Click en el panel enfoca el archivo en el grafo.
 - Tarjan iterativo: 5000 archivos en cadena sin desbordar la pila.
 - mc sigue sin grafo (0 imports archivo→archivo) hasta X1b.
+
+### X1b — validacion con mc
+
+- 0 → 246 includes resueltos de 436 (30 externos a `/usr/local/lib/php`, 160 sin resolver: 57 por
+  `_COMPUMATIC_DIR`, el resto dinamicos o librerias del include_path del servidor). Las constantes
+  `_PRIVATE_DIR`/`_PROOT_DIR`/`PHPEXCEL_ROOT` se deducen solas de los `define` de cada app.
+- 1 ciclo real: `_global/lib/Classes/MSUsersDBCronJobs.lib.inc ⇄ MSUsersTravelInfoUtils.lib.inc`
+  (tarea en Plan). Hubs: las dos copias de PHPExcel (`Autoloader.php`, 26 cada una),
+  `_global/lib/main.lib.inc` (19), `_global/services/_config.lib.inc` (17), `menu.php` duplicado en
+  admin y provider. 20 includes entre apps (4 pares).
+- Rendimiento: el lexer salta entre cambios de estado (archivos de >1 MB); grafo de mc ~2 s.
 

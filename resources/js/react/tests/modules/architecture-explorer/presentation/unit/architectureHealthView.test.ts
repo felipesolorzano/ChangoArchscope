@@ -39,6 +39,13 @@ describe("toArchitectureGraph", () => {
     expect(graph.edges[0]).not.toBe(edgeDto);
   });
 
+  it("copia el resumen de includes si viene y lo omite si no", () => {
+    const includes = { total: 3, resolved: 2, external: 0, unresolved: 1, unresolvedConstants: [] };
+
+    expect(toArchitectureGraph({ ...dto, summary: { ...dto.summary, includes } }).summary.includes).toEqual(includes);
+    expect("includes" in toArchitectureGraph(dto).summary).toBe(false);
+  });
+
   it("copia health si viene y lo omite si no", () => {
     const health = { summary: { files: 1, imports: 0, crossModuleImports: 0, modulePairs: 0, cycles: 0, filesInCycles: 0, largestCycle: 0 }, cycles: [], mostImported: [], mostImporting: [] };
 

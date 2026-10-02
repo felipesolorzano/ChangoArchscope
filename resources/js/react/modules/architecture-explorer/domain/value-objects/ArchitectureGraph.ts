@@ -30,11 +30,21 @@ export interface ArchitectureGraphEdge {
   crossModule: boolean;
 }
 
+export interface IncludeStats {
+  total: number;
+  resolved: number;
+  external: number;
+  unresolved: number;
+  unresolvedConstants: Array<{ name: string; count: number }>;
+}
+
 export interface ArchitectureGraphSummary {
   modules: number;
   nodes: number;
   edges: number;
   cross_module_edges: number;
+  /** Solo laravel: include/require resueltos (XRay X1b). */
+  includes?: IncludeStats;
 }
 
 export interface ImportCycle {

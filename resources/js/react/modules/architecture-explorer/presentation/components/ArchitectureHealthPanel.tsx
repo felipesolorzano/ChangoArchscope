@@ -1,4 +1,4 @@
-import type { ArchitectureGraph, ArchitectureHealth } from "../../domain/value-objects/ArchitectureGraph";
+import type { ArchitectureGraph, ArchitectureHealth, IncludeStats } from "../../domain/value-objects/ArchitectureGraph";
 import { useArchitectureFocusStore } from "../store/architectureFocusStore";
 import { cycleLabel, nodeIdForPath } from "../utils/architectureHealthView";
 import { Stat } from "./Stat";
@@ -33,6 +33,7 @@ export function ArchitectureHealthPanel({ graph }: { graph: ArchitectureGraph })
         <Stat label="Imports entre módulos" value={health.summary.crossModuleImports} />
         <Stat label="Pares de módulos" value={health.summary.modulePairs} />
       </div>
+      {graph.summary.includes && <IncludeSummary includes={graph.summary.includes} />}
       <CycleList cycles={health.cycles} onFocus={focus} />
       <h3 className="architecture-health__subtitle">Más importados</h3>
       <div className="architecture-health__list">
@@ -43,6 +44,25 @@ export function ArchitectureHealthPanel({ graph }: { graph: ArchitectureGraph })
         ))}
       </div>
     </section>
+  );
+}
+
+const MAX_CONSTANTS = 5;
+
+// PHP legacy: cuantos include/require se resolvieron y que constantes faltan declarar.
+function IncludeSummary({ includes }: { includes: IncludeStats }) {
+  const missing = includes.unresolvedConstants.slice(0, MAX_CONSTANTS);
+
+  return (
+    <div className="architecture-health__includes">
+      <span>{`Includes: ${includes.resolved} de ${includes.total} resueltos · ${includes.external} externos`}</span>
+      {missing.length > 0 && (
+        <>
+          <span className="architecture-health__missing">{`Sin valor: ${missing.map((constant) => `${constant.name} (${constant.count})`).join(", ")}`}</span>
+          <span className="architecture-health__hint">Declaralas en laravel.includeConstants</span>
+        </>
+      )}
+    </div>
   );
 }
 

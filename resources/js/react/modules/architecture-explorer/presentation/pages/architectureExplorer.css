@@ -701,3 +701,6 @@
 .architecture-health__cycle { border-color: rgba(234, 88, 12, 0.5); }
 .architecture-health__cycle--cross { border-color: rgba(220, 38, 38, 0.7); background: rgba(220, 38, 38, 0.12); }
 .architecture-health__more { font-size: 11px; color: #94a3b8; }
+.architecture-health__includes { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #cbd5e1; }
+.architecture-health__missing { color: #fbbf24; }
+.architecture-health__hint { color: #94a3b8; font-style: italic; }

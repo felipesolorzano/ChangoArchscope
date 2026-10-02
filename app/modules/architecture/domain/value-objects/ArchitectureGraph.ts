@@ -1,3 +1,4 @@
+import type { IncludeStats } from "../../application/analyzers/phpIncludes.js";
 import type { ArchitectureHealth } from "../services/architectureHealth.js";
 
 export type ArchitectureNode = {
@@ -27,6 +28,8 @@ export type ArchitectureGraphSummary = {
   nodes: number;
   edges: number;
   cross_module_edges: number;
+  /** Solo laravel: cuantos include/require se resolvieron (XRay X1b). */
+  includes?: IncludeStats;
 };
 
 export type ArchitectureGraph = {

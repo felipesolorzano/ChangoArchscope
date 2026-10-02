@@ -36,6 +36,8 @@ export function normalizeConfig(config, cwd) {
             ...config.laravel,
             modulesPath: path.resolve(cwd, config.laravel.modulesPath),
             ignoredPaths: withHidden(config.laravel.ignoredPaths, config.laravel.ignoreHidden),
+            includeConstants: includeConstantsFrom(config.laravel.includeConstants ?? {}, path.resolve(cwd, config.laravel.modulesPath)),
+            includePaths: (config.laravel.includePaths ?? []).map((includePath) => path.resolve(cwd, includePath)),
         },
         react: {
             ...config.react,
@@ -44,6 +46,10 @@ export function normalizeConfig(config, cwd) {
             testPaths: (config.react.testPaths ?? []).map((testPath) => path.resolve(cwd, testPath)),
         },
     };
+}
+// Constantes de include relativas a modulesPath → absolutas, conservando la "/" final (se concatenan).
+function includeConstantsFrom(constants, modulesPath) {
+    return Object.fromEntries(Object.entries(constants).map(([name, value]) => [name, `${path.resolve(modulesPath, value)}${value.endsWith("/") ? "/" : ""}`]));
 }
 // `ignoreHidden` (default true) se resuelve aca, asi todo lo que lee `ignoredPaths` lo respeta.
 function withHidden(ignoredPaths, ignoreHidden = true) {

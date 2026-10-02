@@ -276,4 +276,33 @@ describe("ArchitectureHealthPanel", () => {
 
     expect(html(<ArchitectureSidebar {...sidebarBase} graph={graphWith(health([]))} />)).toContain("Sin ciclos de imports");
   });
+
+  it("con includes muestra cuantos resolvio y las constantes sin valor (hasta 5)", () => {
+    const withIncludes = {
+      ...graphWith(health([])),
+      summary: {
+        modules: 1,
+        nodes: 0,
+        edges: 0,
+        cross_module_edges: 0,
+        includes: {
+          total: 393,
+          resolved: 210,
+          external: 40,
+          unresolved: 143,
+          unresolvedConstants: ["_COMPUMATIC_DIR", "A", "B", "C", "D", "E"].map((name, index) => ({ name, count: 60 - index })),
+        },
+      },
+    } as ArchitectureGraph;
+    const markup = html(<ArchitectureHealthPanel graph={withIncludes} />);
+
+    expect(markup).toContain("Includes: 210 de 393 resueltos · 40 externos");
+    expect(markup).toContain("Sin valor: _COMPUMATIC_DIR (60), A (59), B (58), C (57), D (56)");
+    expect(markup).not.toContain("E (55)");
+    expect(markup).toContain("Declaralas en laravel.includeConstants");
+
+    const allResolved = { ...withIncludes, summary: { ...withIncludes.summary, includes: { ...withIncludes.summary.includes!, unresolvedConstants: [] } } } as ArchitectureGraph;
+    expect(html(<ArchitectureHealthPanel graph={allResolved} />)).not.toContain("Sin valor");
+    expect(html(<ArchitectureHealthPanel graph={graphWith(health([]))} />)).not.toContain("Includes:");
+  });
 });

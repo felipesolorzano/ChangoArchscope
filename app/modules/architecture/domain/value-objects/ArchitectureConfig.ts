@@ -23,6 +23,10 @@ export type LaravelArchitectureConfig = {
   /** Ignora archivos/carpetas ocultos (nombre con `.`); default true. Ver normalizeConfig. */
   ignoreHidden?: boolean;
   phpExtensions: string[];
+  /** Valor de constantes de include que no se deducen de los define (XRay X1b). */
+  includeConstants?: Record<string, string>;
+  /** include_path de PHP para resolver includes relativos. */
+  includePaths?: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;
 };
