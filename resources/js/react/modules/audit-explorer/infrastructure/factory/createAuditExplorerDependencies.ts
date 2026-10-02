@@ -5,8 +5,8 @@ export interface AuditExplorerDependencies {
   graphProvider: AuditGraphProvider;
 }
 
-export function createAuditExplorerDependencies({ graphUrl }: { graphUrl: string }): AuditExplorerDependencies {
+export function createAuditExplorerDependencies({ graphUrl, healthUrl }: { graphUrl: string; healthUrl: string }): AuditExplorerDependencies {
   return {
-    graphProvider: new HttpAuditGraphProvider(graphUrl),
+    graphProvider: new HttpAuditGraphProvider(graphUrl, healthUrl),
   };
 }

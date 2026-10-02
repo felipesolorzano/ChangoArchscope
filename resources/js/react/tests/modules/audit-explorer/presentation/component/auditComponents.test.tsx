@@ -128,13 +128,16 @@ describe("AuditFilters y AuditLegend", () => {
 
 describe("AuditExplorer", () => {
   it("miga, boton de escaneo, toggle de vistas y lienzo cargando", () => {
-    const dependencies: AuditExplorerDependencies = { graphProvider: { getGraph: () => new Promise(() => {}) } };
+    const dependencies: AuditExplorerDependencies = {
+      graphProvider: { getGraph: () => new Promise(() => {}), getHealth: () => new Promise(() => {}) },
+    };
     const markup = html(<AuditExplorer dependencies={dependencies} target="react" />);
 
     expect(markup).toContain("Monorepo");
     expect(markup).toContain("Escaneando…");
     expect(markup).toContain("Mapa por apps");
     expect(markup).toContain("Heatmap global");
+    expect(markup).toContain("Mosaico");
     expect(markup).toContain("Cargando mapa de auditoria...");
   });
 

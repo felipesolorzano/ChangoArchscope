@@ -1,11 +1,13 @@
 import { X } from "lucide-react";
 
-import type { AuditGraph, AuditGraphNode } from "../../domain/value-objects/AuditGraph";
+import type { AuditGraph, AuditGraphNode, AuditHealthCheck } from "../../domain/value-objects/AuditGraph";
+import { checkStatus } from "../constants/auditHealth";
 import { accentStroke, severityBarSegments, toneFill } from "../constants/auditView";
 
 interface AuditDetailDrawerProps {
   graph: AuditGraph | null;
   focusedNodeId: string | null;
+  checks?: AuditHealthCheck[];
   onClose: () => void;
 }
 
@@ -13,7 +15,7 @@ function formatNumber(value: number): string {
   return value.toLocaleString("en-US");
 }
 
-export function AuditDetailDrawer({ graph, focusedNodeId, onClose }: AuditDetailDrawerProps) {
+export function AuditDetailDrawer({ graph, focusedNodeId, checks = [], onClose }: AuditDetailDrawerProps) {
   const node = graph?.nodes.find((candidate) => candidate.id === focusedNodeId) ?? null;
 
   if (!node) {
@@ -37,6 +39,7 @@ export function AuditDetailDrawer({ graph, focusedNodeId, onClose }: AuditDetail
         <Metric value={node.metrics.risk} label="risk score" />
       </div>
 
+      {node.type === "file" && <CategoryChecklist node={node} checks={checks} />}
       <SeveritySection node={node} />
       <BadgesSection badges={node.badges} />
       <FindingsSection node={node} />
@@ -113,6 +116,26 @@ function FindingsSection({ node }: { node: AuditGraphNode }) {
             <span className="audit-drawer__msg">{item.message}</span>
           </li>
         ))}
+      </ul>
+    </div>
+  );
+}
+
+// Una fila por categoria auditada: ✓ si el archivo no tiene hallazgos de esa categoria.
+function CategoryChecklist({ node, checks }: { node: AuditGraphNode; checks: AuditHealthCheck[] }) {
+  return (
+    <div className="audit-drawer__section">
+      <span className="audit-drawer__section-title">Por categoría</span>
+      <ul className="audit-drawer__checks">
+        {checks.map((check) => {
+          const status = checkStatus(node.byCategory[check.category] ?? 0);
+          return (
+            <li key={check.category} className={`audit-drawer__check audit-drawer__check--${status.ok ? "ok" : "bad"}`}>
+              <span>{status.text}</span>
+              {check.label}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

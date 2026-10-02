@@ -9,6 +9,8 @@ import { toFlowEdges, toFlowNodes } from "../../infrastructure/react-flow/auditF
 import { AuditCanvas } from "../components/AuditCanvas";
 import { AuditDetailDrawer } from "../components/AuditDetailDrawer";
 import { AuditFilters } from "../components/AuditFilters";
+import { AuditHealthBar } from "../components/AuditHealthBar";
+import { AuditMosaic } from "../components/AuditMosaic";
 import { AuditLegend } from "../components/AuditLegend";
 import { useAuditGraphController, type AuditTarget } from "../hooks/useAuditGraphController";
 import { useAuditExplorerStore } from "../store/auditExplorerStore";
@@ -35,8 +37,8 @@ export function summaryText(graph: AuditGraph, view: AuditGraphView): string {
 }
 
 export default function AuditExplorer({ dependencies, target }: AuditExplorerProps) {
-  const { graph, view, focus, phpVersion, loading, error, goTo, setPhpVersion } = useAuditGraphController(dependencies, target);
-  const { focusedNodeId, clearFocus } = useAuditExplorerStore();
+  const { graph, health, view, focus, phpVersion, loading, error, goTo, setPhpVersion } = useAuditGraphController(dependencies, target);
+  const { focusedNodeId, clearFocus, mosaic } = useAuditExplorerStore();
   const [category, setCategory] = useState<CategoryFilter>("all");
   const { flowNodes, flowEdges } = useFilteredFlow(graph, category);
   const { navigate, handleNodeClick } = useNodeNavigation(view, goTo);
@@ -47,37 +49,44 @@ export default function AuditExplorer({ dependencies, target }: AuditExplorerPro
         <div>
           <AuditBreadcrumb view={view} focus={focus} onNavigate={navigate} />
           {graph && <p className="audit-explorer__sub">{summaryText(graph, view)}</p>}
+          <AuditHealthBar health={health} />
         </div>
 
         <div className="audit-explorer__right">
           <RefreshButton loading={loading} onRefresh={() => goTo(view, focus)} />
           <AuditFilters target={target} phpVersion={phpVersion} onPhpVersionChange={setPhpVersion} category={category} onCategoryChange={setCategory} />
-          <AuditViewToggle view={view} onNavigate={goTo} />
+          <AuditViewToggle view={view} onNavigate={navigate} />
           <AuditLegend target={target} />
         </div>
       </header>
 
-      <AuditCanvas
-        key={`${view}:${focus ?? ""}`}
-        loading={loading}
-        error={error}
-        nodes={flowNodes}
-        edges={flowEdges}
-        onInit={(instance) => instance.fitView({ padding: 0.25 })}
-        onNodeClick={handleNodeClick}
-      />
+      {mosaic && health ? (
+        <AuditMosaic health={health} onOpenFile={(path) => navigate("file", path)} />
+      ) : (
+        <AuditCanvas
+          key={`${view}:${focus ?? ""}`}
+          loading={loading}
+          error={error}
+          nodes={flowNodes}
+          edges={flowEdges}
+          onInit={(instance) => instance.fitView({ padding: 0.25 })}
+          onNodeClick={handleNodeClick}
+        />
+      )}
 
-      <AuditDetailDrawer graph={graph} focusedNodeId={focusedNodeId} onClose={clearFocus} />
+      <AuditDetailDrawer graph={graph} focusedNodeId={focusedNodeId} checks={health?.checks} onClose={clearFocus} />
     </main>
   );
 }
 
-// Navegar limpia el foco; un click en un nodo lo enfoca y, si tiene nivel mas profundo, entra.
+// Navegar limpia el foco y sale del mosaico; un click en un nodo lo enfoca y, si tiene nivel mas
+// profundo, entra. Un click en un cuadrito del mosaico abre ese archivo.
 function useNodeNavigation(view: AuditGraphView, goTo: GoTo) {
-  const { setFocusedNodeId, clearFocus } = useAuditExplorerStore();
+  const { setFocusedNodeId, clearFocus, setMosaic } = useAuditExplorerStore();
 
   const navigate: GoTo = (nextView, nextFocus) => {
     clearFocus();
+    setMosaic(false);
     goTo(nextView, nextFocus);
   };
 
@@ -135,26 +144,25 @@ function RefreshButton({ loading, onRefresh }: { loading: boolean; onRefresh: ()
   );
 }
 
-// Solo en las vistas globales: alternar entre el mapa por apps y el heatmap.
+// Solo en las vistas globales: mapa por apps, heatmap o mosaico de todos los archivos.
 function AuditViewToggle({ view, onNavigate }: { view: AuditGraphView; onNavigate: GoTo }) {
+  const { mosaic, setMosaic } = useAuditExplorerStore();
+
   if (view !== "overview" && view !== "heatmap") {
     return null;
   }
 
-  const option = (target: "overview" | "heatmap", label: string) => (
-    <button
-      type="button"
-      className={`audit-viewtoggle__btn${view === target ? " audit-viewtoggle__btn--active" : ""}`}
-      onClick={() => onNavigate(target, null)}
-    >
+  const button = (label: string, active: boolean, onClick: () => void) => (
+    <button type="button" className={`audit-viewtoggle__btn${active ? " audit-viewtoggle__btn--active" : ""}`} onClick={onClick}>
       {label}
     </button>
   );
 
   return (
     <div className="audit-viewtoggle">
-      {option("overview", "Mapa por apps")}
-      {option("heatmap", "Heatmap global")}
+      {button("Mapa por apps", !mosaic && view === "overview", () => onNavigate("overview", null))}
+      {button("Heatmap global", !mosaic && view === "heatmap", () => onNavigate("heatmap", null))}
+      {button("Mosaico", mosaic, () => setMosaic(true))}
     </div>
   );
 }

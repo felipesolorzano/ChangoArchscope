@@ -43,6 +43,8 @@ export type PlanGraphEdge = {
 export type PlanGraph = {
   generated_at: string;
   summary: { tasks: number; by_state: Record<string, number> };
+  /** Categorias auditadas del stack con su cantidad de hallazgos (para mostrar lo que esta en verde). */
+  checks: PlanCheck[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 };
@@ -61,3 +63,5 @@ export type PlanTaskFindings = {
   total: number;
   items: PlanFinding[];
 };
+
+export type PlanCheck = { category: string; label: string; findings: number };

@@ -63,4 +63,6 @@ export type AuditSnapshot = {
   riskScore: RiskScore;
   riskBreakdown: AuditRiskBreakdown;
   skippedFiles: PhpParseFailure[];
+  /** Archivos analizados por los analizadores nativos (con y sin hallazgos), rutas absolutas ordenadas. */
+  scannedFiles: string[];
 };

@@ -20,6 +20,7 @@ const architectureDependencies = createArchitectureExplorerDependencies({
 
 const auditDependencies = createAuditExplorerDependencies({
   graphUrl: "/audit-graph.json",
+  healthUrl: "/audit-health.json",
 });
 
 const planDependencies = createPlanExplorerDependencies({

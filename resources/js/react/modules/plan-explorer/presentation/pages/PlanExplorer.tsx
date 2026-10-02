@@ -45,6 +45,7 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
         loading={loading}
         error={error}
         empty={total === 0}
+        checks={graph?.checks}
         nodes={flowNodes}
         edges={flowEdges}
         onInit={(instance) => instance.fitView({ padding: 0.2 })}

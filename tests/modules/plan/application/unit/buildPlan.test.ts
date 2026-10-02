@@ -107,4 +107,24 @@ describe("buildPlan", () => {
     expect(graph.nodes.length).toBeGreaterThan(0);
     expect(graph.nodes.some((node) => node.id === "resolve-duplicate-migrations")).toBe(true);
   });
+
+  it("agrega el checklist de categorias auditadas del stack con su conteo", () => {
+    const repository: PlanTaskStateRepository = { getStates: vi.fn(() => ({})), setState: vi.fn() };
+
+    const graph = buildPlan(snapshot(), repository, "/php");
+
+    expect(graph.checks[0]).toEqual({ category: "security", label: "Seguridad", findings: 1 });
+    expect(graph.checks.find((check) => check.category === "database")).toEqual({ category: "database", label: "Base de datos", findings: 3 });
+    expect(graph.checks.find((check) => check.category === "testing")?.findings).toBe(0);
+    expect(graph.checks.some((check) => check.category === "api_access")).toBe(false);
+  });
+
+  it("con un snapshot react usa las categorias de react", () => {
+    const repository: PlanTaskStateRepository = { getStates: vi.fn(() => ({})), setState: vi.fn() };
+
+    const graph = buildPlan({ ...snapshot(), target: "react" }, repository, "/src");
+
+    expect(graph.checks.at(-1)?.category).toBe("api_access");
+  });
 });
+

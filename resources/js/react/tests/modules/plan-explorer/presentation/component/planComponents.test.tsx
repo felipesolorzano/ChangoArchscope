@@ -44,6 +44,18 @@ describe("PlanCanvas", () => {
     expect(html(<PlanCanvas {...base} empty />)).toContain("Sin tareas: la auditoria no encontro deuda accionable.");
   });
 
+  it("sin tareas muestra el checklist auditado", () => {
+    const checks = [
+      { category: "security", label: "Seguridad", findings: 0 },
+      { category: "testing", label: "Tests", findings: 2 },
+    ];
+    const markup = html(<PlanCanvas {...base} empty checks={checks} />);
+
+    expect(markup).toMatch(/plan-check--ok[^>]*>.*Seguridad/);
+    expect(markup).toMatch(/plan-check--bad[^>]*>.*Tests/);
+    expect(markup).toContain(">2<");
+  });
+
   it("con tareas renderiza el lienzo de React Flow", () => {
     const markup = html(<PlanCanvas {...base} />);
 

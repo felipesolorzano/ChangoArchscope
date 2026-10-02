@@ -105,6 +105,7 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     // Raiz desde la que riskBreakdown deriva el modulo de los findings nativos.
     sourceRoot: phpRoot ?? js?.root,
     skippedFiles: [...skipped, ...jsScan.skipped],
+    scannedFiles: [...files, ...jsScan.files].map((file) => file.file).sort(),
     phpCompatibilityStatus: compatibilityStatus(compatibilityScan),
   });
 }

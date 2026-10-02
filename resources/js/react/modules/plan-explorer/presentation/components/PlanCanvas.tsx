@@ -9,7 +9,7 @@ import {
 } from "@xyflow/react";
 import { AlertCircle } from "lucide-react";
 
-import type { PlanGraphNode } from "../../domain/value-objects/PlanGraph";
+import type { PlanCheck, PlanGraphNode } from "../../domain/value-objects/PlanGraph";
 import { PlanTaskCard } from "./PlanTaskCard";
 import { stateColor } from "../constants/planView";
 
@@ -22,9 +22,10 @@ interface PlanCanvasProps {
   nodes: Node<PlanGraphNode>[];
   edges: Edge[];
   onInit: (instance: ReactFlowInstance) => void;
+  checks?: PlanCheck[];
 }
 
-export function PlanCanvas({ loading, error, empty, nodes, edges, onInit }: PlanCanvasProps) {
+export function PlanCanvas({ loading, error, empty, nodes, edges, onInit, checks = [] }: PlanCanvasProps) {
   return (
     <section className="plan-canvas">
       {loading && <div className="plan-state">Cargando plan de remediacion...</div>}
@@ -37,7 +38,10 @@ export function PlanCanvas({ loading, error, empty, nodes, edges, onInit }: Plan
       )}
 
       {!loading && !error && empty && (
-        <div className="plan-state">Sin tareas: la auditoria no encontro deuda accionable. 🎉</div>
+        <div className="plan-state">
+          Sin tareas: la auditoria no encontro deuda accionable. 🎉
+          <AuditedChecklist checks={checks} />
+        </div>
       )}
 
       {!loading && !error && !empty && (
@@ -57,5 +61,23 @@ export function PlanCanvas({ loading, error, empty, nodes, edges, onInit }: Plan
         </ReactFlow>
       )}
     </section>
+  );
+}
+
+// Categorias auditadas: en verde las que no tienen hallazgos.
+function AuditedChecklist({ checks }: { checks: PlanCheck[] }) {
+  if (checks.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="plan-checks">
+      {checks.map((check) => (
+        <li key={check.category} className={`plan-check plan-check--${check.findings === 0 ? "ok" : "bad"}`}>
+          <span>{check.findings === 0 ? "✓" : check.findings}</span>
+          {check.label}
+        </li>
+      ))}
+    </ul>
   );
 }

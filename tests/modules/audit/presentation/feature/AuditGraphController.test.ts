@@ -7,6 +7,7 @@ import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/
 import type { PhpSourceParser } from "../../../../../app/modules/audit/domain/repositories/PhpSourceParser.js";
 import type { JsSourceParser } from "../../../../../app/modules/audit/domain/repositories/JsSourceParser.js";
 import { AuditGraphController } from "../../../../../app/modules/audit/presentation/http/AuditGraphController.js";
+import { AuditHealthController } from "../../../../../app/modules/audit/presentation/http/AuditHealthController.js";
 
 function buildConfig(): ArchitectureConfig {
   const coupling = {
@@ -234,3 +235,47 @@ describe("AuditGraphController", async () => {
     expect(status).not.toHaveBeenCalled();
   });
 });
+
+describe("AuditHealthController", () => {
+  it("responde la salud del proyecto del target con su raiz", async () => {
+    const check = vi.fn((_c, _r, options: { target: string; module: string | null }) => checkResult(options.target, options.module));
+    const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => ["/abs/react/pages/a.js"], readText: () => "" };
+    const jsParser: JsSourceParser = {
+      parse: (path) => ({ file: path, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+    };
+    const controller = new AuditHealthController({ getConfig: buildConfig, reader: scanningReader, parser, check, jsParser });
+    const { status, json, response } = fakeResponse();
+
+    await controller.show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect(status).toHaveBeenCalledWith(200);
+    const health = json.mock.calls[0][0] as { summary: { files: number }; groups: Array<{ key: string }> };
+    expect(health.summary.files).toBe(1);
+    expect(health.groups.map((group) => group.key)).toEqual(["pages"]);
+  });
+
+  it("con laravel agrupa respecto de la raiz PHP", async () => {
+    const check = vi.fn((_c, _r, options: { target: string; module: string | null }) => checkResult(options.target, options.module));
+    const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => ["/abs/app/modules/admin/X.php"], readText: () => "" };
+    const phpParser: PhpSourceParser = {
+      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [], sqlLiterals: [] }),
+    };
+    const controller = new AuditHealthController({ getConfig: buildConfig, reader: scanningReader, parser: phpParser, check });
+    const { json, response } = fakeResponse();
+
+    await controller.show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect((json.mock.calls[0][0] as { groups: Array<{ key: string }> }).groups.map((group) => group.key)).toEqual(["admin"]);
+  });
+
+  it("delega el error a next", async () => {
+    const boom = new Error("x");
+    const controller = new AuditHealthController({ getConfig: () => { throw boom; }, reader, parser, check: vi.fn() });
+    const next = vi.fn();
+
+    await controller.show({ query: {} } as unknown as Request, fakeResponse().response, next as unknown as NextFunction);
+
+    expect(next).toHaveBeenCalledWith(boom);
+  });
+});
+

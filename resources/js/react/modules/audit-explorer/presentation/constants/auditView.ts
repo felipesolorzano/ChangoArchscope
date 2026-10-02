@@ -6,7 +6,8 @@ const TONE_FILL: Record<AuditGraphTone, string> = {
   high: "#dc2626",
   medium: "#d97706",
   low: "#a16207",
-  none: "#334155",
+  // Sin hallazgos = sano.
+  none: "#16a34a",
 };
 
 const ACCENT_STROKE: Record<AuditGraphAccent, string> = {

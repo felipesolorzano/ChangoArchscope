@@ -95,3 +95,41 @@ Criterios de aceptacion:
   arma `summaryText(graph, view)` (pura): "N hallazgos · risk R · K <unidad>", con K = nodos menos la
   raiz (todos en heatmap) y unidad apps/archivos/reglas segun la vista, mas " · click en un nodo para
   profundizar" salvo en la vista archivo.
+
+## Mapa de salud (UI)
+
+Backend: `app/modules/audit/specs/audit-health.md`. La pantalla muestra siempre el proyecto entero: lo
+sano en verde y lo problematico por severidad.
+
+### Datos
+
+- `AuditGraphNode.health?: { files, withFindings }` (root/app/file) y el tipo `AuditHealth` espejo del
+  backend (`summary`, `checks`, `groups` con `tiles`).
+- `AuditGraphProvider.getHealth(target, phpVersion)` → `GET /audit-health.json?target=&php=`.
+- `useAuditGraphController` carga grafo y salud en paralelo en cada carga y expone `health`.
+
+### Colores y helpers puros (`presentation/constants/auditHealth.ts`)
+
+- `toneFill("none")` pasa a verde `#16a34a`: sin hallazgos = sano.
+- `healthBarSegments(health)`: segmento `healthy` verde (`#16a34a`) y `withFindings` rojo (`#dc2626`)
+  con su porcentaje; solo los segmentos > 0; `[]` si no hay archivos.
+- `healthLabel(health)`: `""` sin archivos; `"✓ N sanos"` si ninguno tiene hallazgos; si no
+  `"W de N con hallazgos"`.
+- `healthSummaryText(summary)`: `"N archivos · H sanos · W con hallazgos"`.
+- `checkStatus(findings)`: `{ ok: true, text: "✓" }` con 0; si no `{ ok: false, text: "<N>" }`.
+
+### Componentes
+
+- `AuditHealthBar({ health })`: KPI "P% sano", `healthSummaryText`, barra verde/roja y el checklist de
+  categorias (`checks`) con su `checkStatus` (clase `--ok`/`--bad`). Sin salud no renderiza nada.
+- `AuditNodeCard`: un nodo sin hallazgos muestra "✓ sano" en lugar del numero; con `health.files > 1`
+  (root/app) muestra la barra de salud y `healthLabel`.
+- `AuditMosaic({ health, onOpenFile })`: un bloque por grupo con encabezado "<label> · <healthLabel>" y un cuadrito
+  por archivo coloreado con `toneFill(tile.tone)` y `title` "<path> · N hallazgos" o "<path> · sano".
+  Click en un cuadrito → `onOpenFile(path)`; la pagina navega a la vista `file` de ese archivo (callback
+  por prop, no por el store: registrarlo en el store en cada render provocaba un loop de renders).
+- Selector de vista: "Mapa por apps" | "Heatmap global" | "Mosaico" (en overview/heatmap/mosaico). El
+  mosaico es un modo de UI (`mosaic` en `auditExplorerStore`): reemplaza al lienzo; navegar a otra vista
+  lo apaga.
+- `AuditDetailDrawer` de un nodo `file`: seccion "Por categoría" con un item por `checks` y el
+  `checkStatus` de `node.byCategory[categoria]`.

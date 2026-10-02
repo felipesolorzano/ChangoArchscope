@@ -117,4 +117,11 @@ describe("buildAuditSnapshot", () => {
       php_compatibility: { status: "skipped" },
     });
   });
+
+  it("scannedFiles viene del contexto (vacio por defecto)", () => {
+    const context = { target: "react", module: null, filesScanned: 2, modules: 1 };
+
+    expect(buildAuditSnapshot([], context).scannedFiles).toEqual([]);
+    expect(buildAuditSnapshot([], { ...context, scannedFiles: ["/src/a.js", "/src/b.js"] }).scannedFiles).toEqual(["/src/a.js", "/src/b.js"]);
+  });
 });

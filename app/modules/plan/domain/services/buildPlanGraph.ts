@@ -31,6 +31,7 @@ export function buildPlanGraph(
   return {
     generated_at: generatedAt,
     summary: { tasks: nodes.length, by_state: byState },
+    checks: [],
     nodes,
     edges,
   };

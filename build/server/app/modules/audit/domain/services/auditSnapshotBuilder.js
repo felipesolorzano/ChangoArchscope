@@ -21,6 +21,7 @@ export function buildAuditSnapshot(findings, context) {
         riskScore: buildRiskScore(findings),
         riskBreakdown: buildRiskBreakdown(findings, context.sourceRoot),
         skippedFiles,
+        scannedFiles: context.scannedFiles ?? [],
     };
 }
 function buildRiskScore(findings) {

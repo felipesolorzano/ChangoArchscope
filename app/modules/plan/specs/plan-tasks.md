@@ -96,6 +96,13 @@ proyecto no aparece en otro al cambiar `modulesPath` (proyecto = raiz del stack,
   descripcion de 3 y dos filas de estados) mide ~225px; con menos espacio las tarjetas de una misma
   etapa se pisan (visible en React, que tiene 5 tareas en la etapa 1).
 
+## Checklist auditado (`PlanGraph.checks`)
+
+- `buildPlan` agrega `checks: [{ category, label, findings }]`: las categorias que audita el stack del
+  snapshot (`auditCategoriesFor(target)` de `audit`, consumido como contrato publicado, igual que el
+  `AuditSnapshot`) con su cantidad de hallazgos (`summary.by_category`, 0 si no hay). Permite mostrar
+  en verde lo auditado cuando no quedan tareas.
+
 ## Criterios de aceptacion
 
 - Cada tarea nueva aparece con su metrica cuando hay hallazgos de sus reglas, y no aparece sin ellos.

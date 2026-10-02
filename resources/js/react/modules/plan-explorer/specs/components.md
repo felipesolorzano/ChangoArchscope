@@ -6,7 +6,9 @@ componente muestra para un estado dado. Las interacciones viven en stores/hooks.
 ## `PlanCanvas({ loading, error, empty, nodes, edges })`
 
 - `loading` → "Cargando plan de remediacion...". `error` → el mensaje de error.
-- Sin loading/error y `empty` → "Sin tareas: la auditoria no encontro deuda accionable."
+- Sin loading/error y `empty` → "Sin tareas: la auditoria no encontro deuda accionable." y, si hay
+  `checks`, el checklist auditado: una fila por categoria con "✓" (clase `--ok`) o su cantidad (clase
+  `--bad`).
 - Sin loading/error y con tareas → el lienzo de React Flow (`.react-flow`).
 
 ## `PlanFindingsDrawer({ graph, focusedTaskKey, findings, loading })`

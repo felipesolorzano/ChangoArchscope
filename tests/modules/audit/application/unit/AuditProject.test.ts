@@ -175,6 +175,19 @@ describe("auditProject", () => {
     expect(snapshot.findings.every((finding) => finding.source === "architecture")).toBe(true);
   });
 
+  it("scannedFiles incluye los PHP parseados", () => {
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: fakeReader(["app/modules/Users/Domain/User.php", "app/modules/Users/Domain/Account.php"]),
+      parser: fakeParser,
+      phpRoot: "app/modules",
+      phpExtensions: [".php"],
+      ignoredPaths: [],
+    });
+
+    expect(snapshot.scannedFiles).toEqual(["app/modules/Users/Domain/Account.php", "app/modules/Users/Domain/User.php"]);
+  });
+
   it("reporta en snapshot.skippedFiles los archivos que el parser no pudo procesar", () => {
     const parser: PhpSourceParser = {
       parse: (file) => {
@@ -432,6 +445,28 @@ describe("auditProject", () => {
       expect(snapshot.findings.filter((finding) => finding.rule === "untested-component").map((finding) => finding.file)).toEqual([
         "/src/pages/Orphan.tsx",
       ]);
+    });
+
+    it("scannedFiles: los JS analizados (no los de testRoots), ordenados", () => {
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: {
+          ...jsInput,
+          root: "/src",
+          testRoots: ["/tests"],
+          scanFiles: (root: string) => ({
+            files: root === "/tests" ? [jsStructure("/tests/a.test.js")] : [jsStructure("/src/z.js"), jsStructure("/src/a.js")],
+            skipped: [],
+          }),
+        },
+      });
+
+      expect(snapshot.scannedFiles).toEqual(["/src/a.js", "/src/z.js"]);
     });
 
     it("sin testRoots el componente queda sin test", () => {

@@ -508,3 +508,70 @@
   color: #cbd5e1;
   line-height: 1.35;
 }
+
+/* ---------- Mapa de salud ---------- */
+.audit-health {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+.audit-health__kpi { display: flex; align-items: baseline; gap: 10px; }
+.audit-health__percent { font-size: 22px; font-weight: 800; color: #4ade80; }
+.audit-health__summary { color: #94a3b8; font-size: 12px; }
+.audit-health__bar {
+  display: flex;
+  width: 220px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #1e293b;
+}
+.audit-health__checks { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.audit-health__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+}
+.audit-health__check--ok { color: #86efac; border-color: rgba(34, 197, 94, 0.45); background: rgba(22, 163, 74, 0.12); }
+.audit-health__check--bad { color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); background: rgba(220, 38, 38, 0.12); }
+.audit-health__check-icon { font-weight: 800; }
+
+.audit-node__healthy { color: #dcfce7; font-weight: 800; font-size: 13px; }
+.audit-node__health { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-bottom: 4px; }
+.audit-node__health-bar { display: flex; width: 90px; height: 5px; border-radius: 999px; overflow: hidden; background: #1e293b; }
+.audit-node__health-label { font-size: 10px; color: #cbd5e1; }
+
+.audit-mosaic {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.audit-mosaic__group { display: flex; flex-direction: column; gap: 8px; }
+.audit-mosaic__head { display: flex; align-items: baseline; gap: 10px; color: #e2e8f0; font-size: 13px; }
+.audit-mosaic__head span { color: #94a3b8; font-size: 12px; }
+.audit-mosaic__tiles { display: flex; flex-wrap: wrap; gap: 4px; }
+.audit-mosaic__tile {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.audit-mosaic__tile:hover { transform: scale(1.35); box-shadow: 0 0 0 2px #f8fafc; }
+
+.audit-drawer__checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.audit-drawer__check { display: flex; gap: 8px; font-size: 12px; }
+.audit-drawer__check span { min-width: 22px; font-weight: 800; }
+.audit-drawer__check--ok { color: #86efac; }
+.audit-drawer__check--bad { color: #fca5a5; }

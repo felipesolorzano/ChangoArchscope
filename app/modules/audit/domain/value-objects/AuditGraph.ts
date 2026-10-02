@@ -47,6 +47,8 @@ export type AuditGraphNode = {
   byCategory: Record<string, number>;
   badges: string[];
   drill: boolean;
+  // Archivos escaneados que representa el nodo y cuantos tienen hallazgos (root/app/file).
+  health?: { files: number; withFindings: number };
   // Presente solo en nodos `rule` (vista file): muestra hasta `RULE_FINDINGS_LIMIT`
   // hallazgos reales de esa regla en ese archivo.
   findings?: AuditGraphFinding[];

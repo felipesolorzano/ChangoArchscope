@@ -1,4 +1,4 @@
-import type { AuditGraph, AuditGraphView } from "../../domain/value-objects/AuditGraph";
+import type { AuditGraph, AuditGraphView, AuditHealth } from "../../domain/value-objects/AuditGraph";
 
 export interface AuditGraphProvider {
   getGraph(
@@ -7,4 +7,5 @@ export interface AuditGraphProvider {
     focus?: string | null,
     phpVersion?: string | null,
   ): Promise<AuditGraph>;
+  getHealth(target: "laravel" | "react", phpVersion: string | null): Promise<AuditHealth>;
 }

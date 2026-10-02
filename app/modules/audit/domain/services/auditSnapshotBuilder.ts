@@ -11,6 +11,7 @@ export type AuditSnapshotContext = {
   sourceRoot?: string;
   skippedFiles?: PhpParseFailure[];
   phpCompatibilityStatus?: AuditScannerStatus;
+  scannedFiles?: string[];
 };
 
 export function buildAuditSnapshot(findings: AuditFinding[], context: AuditSnapshotContext): AuditSnapshot {
@@ -35,6 +36,7 @@ export function buildAuditSnapshot(findings: AuditFinding[], context: AuditSnaps
     riskScore: buildRiskScore(findings),
     riskBreakdown: buildRiskBreakdown(findings, context.sourceRoot),
     skippedFiles,
+    scannedFiles: context.scannedFiles ?? [],
   };
 }
 

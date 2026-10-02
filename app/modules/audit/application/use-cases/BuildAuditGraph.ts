@@ -4,6 +4,7 @@ import type { AuditSnapshot, RiskEntry } from "../../domain/value-objects/AuditS
 import type { AuditGraph, AuditGraphEdge, AuditGraphNode, AuditGraphView } from "../../domain/value-objects/AuditGraph.js";
 import {
   MAX_NODE_SIZE,
+  MIN_NODE_SIZE,
   dominantAccent,
   foldSeverityMix,
   gridPositions,
@@ -46,11 +47,29 @@ export function buildAuditGraph(snapshot: AuditSnapshot, options: BuildAuditGrap
     }
   }
 
-  return buildOverview(snapshot, focus);
+  return buildOverview(snapshot, focus, sourceRoot);
 }
 
-function buildOverview(snapshot: AuditSnapshot, focus: string | null): AuditGraph {
-  const apps = snapshot.riskBreakdown.byModule;
+// Universo de archivos: los escaneados mas los que tienen hallazgos sin haber pasado por el parser.
+function fileUniverse(snapshot: AuditSnapshot): string[] {
+  return [...new Set([...snapshot.scannedFiles, ...snapshot.riskBreakdown.byFile.map((file) => file.key)])];
+}
+
+function healthOf(snapshot: AuditSnapshot, files: string[]): { files: number; withFindings: number } {
+  const withFindings = new Set(snapshot.riskBreakdown.byFile.map((file) => file.key));
+  return { files: files.length, withFindings: files.filter((file) => withFindings.has(file)).length };
+}
+
+function buildOverview(snapshot: AuditSnapshot, focus: string | null, sourceRoot: string | null): AuditGraph {
+  const universe = fileUniverse(snapshot);
+  const riskyApps = snapshot.riskBreakdown.byModule;
+  const riskyKeys = new Set(riskyApps.map((app) => app.key));
+  // Con raiz conocida, tambien las carpetas sanas (sin hallazgos), despues y en orden alfabetico.
+  const healthyApps =
+    sourceRoot === null
+      ? []
+      : [...new Set(universe.map((file) => appOf(file, sourceRoot)))].filter((app) => !riskyKeys.has(app)).sort().map(emptyEntry);
+  const apps = [...riskyApps, ...healthyApps];
   const maxRisk = apps.reduce((max, app) => Math.max(max, app.value), 0);
   const positions = overviewPositions(apps.length);
 
@@ -67,11 +86,13 @@ function buildOverview(snapshot: AuditSnapshot, focus: string | null): AuditGrap
     byCategory: snapshot.summary.by_category,
     badges: topCategoryBadges(snapshot.summary.by_category),
     drill: apps.length > 0,
+    health: healthOf(snapshot, universe),
   };
 
-  const appNodes: AuditGraphNode[] = apps.map((app, index) =>
-    entryNode(app, `app:${app.key}`, "app", app.key, positions[index], sizeForRisk(app.value, maxRisk), true),
-  );
+  const appNodes: AuditGraphNode[] = apps.map((app, index) => ({
+    ...entryNode(app, `app:${app.key}`, "app", app.key, positions[index], sizeForRisk(app.value, maxRisk), true),
+    ...(sourceRoot === null ? {} : { health: healthOf(snapshot, universe.filter((file) => appOf(file, sourceRoot) === app.key)) }),
+  }));
 
   const edges: AuditGraphEdge[] = apps.map((app) => containsEdge("root", `app:${app.key}`));
 
@@ -85,8 +106,8 @@ function buildHeatmapView(snapshot: AuditSnapshot, sourceRoot: string): AuditGra
   const maxFindings = files.reduce((max, file) => Math.max(max, file.findingsCount), 0);
   const positions = gridPositions(files.length, HEATMAP_COLUMNS);
 
-  const nodes: AuditGraphNode[] = files.map((file, index) =>
-    entryNode(
+  const nodes: AuditGraphNode[] = files.map((file, index) => ({
+    ...entryNode(
       file,
       `file:${relativePosix(sourceRoot, file.key)}`,
       "file",
@@ -95,7 +116,8 @@ function buildHeatmapView(snapshot: AuditSnapshot, sourceRoot: string): AuditGra
       sizeForRisk(file.findingsCount, maxFindings),
       true,
     ),
-  );
+    health: { files: 1, withFindings: 1 },
+  }));
 
   return graph(snapshot, "heatmap", null, nodes, []);
 }
@@ -104,24 +126,32 @@ function buildAppView(snapshot: AuditSnapshot, focus: string, sourceRoot: string
   const files = snapshot.riskBreakdown.byFile
     .filter((file) => appOf(file.key, sourceRoot) === focus)
     .slice(0, APP_FILE_LIMIT);
+  const withFindings = new Set(snapshot.riskBreakdown.byFile.map((file) => file.key));
+  const appFiles = fileUniverse(snapshot).filter((file) => appOf(file, sourceRoot) === focus);
+  // Los sanos completan la grilla hasta el limite, en orden alfabetico.
+  const healthyFiles = appFiles
+    .filter((file) => !withFindings.has(file))
+    .sort()
+    .slice(0, APP_FILE_LIMIT - files.length);
   const maxRisk = files.reduce((max, file) => Math.max(max, file.value), 0);
-  const positions = gridPositions(files.length, GRID_COLUMNS);
+  const positions = gridPositions(files.length + healthyFiles.length, GRID_COLUMNS);
   const appEntry = snapshot.riskBreakdown.byModule.find((app) => app.key === focus);
 
-  const appNode: AuditGraphNode = entryNode(
-    appEntry ?? emptyEntry(focus),
-    `app:${focus}`,
-    "app",
-    focus,
-    { x: 0, y: 0 },
-    MAX_NODE_SIZE,
-    false,
-  );
+  const appNode: AuditGraphNode = {
+    ...entryNode(appEntry ?? emptyEntry(focus), `app:${focus}`, "app", focus, { x: 0, y: 0 }, MAX_NODE_SIZE, false),
+    health: healthOf(snapshot, appFiles),
+  };
 
-  const fileNodes: AuditGraphNode[] = files.map((file, index) => {
-    const id = `file:${relativePosix(sourceRoot, file.key)}`;
-    return entryNode(file, id, "file", path.basename(file.key), positions[index], sizeForRisk(file.value, maxRisk), false);
-  });
+  const fileNodes: AuditGraphNode[] = [
+    ...files.map((file, index) => ({
+      ...entryNode(file, `file:${relativePosix(sourceRoot, file.key)}`, "file", path.basename(file.key), positions[index], sizeForRisk(file.value, maxRisk), false),
+      health: { files: 1, withFindings: 1 },
+    })),
+    ...healthyFiles.map((file, index) => ({
+      ...entryNode(emptyEntry(file), `file:${relativePosix(sourceRoot, file)}`, "file", path.basename(file), positions[files.length + index], MIN_NODE_SIZE, false),
+      health: { files: 1, withFindings: 0 },
+    })),
+  ];
 
   const containsEdges = fileNodes.map((file) => containsEdge(appNode.id, file.id));
   const duplicateEdges = findDuplicateEdges(fileNodes.map((file) => ({ id: file.id, label: file.label })));
@@ -136,15 +166,10 @@ function buildFileView(snapshot: AuditSnapshot, focus: string, sourceRoot: strin
   const positions = gridPositions(rules.length, GRID_COLUMNS);
   const fileEntry = snapshot.riskBreakdown.byFile.find((file) => relativePosix(sourceRoot, file.key) === focus);
 
-  const fileNode: AuditGraphNode = entryNode(
-    fileEntry ?? emptyEntry(focus),
-    `file:${focus}`,
-    "file",
-    path.basename(focus),
-    { x: 0, y: 0 },
-    MAX_NODE_SIZE,
-    false,
-  );
+  const fileNode: AuditGraphNode = {
+    ...entryNode(fileEntry ?? emptyEntry(focus), `file:${focus}`, "file", path.basename(focus), { x: 0, y: 0 }, MAX_NODE_SIZE, false),
+    health: { files: 1, withFindings: fileEntry === undefined ? 0 : 1 },
+  };
 
   const ruleNodes: AuditGraphNode[] = rules.map((rule, index) => ({
     ...entryNode(

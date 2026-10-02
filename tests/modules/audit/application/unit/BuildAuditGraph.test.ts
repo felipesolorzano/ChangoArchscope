@@ -8,7 +8,7 @@ function entry(overrides: Partial<RiskEntry> = {}): RiskEntry {
   return { key: "x", value: 0, byCategory: {}, bySeverity: {}, findingsCount: 0, ...overrides };
 }
 
-function buildSnapshot(byModule: RiskEntry[], byFile: RiskEntry[] = [], findings: AuditFinding[] = []): AuditSnapshot {
+function buildSnapshot(byModule: RiskEntry[], byFile: RiskEntry[] = [], findings: AuditFinding[] = [], scannedFiles: string[] = []): AuditSnapshot {
   return {
     generatedAt: "2026-01-01T00:00:00.000Z",
     target: "laravel",
@@ -25,6 +25,7 @@ function buildSnapshot(byModule: RiskEntry[], byFile: RiskEntry[] = [], findings
     riskScore: { value: 999, breakdown: {} },
     riskBreakdown: { byFile, byClass: [], byModule, topRiskiestFiles: [] },
     skippedFiles: [],
+    scannedFiles,
   };
 }
 
@@ -348,3 +349,87 @@ describe("buildAuditGraph (limites, raices y badges)", () => {
     expect(app?.badges).toEqual(["security", "complexity"]);
   });
 });
+
+describe("buildAuditGraph (salud: archivos y apps sanas)", () => {
+  const scanned = ["/root/admin/Order.php", "/root/admin/Clean.php", "/root/admin/Also.php", "/root/api/Ok.php"];
+  const byModule = [entry({ key: "admin", value: 9, findingsCount: 3, bySeverity: { high: 3 }, byCategory: { security: 9 } })];
+  const byFile = [entry({ key: "/root/admin/Order.php", value: 9, findingsCount: 3, bySeverity: { high: 3 }, byCategory: { security: 9 } })];
+  const snapshot = () => buildSnapshot(byModule, byFile, [], scanned);
+
+  it("overview: las apps sanas aparecen despues, en verde (tone none), con su salud", () => {
+    const graph = buildAuditGraph(snapshot(), { sourceRoot: "/root" });
+
+    expect(graph.nodes.map((node) => [node.id, node.tone, node.health])).toEqual([
+      ["root", "high", { files: 4, withFindings: 1 }],
+      ["app:admin", "high", { files: 3, withFindings: 1 }],
+      ["app:api", "none", { files: 1, withFindings: 0 }],
+    ]);
+    expect(graph.nodes[2]).toMatchObject({ metrics: { findings: 0, risk: 0 }, drill: true, label: "api" });
+    expect(graph.edges.map((edge) => edge.target)).toEqual(["app:admin", "app:api"]);
+  });
+
+  it("overview: las apps sanas se ordenan alfabeticamente", () => {
+    const graph = buildAuditGraph(buildSnapshot([], [], [], ["/root/zeta/a.php", "/root/beta/b.php"]), { sourceRoot: "/root" });
+
+    expect(graph.nodes.map((node) => node.id)).toEqual(["root", "app:beta", "app:zeta"]);
+  });
+
+  it("heatmap y archivo con hallazgos llevan salud { 1, 1 }", () => {
+    expect(buildAuditGraph(snapshot(), { view: "heatmap", sourceRoot: "/root" }).nodes[0].health).toEqual({ files: 1, withFindings: 1 });
+    expect(buildAuditGraph(snapshot(), { view: "file", focus: "admin/Order.php", sourceRoot: "/root" }).nodes[0].health).toEqual({ files: 1, withFindings: 1 });
+  });
+
+  it("app: con archivos con y sin hallazgos el total sigue en 24 y cada uno tiene su lugar en la grilla", () => {
+    const risky = Array.from({ length: 5 }, (_, index) => entry({ key: `/root/app/R${index}.php`, value: 10 - index, findingsCount: 1, bySeverity: { low: 1 } }));
+    const healthy = Array.from({ length: 30 }, (_, index) => `/root/app/H${String(index).padStart(2, "0")}.php`);
+    const graph = buildAuditGraph(buildSnapshot([entry({ key: "app" })], risky, [], healthy), { view: "app", focus: "app", sourceRoot: "/root" });
+    const files = graph.nodes.filter((node) => node.type === "file");
+    const positions = files.map((node) => `${node.position.x},${node.position.y}`);
+
+    expect(files).toHaveLength(24);
+    expect(files[5].label).toBe("H00.php");
+    expect(new Set(positions).size).toBe(24);
+    expect(files.every((node) => Number.isFinite(node.position.x) && Number.isFinite(node.position.y))).toBe(true);
+  });
+
+  it("overview sin sourceRoot no inventa apps ni salud por carpeta", () => {
+    const graph = buildAuditGraph(snapshot());
+
+    expect(graph.nodes.map((node) => node.id)).toEqual(["root", "app:admin"]);
+  });
+
+  it("app: archivos con hallazgos y despues los sanos en orden alfabetico", () => {
+    const graph = buildAuditGraph(snapshot(), { view: "app", focus: "admin", sourceRoot: "/root" });
+
+    expect(graph.nodes.map((node) => [node.id, node.tone, node.health])).toEqual([
+      ["app:admin", "high", { files: 3, withFindings: 1 }],
+      ["file:admin/Order.php", "high", { files: 1, withFindings: 1 }],
+      ["file:admin/Also.php", "none", { files: 1, withFindings: 0 }],
+      ["file:admin/Clean.php", "none", { files: 1, withFindings: 0 }],
+    ]);
+    expect(graph.nodes[2]).toMatchObject({ size: MIN_NODE_SIZE, label: "Also.php", drill: false });
+  });
+
+  it("app: los sanos completan hasta el limite de 24", () => {
+    const many = Array.from({ length: 30 }, (_, index) => `/root/app/F${String(index).padStart(2, "0")}.php`);
+    const graph = buildAuditGraph(buildSnapshot([entry({ key: "app" })], [], [], many), { view: "app", focus: "app", sourceRoot: "/root" });
+
+    expect(graph.nodes.filter((node) => node.type === "file")).toHaveLength(24);
+  });
+
+  it("file: un archivo sano es solo su nodo, con salud { 1, 0 }", () => {
+    const graph = buildAuditGraph(snapshot(), { view: "file", focus: "admin/Clean.php", sourceRoot: "/root" });
+
+    expect(graph.nodes.map((node) => [node.id, node.tone, node.health])).toEqual([["file:admin/Clean.php", "none", { files: 1, withFindings: 0 }]]);
+    expect(graph.edges).toEqual([]);
+  });
+
+  it("un archivo con hallazgos de arquitectura que no paso por el parser cuenta en la salud", () => {
+    const graph = buildAuditGraph(buildSnapshot(byModule, [...byFile, entry({ key: "/root/admin/Extra.php", findingsCount: 1, bySeverity: { low: 1 } })], [], scanned), {
+      sourceRoot: "/root",
+    });
+
+    expect(graph.nodes[0].health).toEqual({ files: 5, withFindings: 2 });
+  });
+});
+

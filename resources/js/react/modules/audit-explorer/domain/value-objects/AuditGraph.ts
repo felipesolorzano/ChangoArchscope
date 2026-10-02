@@ -46,6 +46,41 @@ export interface AuditGraphNode {
   badges: string[];
   drill: boolean;
   findings?: AuditGraphFinding[];
+  health?: AuditNodeHealth;
+}
+
+export interface AuditNodeHealth {
+  files: number;
+  withFindings: number;
+}
+
+export interface AuditHealthTile {
+  path: string;
+  label: string;
+  findings: number;
+  risk: number;
+  tone: AuditGraphTone;
+  accent: AuditGraphAccent;
+}
+
+export interface AuditHealthGroup {
+  key: string;
+  label: string;
+  files: number;
+  withFindings: number;
+  tiles: AuditHealthTile[];
+}
+
+export interface AuditHealthCheck {
+  category: string;
+  label: string;
+  findings: number;
+}
+
+export interface AuditHealth {
+  summary: { files: number; healthy: number; withFindings: number; healthyPercent: number };
+  checks: AuditHealthCheck[];
+  groups: AuditHealthGroup[];
 }
 
 export type AuditGraphEdgeKind = "contains" | "duplicate" | "depends";

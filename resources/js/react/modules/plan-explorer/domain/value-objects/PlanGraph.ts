@@ -17,9 +17,16 @@ export interface PlanGraphEdge {
   target: string;
 }
 
+export interface PlanCheck {
+  category: string;
+  label: string;
+  findings: number;
+}
+
 export interface PlanGraph {
   generated_at: string;
   summary: { tasks: number; by_state: Record<string, number> };
+  checks?: PlanCheck[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 }
