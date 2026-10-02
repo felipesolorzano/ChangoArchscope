@@ -29,6 +29,8 @@ export type ReactArchitectureConfig = {
   modulesPath: string;
   alias: string;
   layers: Record<string, string>;
+  /** Arbol plano legacy: carpetas de primer nivel de arriba hacia abajo (ver folderOrder.ts). */
+  folderOrder?: Array<string | string[]>;
   ignoredPaths: string[];
   forbiddenImports: Record<string, ForbiddenImportRule[]>;
   coupling: CouplingRules;

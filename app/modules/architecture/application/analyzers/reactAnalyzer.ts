@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 
 import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
+import { folderOrderViolation } from "../../domain/services/folderOrder.js";
 import { resolveSourceFileCandidate } from "../../domain/services/resolveSourceFileCandidate.js";
 import type { ArchitectureConfig } from "../../domain/value-objects/ArchitectureConfig.js";
 import type { ArchitectureCheckResult } from "../../domain/value-objects/ArchitectureCheckReport.js";
@@ -112,12 +113,15 @@ export function checkReactArchitecture(
 
     for (const file of scannedFiles) {
       const layer = reactLayerFor(config, modulePath, file);
+      const imports = tsImports(file, reader);
+
+      violations.push(...folderOrderViolations(config, reader, module, layer, file, imports));
 
       if (!layer) {
         continue;
       }
 
-      for (const importItem of tsImports(file, reader)) {
+      for (const importItem of imports) {
         const coupling = reactCouplingFor(config, reader, module, layer, file, importItem);
 
         if (coupling) {
@@ -251,6 +255,41 @@ function reactCouplingFor(
     assessment: coupling.defaultAssessment,
     recommendation: coupling.defaultRecommendation,
     action: coupling.defaultAction,
+  });
+}
+
+// Arbol plano: un import hacia una carpeta de mas arriba en react.folderOrder (aplica sin capa).
+function folderOrderViolations(
+  config: ArchitectureConfig,
+  reader: SourceTreeReader,
+  module: string,
+  layer: string | null,
+  file: string,
+  imports: ImportReference[],
+) {
+  // Stryker disable next-line ArrayDeclaration: equivalente, una carpeta inventada en el fallback nunca
+  // coincide con un modulo real, asi que la regla sigue sin disparar.
+  const folderOrder = config.react.folderOrder ?? [];
+
+  return imports.flatMap((importItem) => {
+    const target = targetForReactImport(config, reader, importItem.import, path.dirname(file));
+
+    if (!target || !folderOrderViolation(folderOrder, module, target.module)) {
+      return [];
+    }
+
+    return [
+      issue({
+        module,
+        targetModule: target.module,
+        layer,
+        file,
+        line: importItem.line,
+        importName: importItem.import,
+        message: `La carpeta "${module}" depende de "${target.module}", que esta por encima en react.folderOrder.`,
+        suggestion: "Mover lo compartido a una carpeta inferior o invertir la dependencia (props, callbacks, contexto).",
+      }),
+    ];
   });
 }
 

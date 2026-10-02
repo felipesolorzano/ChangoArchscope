@@ -34,3 +34,44 @@ Construir un grafo navegable de modulos/archivos/imports y validar reglas de arq
 - `config.laravel.phpExtensions: [".lib.inc"]` recorre solo archivos cuyo nombre termina en `.lib.inc`, no los `.inc` simples.
 - Con `config.laravel.phpExtensions` en su default (`[".php"]`), el comportamiento es exactamente el de antes: solo se recorren archivos `.php`.
 - Con `config.laravel.ignoredPaths: ["**/vendor/**"]`, los archivos PHP dentro de `vendor/` no aparecen en el grafo ni en el check; lo mismo para `config.react.ignoredPaths` en el lado React.
+
+## Orden de carpetas para arboles React planos (`react.folderOrder`)
+
+Fase 6 de `docs/react-target-plan.md`. Un frontend legacy suele no tener capas hexagonales
+(`domain/`, `application/`…): sus "modulos" son carpetas tecnicas planas (`pages/`, `components/`,
+`globals/`). Ahi la regla de arquitectura util es la DIRECCION de las dependencias: las carpetas de
+arriba (entrada) pueden depender de las de abajo (base), nunca al reves.
+
+### Config
+
+- `react.folderOrder: Array<string | string[]>` (default `[]` = regla desactivada). Carpetas de primer
+  nivel bajo `react.modulesPath`, de arriba hacia abajo. Un elemento `string[]` agrupa carpetas del
+  mismo nivel (pueden importarse entre si).
+- Ejemplo: `["routes", "pages", "partials", ["components", "stripes"], "globals", "languages"]`.
+
+### Regla (`folderRank` / `folderOrderViolation`, puros, `domain/services/folderOrder.ts`)
+
+- `folderRank(folderOrder, folder)`: indice del nivel que contiene la carpeta, o `null` si no esta.
+- `folderOrderViolation(folderOrder, source, target)`: `true` solo si las dos carpetas tienen rango y el
+  de `target` es MENOR que el de `source` (import hacia una carpeta de mas arriba). Misma carpeta, mismo
+  nivel, o carpetas fuera de `folderOrder` → `false`.
+
+### Check (`checkReactArchitecture`)
+
+- Para cada import relativo/alias que resuelve a otro modulo (carpeta), si `folderOrderViolation`:
+  agrega una **violacion** (no un coupling) con `module` = carpeta origen, `layer` = `null` si el
+  archivo no esta en una capa (o su capa si la tiene), `target_module` = carpeta destino, `line`,
+  `import`, `message` = `La carpeta "<origen>" depende de "<destino>", que esta por encima en
+  react.folderOrder.` y `suggestion` = `Mover lo compartido a una carpeta inferior o invertir la
+  dependencia (props, callbacks, contexto).`
+- La regla aplica aunque el archivo no tenga capa (hoy el check saltea esos archivos para
+  `forbiddenImports` y coupling; eso no cambia).
+- Como es una violacion, fluye sola al audit (`architecture_violation`) y al plan.
+
+### Criterios de aceptacion
+
+- `folderRank`/`folderOrderViolation` cubren: arriba→abajo permitido, abajo→arriba violacion, mismo
+  nivel (grupo) permitido, misma carpeta permitida, carpeta fuera del orden ignorada.
+- Con `folderOrder: ["pages", "components"]`, un `components/x.js` que importa `../pages/y` produce una
+  violacion; `pages/y.js` importando `../components/x` no.
+- Sin `folderOrder` el resultado del check no cambia.

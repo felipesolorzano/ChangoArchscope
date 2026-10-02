@@ -84,3 +84,58 @@ describe("checkReactArchitecture", () => {
     expect(result.summary.files_scanned).toBe(1);
   });
 });
+
+describe("checkReactArchitecture con react.folderOrder (arbol plano)", () => {
+  const root = "/src";
+  const sources: Record<string, string> = {
+    "/src/pages/page.home.js": "import Card from '../components/card';\n",
+    "/src/components/card.js": "import React from 'react';\nimport Home from '../pages/page.home';\n",
+    "/src/globals/global.js": "import cfg from '../configs/config';\n",
+    "/src/configs/config.js": "",
+  };
+
+  function flatConfig(folderOrder: Array<string | string[]>): ArchitectureConfig {
+    const config = buildConfig();
+    return { ...config, react: { ...config.react, modulesPath: root, layers: {}, folderOrder } };
+  }
+
+  const flatReader: SourceTreeReader = {
+    listDirectories: (dir) => (dir === root ? ["/src/pages", "/src/components", "/src/globals", "/src/configs"] : []),
+    walkFiles: (dir) => Object.keys(sources).filter((file) => file.startsWith(`${dir}/`)),
+    readText: (file) => sources[file],
+    isFile: (file) => file in sources,
+  };
+
+  it("reporta como violacion un import hacia una carpeta de mas arriba", () => {
+    const result = checkReactArchitecture(flatConfig(["pages", "components", "globals"]), flatReader);
+
+    const violations = result.reports.flatMap((report) => report.violations);
+    expect(violations).toEqual([
+      {
+        module: "components",
+        layer: null,
+        file: "/src/components/card.js",
+        line: 2,
+        import: "../pages/page.home",
+        message: 'La carpeta "components" depende de "pages", que esta por encima en react.folderOrder.',
+        suggestion: "Mover lo compartido a una carpeta inferior o invertir la dependencia (props, callbacks, contexto).",
+        target_module: "pages",
+      },
+    ]);
+    expect(result.summary.violations_count).toBe(1);
+    expect(result.passed).toBe(false);
+  });
+
+  it("sin folderOrder no hay violaciones en un arbol plano", () => {
+    const result = checkReactArchitecture(flatConfig([]), flatReader);
+
+    expect(result.summary.violations_count).toBe(0);
+  });
+
+  it("carpetas fuera del orden se ignoran (components y configs no estan)", () => {
+    const result = checkReactArchitecture(flatConfig(["pages", "globals"]), flatReader);
+
+    expect(result.reports.flatMap((report) => report.violations)).toEqual([]);
+  });
+});
+

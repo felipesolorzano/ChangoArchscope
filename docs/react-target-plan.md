@@ -36,7 +36,7 @@ via `react.modulesPath` absoluto en `chango-archscope.config.mjs`. Rasgos del pr
 | **F3 Analizadores React** | 6 analizadores JS + integracion en `auditProject`, HTTP y CLI. Spec: `app/modules/audit/specs/react-analyzers.md` | Completa |
 | **F4 Auditoria generalizada** | `phpRoot` → `sourceRoot` en snapshot/grafo (drill app/file/heatmap para React); acento `api_access` + categorias por stack en filtro/leyenda (`auditCategoriesFor`); snapshot cache + fingerprint para React. Specs: `audit-graph.md`, `audit-snapshot-cache.md`, `audit-explorer.md` | Completa |
 | **F5 Plan React** | 8 tareas nuevas derivadas de reglas React; selectores `{ rule, severities? }` como fuente unica de metrica y hallazgos; estado del plan por target (migracion 005). Spec: `app/modules/plan/specs/plan-tasks.md` | Completa |
-| **F6 Arquitectura legacy** | Mapeo carpeta→rol para arboles sin capas, para que el check de capas/acoplamiento de señal | Pendiente |
+| **F6 Arquitectura legacy** | `react.folderOrder`: orden de carpetas de un arbol plano; importar una carpeta de mas arriba es violacion (fluye a audit y plan). Spec: `app/modules/architecture/specs/architecture-analyzers.md` | Completa |
 
 Decisiones tomadas:
 
@@ -109,6 +109,19 @@ de aislar HTTP) → validar. El plan de Laravel sigue igual (8 tareas) y conserv
 migracion 005 copio los 7 estados existentes como `laravel`. Marcar una tarea en React no la marca en
 Laravel. Se subio el espaciado entre filas del grafo (170 → 250) porque con 5 tareas por etapa las
 tarjetas se pisaban.
+
+### F6 — validacion contra el proyecto real
+
+Matriz real de imports entre carpetas: `routes → pages` 184, `pages → components` 163,
+`components → globals` 85, … y `components → pages` 4. Con
+`folderOrder: ["routes", "pages", "partials", ["components", "stripes", "customStripe"], "globals",
+"languages", "configs"]` el check pasa de 0 a 4 violaciones, todas reales: `component.cart.list.js`
+(y sus 3 copias) importa la pagina `page.transfers.prices` para renderizarla como tabla dentro del
+carrito. Aparecen tambien en Auditoria como `architecture_violation`. El check de Laravel no cambia.
+
+Limitacion conocida: el extractor de imports de `architecture` (`tsImports`, regex) no ve
+`require(...)`, asi que esas dependencias (p. ej. `sitemaps → globals`) no entran a la regla. El audit
+usa el parser de Babel y si las ve.
 
 ## 4. Definicion de hecho (global)
 
