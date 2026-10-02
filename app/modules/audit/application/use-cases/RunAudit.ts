@@ -1,4 +1,8 @@
-import type { ArchitectureCheckResult, ArchitectureIssue } from "../../../architecture/domain/value-objects/ArchitectureCheckReport.js";
+import type {
+  ArchitectureCheckResult,
+  ArchitectureIssue,
+  CheckedImportCycle,
+} from "../../../architecture/domain/value-objects/ArchitectureCheckReport.js";
 import type { AuditFinding, AuditFindingSeverity, AuditSnapshot } from "../../domain/value-objects/AuditSnapshot.js";
 import { buildAuditSnapshot } from "../../domain/services/auditSnapshotBuilder.js";
 
@@ -12,10 +16,30 @@ export function runAudit(checkResult: ArchitectureCheckResult): AuditSnapshot {
 }
 
 export function architectureFindings(checkResult: ArchitectureCheckResult): AuditFinding[] {
-  return checkResult.reports.flatMap((report) => [
-    ...report.violations.map((issue) => toFinding(issue, "architecture_violation", "layer-violation", "high")),
-    ...report.couplings.map((issue) => toFinding(issue, "coupling_module", "module-coupling", "medium")),
-  ]);
+  return [
+    ...checkResult.reports.flatMap((report) => [
+      ...report.violations.map((issue) => toFinding(issue, "architecture_violation", "layer-violation", "high")),
+      ...report.couplings.map((issue) => toFinding(issue, "coupling_module", "module-coupling", "medium")),
+    ]),
+    ...(checkResult.cycles ?? []).map(cycleFinding),
+  ];
+}
+
+// XRay X1: un hallazgo por ciclo de imports (mas grave si cruza modulos).
+function cycleFinding(cycle: CheckedImportCycle): AuditFinding {
+  return {
+    category: "architecture_violation",
+    rule: "import-cycle",
+    severity: cycle.crossModule ? "high" : "medium",
+    source: "architecture",
+    module: cycle.modules[0],
+    class: null,
+    file: cycle.file,
+    line: cycle.line,
+    message: `Ciclo de imports (${cycle.files.length} archivos): ${cycle.path.join(" → ")}`,
+    suggestion: "Extrae lo compartido a un modulo comun o invierte la dependencia con un contrato.",
+    details: {},
+  };
 }
 
 function toFinding(

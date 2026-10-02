@@ -14,6 +14,7 @@ export const TASK_RULES: Record<string, TaskRuleSelector[]> = {
   "close-xss-sinks": [{ rule: "dangerously-set-inner-html" }, { rule: "inner-html-assignment" }],
   "remove-manual-copies": [{ rule: "manual-copy-file" }],
   "remove-unused-files": [{ rule: "possibly-unused-file" }],
+  "break-import-cycles": [{ rule: "import-cycle" }],
   "add-characterization-tests": [{ rule: "untested-complex-method" }],
   "add-component-tests": [{ rule: "untested-component", severities: ["high"] }],
   "reduce-n-plus-one": [{ rule: "n-plus-one-query" }],

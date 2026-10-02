@@ -37,6 +37,7 @@ Cada tarea se incluye solo si su metrica es > 0. `dependsOn` se poda a las tarea
 | `resolve-duplicate-migrations` | debt | `duplicatePairs` | — |
 | `remove-manual-copies` | debt | `manual-copy-file` | — |
 | `remove-unused-files` | debt | `possibly-unused-file` | `remove-manual-copies` |
+| `break-import-cycles` | architecture | `import-cycle` (XRay X1) | `add-characterization-tests`, `add-component-tests` |
 | `add-characterization-tests` | testing | `untested-complex-method` | — |
 | `add-component-tests` | testing | `untested-component` con severidad `high` | — |
 | `reduce-n-plus-one` | database | `n-plus-one-query` | `add-characterization-tests` |

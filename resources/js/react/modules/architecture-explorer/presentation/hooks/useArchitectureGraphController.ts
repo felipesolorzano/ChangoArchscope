@@ -5,6 +5,7 @@ import type { ArchitectureGraph } from "../../domain/value-objects/ArchitectureG
 import type { ArchitectureTarget } from "../../domain/value-objects/ArchitectureTarget";
 import { filterArchitectureGraph } from "../utils/filterArchitectureGraph";
 import { selectedNodeFor } from "../utils/selectedNodeFor";
+import { useArchitectureFocusStore } from "../store/architectureFocusStore";
 
 // Carga del grafo (opcionalmente de un modulo) con su estado de carga/error.
 function useArchitectureGraphData(dependencies: ArchitectureProviders, target: ArchitectureTarget, onReload: () => void) {
@@ -37,7 +38,8 @@ function useGraphFilters() {
   const [selectedModule, setSelectedModule] = useState("");
   const [selectedLayer, setSelectedLayer] = useState("");
   const [query, setQuery] = useState("");
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const focusedNodeId = useArchitectureFocusStore((state) => state.focusedNodeId);
+  const setFocusedNodeId = useArchitectureFocusStore((state) => state.setFocusedNodeId);
   const clearFocus = useCallback(() => setFocusedNodeId(null), []);
 
   return {

@@ -12,6 +12,22 @@ function counts(byRule: Record<string, number>, severity = "high"): PlanSignals[
   return Object.fromEntries(Object.entries(byRule).map(([rule, count]) => [rule, { [severity]: count }]));
 }
 
+describe("generatePlan: ciclos de dependencias (XRay X1)", () => {
+  it("break-import-cycles cuenta import-cycle, va despues de remove-unused-files y espera a los tests", () => {
+    const plan = generatePlan(signals({ findingCounts: counts({ "import-cycle": 3, "possibly-unused-file": 1, "untested-component": 2, "untested-complex-method": 1 }) }));
+    const keys = plan.map((task) => task.key);
+
+    expect(keys.indexOf("break-import-cycles")).toBe(keys.indexOf("remove-unused-files") + 1);
+    expect(plan.find((task) => task.key === "break-import-cycles")).toMatchObject({
+      title: "Romper ciclos de dependencias",
+      category: "architecture",
+      metric: 3,
+      dependsOn: ["add-characterization-tests", "add-component-tests"],
+    });
+    expect(plan.find((task) => task.key === "break-import-cycles")?.description).not.toBe("");
+  });
+});
+
 describe("generatePlan con tareas de dependencias", () => {
   const dependencies = (counts: Record<string, number>) => ({ counts, items: {} });
 

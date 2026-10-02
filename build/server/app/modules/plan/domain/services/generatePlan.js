@@ -81,6 +81,13 @@ const TEMPLATES = [
         dependsOn: ["remove-manual-copies"],
     }),
     ruleTemplate({
+        key: "break-import-cycles",
+        title: "Romper ciclos de dependencias",
+        description: "Cortar cada ciclo de imports extrayendo lo compartido o invirtiendo la dependencia con un contrato.",
+        category: "architecture",
+        dependsOn: ["add-characterization-tests", "add-component-tests"],
+    }),
+    ruleTemplate({
         key: "add-characterization-tests",
         title: "Tests de caracterizacion en lo complejo",
         description: "Cubrir con tests los metodos complejos antes de refactorizar.",

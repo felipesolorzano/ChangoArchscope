@@ -37,9 +37,32 @@ export interface ArchitectureGraphSummary {
   cross_module_edges: number;
 }
 
+export interface ImportCycle {
+  files: string[];
+  path: string[];
+  modules: string[];
+  crossModule: boolean;
+  line: number;
+}
+
+export interface FileRank {
+  path: string;
+  module: string;
+  count: number;
+}
+
+/** Ciclos y KPIs de acoplamiento (XRay X1, ver app/modules/architecture/specs/architecture-health.md). */
+export interface ArchitectureHealth {
+  summary: { files: number; imports: number; crossModuleImports: number; modulePairs: number; cycles: number; filesInCycles: number; largestCycle: number };
+  cycles: ImportCycle[];
+  mostImported: FileRank[];
+  mostImporting: FileRank[];
+}
+
 export interface ArchitectureGraph {
   generated_at: string;
   summary: ArchitectureGraphSummary;
   nodes: ArchitectureGraphNode[];
   edges: ArchitectureGraphEdge[];
+  health?: ArchitectureHealth;
 }

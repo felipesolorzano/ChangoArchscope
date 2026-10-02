@@ -5,6 +5,7 @@ import {
   architectureLayerOrder,
 } from "../constants/architectureExplorerView";
 import type { FilteredArchitectureGraph } from "../utils/filterArchitectureGraph";
+import { ArchitectureHealthPanel } from "./ArchitectureHealthPanel";
 import { Stat } from "./Stat";
 
 export interface ArchitectureSidebarProps {
@@ -43,6 +44,7 @@ export function ArchitectureSidebar(props: ArchitectureSidebarProps) {
 
       <SidebarControls {...props} />
       {graph && <SidebarStats graph={graph} filteredGraph={filteredGraph} />}
+      {graph && <ArchitectureHealthPanel graph={graph} />}
       {focusedNode && <FocusBox node={focusedNode} onClear={onClearFocus} />}
       <LayerLegend />
 

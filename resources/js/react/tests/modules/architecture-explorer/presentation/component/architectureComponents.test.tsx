@@ -9,6 +9,7 @@ import { ArchitectureNodeCard } from "../../../../../modules/architecture-explor
 import { ArchitectureCanvas, minimapNodeColor } from "../../../../../modules/architecture-explorer/presentation/components/ArchitectureCanvas";
 import { ArchitectureCheckModal } from "../../../../../modules/architecture-explorer/presentation/components/ArchitectureCheckModal";
 import { ArchitectureSidebar } from "../../../../../modules/architecture-explorer/presentation/components/ArchitectureSidebar";
+import { ArchitectureHealthPanel } from "../../../../../modules/architecture-explorer/presentation/components/ArchitectureHealthPanel";
 import { Stat } from "../../../../../modules/architecture-explorer/presentation/components/Stat";
 import ArchitectureExplorer from "../../../../../modules/architecture-explorer/presentation/pages/ArchitectureExplorer";
 
@@ -211,5 +212,68 @@ describe("ArchitectureExplorer", () => {
 
     expect(markup).toContain("Architecture Explorer");
     expect(markup).toContain("Cargando grafo...");
+  });
+});
+
+describe("ArchitectureHealthPanel", () => {
+  const cycle = (path: string[], crossModule: boolean) => ({ files: [...new Set(path)].sort(), path, modules: [], crossModule, line: 1 });
+  const health = (cycles: ReturnType<typeof cycle>[]) => ({
+    summary: { files: 10, imports: 20, crossModuleImports: 581, modulePairs: 12, cycles: cycles.length, filesInCycles: 3, largestCycle: 2 },
+    cycles,
+    mostImported: Array.from({ length: 7 }, (_, index) => ({ path: `globals/g${index}.js`, module: "globals", count: 150 - index })),
+    mostImporting: [],
+  });
+  const graphWith = (h: ReturnType<typeof health> | undefined) => ({ generated_at: "t", summary: { modules: 1, nodes: 0, edges: 0, cross_module_edges: 0 }, nodes: [], edges: [], health: h }) as ArchitectureGraph;
+
+  it("sin health no renderiza", () => {
+    expect(html(<ArchitectureHealthPanel graph={graphWith(undefined)} />)).toBe("");
+  });
+
+  it("KPIs, ciclos (entre modulos marcados) y los 5 mas importados", () => {
+    const markup = html(<ArchitectureHealthPanel graph={graphWith(health([cycle(["pages/a.js", "globals/b.js", "pages/a.js"], true), cycle(["x.js", "x.js"], false)]))} />);
+
+    expect(markup).toContain("Salud");
+    expect(markup).toMatch(/Ciclos.*2/);
+    expect(markup).toContain("Imports entre módulos");
+    expect(markup).toContain(">581<");
+    expect(markup).toContain("Pares de módulos");
+    expect(markup).toMatch(/architecture-health__cycle architecture-health__cycle--cross" title="pages\/a.js → globals\/b.js → pages\/a.js">a.js → b.js → a.js</);
+    expect(markup).toMatch(/class="architecture-health__cycle" title="x.js → x.js">x.js → x.js</);
+    expect(markup).toContain("Más importados");
+    expect(markup).toContain("globals/g0.js · 150");
+    expect(markup).toContain("globals/g4.js · 146");
+    expect(markup).not.toContain("globals/g5.js");
+    expect(markup).not.toContain("Sin ciclos");
+    expect(markup).not.toContain("más<");
+  });
+
+  it("sin ciclos lo dice en verde; con mas de 8 muestra 8 y cuantos faltan", () => {
+    expect(html(<ArchitectureHealthPanel graph={graphWith(health([]))} />)).toContain('class="architecture-health__ok">Sin ciclos de imports ✓');
+
+    const many = Array.from({ length: 11 }, (_, index) => cycle([`f${index}.js`, `f${index}.js`], false));
+    const markup = html(<ArchitectureHealthPanel graph={graphWith(health(many))} />);
+    expect(markup.match(/architecture-health__cycle"/g)).toHaveLength(8);
+    expect(markup).toContain("+3 más");
+  });
+
+  it("el sidebar lo muestra cuando el grafo trae health", () => {
+    const sidebarBase = {
+      modules: [],
+      filteredGraph: { nodes: [], edges: [] },
+      selectedModule: "",
+      selectedLayer: "",
+      query: "",
+      focusedNode: null,
+      selectedNode: null,
+      onClose: noop,
+      onModuleChange: noop,
+      onLayerChange: noop,
+      onQueryChange: noop,
+      onClearFocus: noop,
+      onRefresh: noop,
+      onOpenCheck: noop,
+    };
+
+    expect(html(<ArchitectureSidebar {...sidebarBase} graph={graphWith(health([]))} />)).toContain("Sin ciclos de imports");
   });
 });

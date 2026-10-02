@@ -54,3 +54,26 @@ Tests de componente con `react-dom/server` (sin DOM) y tests unitarios de las fu
   stack o de pestaña reinicia el estado. En particular Migracion y Diseño usan el mismo componente y no
   deben compartir estado (navegacion, modulo abierto).
 - `browserLocation.search()` devuelve "" si no hay `window` (render en servidor/tests).
+
+## Salud de arquitectura (XRay X1)
+
+`/graph.json` trae `health` (ver `app/modules/architecture/specs/architecture-health.md`):
+`summary { files, imports, crossModuleImports, modulePairs, cycles, filesInCycles, largestCycle }`,
+`cycles[{ files, path, modules, crossModule, line }]`, `mostImported` / `mostImporting`
+(`[{ path, module, count }]`).
+
+- `toArchitectureGraph` copia `health` tal cual (o lo omite si el DTO no lo trae).
+- Foco en un store Zustand (`presentation/store/architectureFocusStore.ts`: `focusedNodeId`,
+  `setFocusedNodeId`, `getServerState` = `getState` para el render estatico de los tests). El
+  controlador lee y escribe el foco ahi (antes era un `useState`); los props existentes siguen igual.
+- Helpers puros (`presentation/utils/architectureHealthView.ts`):
+  - `nodeIdForPath(nodes, path)`: id del nodo `file` con ese `path`, o `null`.
+  - `cycleLabel(cycle)`: los nombres de archivo (ultimo segmento) de `path` unidos por `" → "`.
+- `ArchitectureHealthPanel({ graph })` (en el sidebar, debajo de las metricas, solo si hay `health`):
+  - titulo "Salud"; cuatro `Stat`: "Ciclos", "En ciclos", "Imports entre módulos", "Pares de módulos".
+  - sin ciclos: "Sin ciclos de imports ✓" (clase `architecture-health__ok`); con ciclos: hasta 8
+    botones (`architecture-health__cycle`, `--cross` si `crossModule`) con `cycleLabel` y `title` =
+    `path` completo unido por `" → "`; "+N más" si hay mas de 8.
+  - "Más importados": hasta 5 botones `"<path> · <count>"`.
+  - Click en un ciclo enfoca el primer archivo del ciclo; en un archivo, ese archivo
+    (`nodeIdForPath`; si no esta en el grafo, no hace nada).

@@ -1,6 +1,7 @@
 import type {
   ArchitectureEdgeKind,
   ArchitectureGraph,
+  ArchitectureHealth,
   ArchitectureLayer,
   ArchitectureNodeKind,
 } from "../../domain/value-objects/ArchitectureGraph";
@@ -39,6 +40,7 @@ export interface ArchitectureGraphDto {
   summary: ArchitectureGraphSummaryDto;
   nodes: ArchitectureGraphNodeDto[];
   edges: ArchitectureGraphEdgeDto[];
+  health?: ArchitectureHealth;
 }
 
 export function toArchitectureGraph(dto: ArchitectureGraphDto): ArchitectureGraph {
@@ -52,5 +54,6 @@ export function toArchitectureGraph(dto: ArchitectureGraphDto): ArchitectureGrap
     },
     nodes: dto.nodes.map((node) => ({ ...node })),
     edges: dto.edges.map((edge) => ({ ...edge })),
+    ...(dto.health ? { health: dto.health } : {}),
   };
 }

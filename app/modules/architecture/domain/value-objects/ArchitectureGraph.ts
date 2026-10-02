@@ -1,3 +1,5 @@
+import type { ArchitectureHealth } from "../services/architectureHealth.js";
+
 export type ArchitectureNode = {
   id: string;
   type: "module" | "file";
@@ -32,4 +34,6 @@ export type ArchitectureGraph = {
   summary: ArchitectureGraphSummary;
   nodes: ArchitectureNode[];
   edges: ArchitectureEdge[];
+  /** Ciclos y KPIs de acoplamiento (XRay X1); lo agrega buildArchitectureGraph. */
+  health?: ArchitectureHealth;
 };

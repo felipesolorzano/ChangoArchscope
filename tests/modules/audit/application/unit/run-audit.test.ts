@@ -172,4 +172,34 @@ describe("runAudit", () => {
     expect(snapshot.module).toBe("Billing");
     expect(snapshot.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
+
+  it("un hallazgo import-cycle por ciclo: high entre modulos, medium dentro de uno; sin cycles no aporta", () => {
+    const cycle = (crossModule: boolean, files: string[]) => ({
+      files,
+      path: [...files, files[0]],
+      modules: crossModule ? ["Billing", "Users"] : ["Users"],
+      crossModule,
+      line: 4,
+      file: `/abs/${files[0]}`,
+    });
+    const snapshot = runAudit(buildCheckResult({ reports: [], cycles: [cycle(true, ["Billing/b.ts", "Users/a.ts"]), cycle(false, ["Users/x.ts"])] }));
+
+    expect(snapshot.findings).toEqual([
+      {
+        category: "architecture_violation",
+        rule: "import-cycle",
+        severity: "high",
+        source: "architecture",
+        module: "Billing",
+        class: null,
+        file: "/abs/Billing/b.ts",
+        line: 4,
+        message: "Ciclo de imports (2 archivos): Billing/b.ts → Users/a.ts → Billing/b.ts",
+        suggestion: "Extrae lo compartido a un modulo comun o invierte la dependencia con un contrato.",
+        details: {},
+      },
+      expect.objectContaining({ rule: "import-cycle", severity: "medium", module: "Users", message: "Ciclo de imports (1 archivos): Users/x.ts → Users/x.ts" }),
+    ]);
+    expect(runAudit(buildCheckResult({ reports: [] })).findings).toEqual([]);
+  });
 });

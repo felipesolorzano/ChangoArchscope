@@ -1,3 +1,5 @@
+import type { ImportCycle } from "../services/importCycles.js";
+
 export type ArchitectureIssue = {
   module: string;
   layer: string | null;
@@ -30,6 +32,9 @@ export type ArchitectureCheckSummary = {
   couplings_count: number;
 };
 
+/** Ciclo de imports con la ruta absoluta de su primer archivo (ancla del hallazgo de auditoria). */
+export type CheckedImportCycle = ImportCycle & { file: string };
+
 export type ArchitectureCheckResult = {
   checked_at: string;
   target: string;
@@ -38,4 +43,5 @@ export type ArchitectureCheckResult = {
   passed: boolean;
   summary: ArchitectureCheckSummary;
   reports: ModuleCheckReport[];
+  cycles?: CheckedImportCycle[];
 };
