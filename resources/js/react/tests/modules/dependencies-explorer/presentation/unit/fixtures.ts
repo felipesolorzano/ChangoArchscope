@@ -32,5 +32,7 @@ export const entry = (overrides: Partial<DependencyEntry> = {}): DependencyEntry
   security: { vulnerabilities: [], maxSeverity: null, recommendedAffected: false },
   advisoryError: null,
   support: null,
+  usage: null,
+  group: null,
   ...overrides,
 });

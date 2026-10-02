@@ -3,6 +3,9 @@ import { Router } from "express";
 import { createDrizzleDatabase } from "../../../shared/infrastructure/persistence/sqlite/createDrizzleDatabase.js";
 import { getSqliteDatabaseConnection } from "../../../shared/infrastructure/persistence/sqlite/sqliteDatabaseConnection.js";
 import { getAuditDeps } from "../../../audit/presentation/http/createAuditDeps.js";
+import { generateDependencyReport } from "../../../dependencies/application/use-cases/generateDependencyReport.js";
+import { getDependencyReportDeps } from "../../../dependencies/presentation/http/createDependencyReportDeps.js";
+import { dependencyReportToSignals } from "../../application/services/dependencyReportToSignals.js";
 import { resolveAuditSnapshot } from "../../../audit/presentation/http/auditRequest.js";
 import type { AuditSnapshotProvider } from "../../application/contracts/AuditSnapshotProvider.js";
 import { SqlitePlanTaskStateRepository } from "../../infrastructure/persistence/SqlitePlanTaskStateRepository.js";
@@ -27,6 +30,11 @@ export function planApiRoutes(): Router {
     projectOf: (target) => {
       const config = auditDeps.getConfig();
       return target === "react" ? config.react.modulesPath : config.laravel.modulesPath;
+    },
+    // Sin red: el Plan usa lo que la pestaña Dependencias ya dejo en cache (nunca espera a npm/OSV).
+    dependencySignals: {
+      getSignals: async (target) =>
+        dependencyReportToSignals(await generateDependencyReport(getDependencyReportDeps(), { target, requested: {}, refresh: false, offline: true })),
     },
   });
 

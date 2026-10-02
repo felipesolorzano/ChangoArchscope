@@ -1,8 +1,8 @@
 import { findDuplicateMigrationPairs } from "../../domain/services/findDuplicateMigrationPairs.js";
 import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, matchesSelectors } from "../../domain/services/planTaskRules.js";
 const ITEMS_LIMIT = 100;
-export function findingsForTask(snapshot, taskKey) {
-    const items = collectItems(snapshot, taskKey);
+export function findingsForTask(snapshot, taskKey, dependencies) {
+    const items = dependencies?.items[taskKey] ?? collectItems(snapshot, taskKey);
     return { taskKey, total: items.length, items: items.slice(0, ITEMS_LIMIT) };
 }
 function collectItems(snapshot, taskKey) {

@@ -143,3 +143,18 @@ resumen `vulnerable`, `bySeverity` y `endOfLife`
   "Vulnerabilidades" con una entrada por vulnerabilidad (`cve` o `id`, severidad, `summary`,
   `"corregida en <fixedIn>"` o `"sin version corregida"`, link `https://osv.dev/vulnerability/<id>`);
   `advisoryError` como `"OSV: <error>"`.
+
+## F5: uso y grupos (UI)
+
+Cada paquete trae `usage` (`{ files, inManifest, unused }` o `null`) y `group` (string o `null`); el
+resumen trae `unused`.
+
+- `usageLabel(dep)` (helper): `""` si `usage` es `null`; `"sin uso"` si `unused`; si no,
+  `"<files> archivo(s)"` (`"1 archivo"`, `"N archivos"`) y `" + manifiesto"` si `inManifest`
+  (`"en el manifiesto"` si `files` es 0).
+- `groupMates(dep, all)` (helper): nombres (orden alfabetico) de los otros paquetes con el mismo
+  `group` no nulo.
+- Resumen: nota `"<n> sin uso"` si `unused > 0`.
+- Fila: etiqueta `"sin uso"` (clase `deps-tag--unused`) si `usage.unused`.
+- Drawer: filas "Uso" (`usageLabel`, si no es vacio) y "Actualizar junto con" (`groupMates` unidos por
+  `", "`, si hay alguno).

@@ -17,7 +17,8 @@
     "!app/modules/audit/infrastructure/scan/IncrementalPhpFileScanner.ts",
     "!app/modules/audit/infrastructure/cache/computeRepoFingerprint.ts",
     "!app/modules/audit/presentation/http/createAuditDeps.ts",
-    "!app/modules/dependencies/infrastructure/registry/fetchJson.ts"
+    "!app/modules/dependencies/infrastructure/registry/fetchJson.ts",
+    "!app/modules/dependencies/presentation/http/createDependencyReportDeps.ts"
   ],
   "coverageAnalysis": "perTest",
   "thresholds": {

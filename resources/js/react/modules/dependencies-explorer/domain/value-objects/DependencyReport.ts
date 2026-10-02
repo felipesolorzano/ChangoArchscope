@@ -65,6 +65,8 @@ export interface DependencyEntry {
   security: SecurityAssessment;
   advisoryError: string | null;
   support: SupportStatus | null;
+  usage: { files: number; inManifest: boolean; unused: boolean } | null;
+  group: string | null;
 }
 
 export interface DependencySummaryData {
@@ -75,6 +77,7 @@ export interface DependencySummaryData {
   vulnerable: number;
   bySeverity: Record<Severity, number>;
   endOfLife: number;
+  unused: number;
 }
 
 /** Respuesta de /dependencies.json (ver app/modules/dependencies/specs/package-registries.md). */

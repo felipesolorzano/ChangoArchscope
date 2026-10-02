@@ -2,8 +2,8 @@ import { auditCategoriesFor } from "../../../audit/domain/services/auditCategori
 import { buildPlanGraph } from "../../domain/services/buildPlanGraph.js";
 import { generatePlan } from "../../domain/services/generatePlan.js";
 import { auditSnapshotToSignals } from "../services/auditSnapshotToSignals.js";
-export function buildPlan(snapshot, repository, project) {
-    const tasks = generatePlan(auditSnapshotToSignals(snapshot));
+export function buildPlan(snapshot, repository, project, dependencies) {
+    const tasks = generatePlan({ ...auditSnapshotToSignals(snapshot), dependencies });
     const graph = buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString());
     return { ...graph, checks: auditedChecks(snapshot) };
 }

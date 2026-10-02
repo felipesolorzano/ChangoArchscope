@@ -200,4 +200,35 @@ describe("PlanController", async () => {
     expect(status).not.toHaveBeenCalled();
     expect(repo.setState).not.toHaveBeenCalled();
   });
+
+  it("con proveedor de dependencias: show y update agregan sus tareas; findings devuelve sus items", async () => {
+    const dependencies = { counts: { "remove-unused-packages": 2 }, items: { "remove-unused-packages": [{ file: "/p/package.json", line: 0, rule: "dependency-unused", severity: "low", message: "write" }] } };
+    const getSignals = vi.fn(async (_target: "laravel" | "react") => dependencies);
+    const controller = new PlanController({ snapshots, repository: repository(), projectOf, dependencySignals: { getSignals } });
+
+    const shown = fakeResponse();
+    await controller.show({ query: { target: "react" } } as unknown as Request, shown.response, vi.fn() as unknown as NextFunction);
+    expect(getSignals).toHaveBeenCalledWith("react");
+    expect((shown.json.mock.calls[0][0] as { nodes: Array<{ id: string }> }).nodes.some((node) => node.id === "remove-unused-packages")).toBe(true);
+
+    const updated = fakeResponse();
+    await controller.update({ params: { key: "remove-unused-packages" }, body: { state: "done" }, query: {} } as unknown as Request, updated.response, vi.fn() as unknown as NextFunction);
+    expect((updated.json.mock.calls[0][0] as { nodes: Array<{ id: string }> }).nodes.some((node) => node.id === "remove-unused-packages")).toBe(true);
+
+    const found = fakeResponse();
+    await controller.findings({ params: { key: "remove-unused-packages" }, query: {} } as unknown as Request, found.response, vi.fn() as unknown as NextFunction);
+    expect(found.json.mock.calls[0][0]).toMatchObject({ total: 1, items: [{ message: "write" }] });
+  });
+
+  it("si el proveedor de dependencias falla, el plan sale sin sus tareas", async () => {
+    const controller = new PlanController({ snapshots, repository: repository(), projectOf, dependencySignals: { getSignals: async () => { throw new Error("sin red"); } } });
+    const { status, json, response } = fakeResponse();
+    const next = vi.fn();
+
+    await controller.show({ query: {} } as unknown as Request, response, next as unknown as NextFunction);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(status).toHaveBeenCalledWith(200);
+    expect((json.mock.calls[0][0] as { nodes: Array<{ id: string }> }).nodes.some((node) => node.id === "close-sql-injections")).toBe(true);
+  });
 });

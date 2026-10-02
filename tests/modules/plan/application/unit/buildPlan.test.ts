@@ -126,5 +126,11 @@ describe("buildPlan", () => {
 
     expect(graph.checks.at(-1)?.category).toBe("api_access");
   });
-});
 
+  it("con señales de dependencias agrega sus tareas al grafo", () => {
+    const repository = { getStates: () => ({}), setState: () => {} };
+    const graph = buildPlan(snapshot(), repository, "/php", { counts: { "remove-unused-packages": 4 }, items: {} });
+
+    expect(graph.nodes.find((node) => node.id === "remove-unused-packages")).toMatchObject({ metric: 4, category: "dependencies" });
+  });
+});

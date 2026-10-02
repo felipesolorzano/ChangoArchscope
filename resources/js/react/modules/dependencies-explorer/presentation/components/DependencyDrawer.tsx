@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { DependencyEntry, DependencyReport } from "../../domain/value-objects/DependencyReport";
 import { DependencyVulnerabilities } from "./DependencyVulnerabilities";
 import { useDependenciesExplorerStore } from "../store/dependenciesExplorerStore";
-import { ageLabel, dependencyKey, manifestLabel, statusColor, statusLabel, supportLabel, upgradeHint } from "../utils/dependencyView";
+import { ageLabel, dependencyKey, groupMates, manifestLabel, statusColor, statusLabel, supportLabel, upgradeHint, usageLabel } from "../utils/dependencyView";
 
 function registryUrl(dependency: DependencyEntry): string {
   return dependency.ecosystem === "npm" ? `https://www.npmjs.com/package/${dependency.name}` : `https://packagist.org/packages/${dependency.name}`;
@@ -33,7 +33,7 @@ export function DependencyDrawer({ report, now }: { report: DependencyReport; no
         </button>
       </header>
       <p className="deps-drawer__hint">{upgradeHint(dependency)}</p>
-      <DependencyFacts dependency={dependency} root={report.root} now={now} />
+      <DependencyFacts dependency={dependency} root={report.root} now={now} mates={groupMates(dependency, report.dependencies)} />
       <DependencyVulnerabilities security={dependency.security} advisoryError={dependency.advisoryError} />
       {dependency.lookupError && (
         <p className="deps-drawer__error">
@@ -48,7 +48,9 @@ export function DependencyDrawer({ report, now }: { report: DependencyReport; no
   );
 }
 
-function DependencyFacts({ dependency, root, now }: { dependency: DependencyEntry; root: string; now: Date }) {
+type FactsProps = { dependency: DependencyEntry; root: string; now: Date; mates: string[] };
+
+function DependencyFacts({ dependency, root, now, mates }: FactsProps) {
   const withAge = (version: string | null, publishedAt: string | null) => [version ?? "—", ageLabel(publishedAt, now)].filter(Boolean).join(" · ");
   const rows: Array<[string, string]> = [
     ["Ecosistema", dependency.ecosystem],
@@ -58,12 +60,14 @@ function DependencyFacts({ dependency, root, now }: { dependency: DependencyEntr
     ["Actual", withAge(dependency.current, dependency.currentPublishedAt)],
     ["Recomendada", dependency.recommended ?? "—"],
     ["Ultima", withAge(dependency.latest, dependency.latestPublishedAt)],
-    ...(dependency.support ? [["Soporte", `${dependency.support.product} ${dependency.support.cycle} · ${supportLabel(dependency.support)}`] as [string, string]] : []),
+    ["Soporte", dependency.support ? `${dependency.support.product} ${dependency.support.cycle} · ${supportLabel(dependency.support)}` : ""],
+    ["Uso", usageLabel(dependency)],
+    ["Actualizar junto con", mates.join(", ")],
   ];
 
   return (
     <dl className="deps-drawer__facts">
-      {rows.map(([label, value]) => (
+      {rows.filter(([, value]) => value !== "").map(([label, value]) => (
         <div key={label} className="deps-drawer__fact">
           <dt>{label}</dt>
           <dd>{value}</dd>

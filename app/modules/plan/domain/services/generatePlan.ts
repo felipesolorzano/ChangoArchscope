@@ -46,6 +46,30 @@ const TEMPLATES: PlanTemplate[] = [
     category: "security",
     dependsOn: [],
   }),
+  dependencyTemplate({
+    key: "fix-vulnerable-packages",
+    title: "Corregir paquetes vulnerables",
+    description: "Subir cada paquete con vulnerabilidades conocidas (OSV) a la version que las corrige.",
+    dependsOn: [],
+  }),
+  dependencyTemplate({
+    key: "update-unsupported-runtime",
+    title: "Actualizar runtime sin soporte",
+    description: "Llevar PHP / Node a un ciclo con soporte de seguridad antes de los saltos grandes.",
+    dependsOn: [],
+  }),
+  dependencyTemplate({
+    key: "remove-unused-packages",
+    title: "Quitar dependencias sin uso",
+    description: "Eliminar paquetes declarados que el codigo no referencia: menos que actualizar.",
+    dependsOn: [],
+  }),
+  dependencyTemplate({
+    key: "replace-abandoned-packages",
+    title: "Reemplazar paquetes abandonados o deprecated",
+    description: "Migrar a su reemplazo (o a una alternativa mantenida) con tests que cubran el uso actual.",
+    dependsOn: ["add-characterization-tests", "add-component-tests"],
+  }),
   {
     key: DUPLICATE_FILES_TASK,
     title: "Resolver migraciones a medias (_new)",
@@ -131,8 +155,25 @@ const TEMPLATES: PlanTemplate[] = [
     category: "complexity",
     dependsOn: ["add-component-tests"],
   }),
+  dependencyTemplate({
+    key: "apply-safe-updates",
+    title: "Aplicar actualizaciones patch y minor",
+    description: "Subir en bloque lo que no rompe compatibilidad, con los tests como red.",
+    dependsOn: ["fix-vulnerable-packages", "remove-unused-packages"],
+  }),
+  dependencyTemplate({
+    key: "upgrade-major-versions",
+    title: "Migrar versiones major",
+    description: "Un grupo a la vez (react, eslint, jest...), siguiendo su guia de migracion.",
+    dependsOn: ["apply-safe-updates", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests"],
+  }),
 ];
 // Stryker restore ArrayDeclaration
+
+// Plantilla de actualizacion de paquetes: su metrica la calcula el modulo dependencies.
+function dependencyTemplate(template: Omit<PlanTemplate, "metric" | "category">): PlanTemplate {
+  return { ...template, category: "dependencies", metric: (signals) => signals.dependencies?.counts[template.key] ?? 0 };
+}
 
 // Plantilla cuya metrica es la cantidad de hallazgos que coinciden con sus selectores.
 function ruleTemplate(template: Omit<PlanTemplate, "metric">): PlanTemplate {

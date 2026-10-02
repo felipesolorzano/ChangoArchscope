@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AuditFinding, AuditSnapshot } from "../../../../../app/modules/audit/domain/value-objects/AuditSnapshot.js";
 import { findingsForTask } from "../../../../../app/modules/plan/application/use-cases/findingsForTask.js";
+import type { PlanFinding } from "../../../../../app/modules/plan/domain/value-objects/Plan.js";
 
 function finding(over: Partial<AuditFinding>): AuditFinding {
   return { category: "x", rule: "r", severity: "medium", source: "native", module: "", class: null, file: "/r/F.php", line: 1, message: "m", details: {}, ...over };
@@ -117,5 +118,19 @@ describe("findingsForTask", () => {
 
   it("una tarea sin fuente de hallazgos devuelve lista vacia", () => {
     expect(findingsForTask(snapshot(), "validate-risk-reduction")).toEqual({ taskKey: "validate-risk-reduction", total: 0, items: [] });
+  });
+
+  it("tareas de dependencias: items de las señales (maximo 100, total completo); sin señales, vacio", () => {
+    const item = (index: number): PlanFinding => ({ file: "/p/package.json", line: 0, rule: "dependency-major", severity: "medium", message: `pkg${index}` });
+    const dependencies = { counts: {}, items: { "upgrade-major-versions": Array.from({ length: 120 }, (_, index) => item(index)) } };
+
+    const result = findingsForTask(snapshot(), "upgrade-major-versions", dependencies);
+
+    expect(result.total).toBe(120);
+    expect(result.items).toHaveLength(100);
+    expect(result.items[0].message).toBe("pkg0");
+    expect(findingsForTask(snapshot(), "upgrade-major-versions")).toEqual({ taskKey: "upgrade-major-versions", total: 0, items: [] });
+    expect(findingsForTask(snapshot(), "apply-safe-updates", dependencies)).toEqual({ taskKey: "apply-safe-updates", total: 0, items: [] });
+    expect(findingsForTask(snapshot(), "close-sql-injections", dependencies).total).toBe(2);
   });
 });

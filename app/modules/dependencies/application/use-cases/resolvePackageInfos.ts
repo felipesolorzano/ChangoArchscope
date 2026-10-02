@@ -18,6 +18,7 @@ export type ResolvePackageInfosInput = {
   ttlMs: number;
   refresh: boolean;
   concurrency: number;
+  offline?: boolean;
 };
 
 export function lookupKey(ecosystem: Ecosystem, name: string): string {
@@ -45,6 +46,7 @@ export async function resolvePackageInfos(input: ResolvePackageInfosInput): Prom
     ttlMs: input.ttlMs,
     refresh: input.refresh,
     concurrency: input.concurrency,
+    offline: input.offline,
   });
 
   return new Map([...lookups].map(([key, { value, ...rest }]) => [key, { info: value, ...rest }]));

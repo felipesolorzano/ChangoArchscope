@@ -1,5 +1,7 @@
 import { assessSecurity } from "../../domain/services/advisoryMatching.js";
 import { classifyDependency } from "../../domain/services/classifyDependency.js";
+import type { Usage } from "../../domain/services/packageUsage.js";
+import { upgradeGroup } from "../../domain/services/upgradeGroups.js";
 import { runtimeProduct, supportProductFor } from "../../domain/services/supportProducts.js";
 import { isPast, supportStatus } from "../../domain/services/supportStatus.js";
 import { normalizeVersion } from "../../domain/services/versioning.js";
@@ -13,6 +15,7 @@ import type {
   RuntimeSelection,
 } from "../../domain/value-objects/Dependency.js";
 import type { Advisory, SecurityAssessment, Severity, SupportCycle, SupportStatus } from "../../domain/value-objects/Security.js";
+import { usageKey } from "./measureUsage.js";
 import type { Lookup } from "./resolveCachedLookups.js";
 import { lookupKey, type PackageLookup } from "./resolvePackageInfos.js";
 
@@ -27,6 +30,8 @@ export type DependencyReportEntry = DependencyReport & {
   security: SecurityAssessment;
   advisoryError: string | null;
   support: SupportStatus | null;
+  usage: Usage | null;
+  group: string | null;
 };
 
 export type DependencyReportResult = {
@@ -44,6 +49,7 @@ export type DependencyReportResult = {
     vulnerable: number;
     bySeverity: Record<Severity, number>;
     endOfLife: number;
+    unused: number;
   };
 };
 
@@ -56,6 +62,7 @@ export type BuildDependencyReportInput = {
   calendars: Map<string, Lookup<SupportCycle[] | null>>;
   /** Fecha de hoy (YYYY-MM-DD) para decidir si un ciclo ya vencio. */
   today: string;
+  usage: Map<string, Usage>;
 };
 
 const STATUSES: DependencyStatus[] = ["up_to_date", "patch", "minor", "major", "deprecated", "abandoned", "unknown"];
@@ -97,7 +104,7 @@ function selectedRuntime(runtime: DetectedRuntime, { requested, calendars, today
   };
 }
 
-function reportEntry(dependency: DeclaredDependency, selection: RuntimeSelection, { lookups, advisories, calendars, today }: BuildDependencyReportInput): DependencyReportEntry {
+function reportEntry(dependency: DeclaredDependency, selection: RuntimeSelection, { lookups, advisories, calendars, today, usage }: BuildDependencyReportInput): DependencyReportEntry {
   const key = lookupKey(dependency.ecosystem, dependency.name);
   const lookup = lookups.get(key) ?? NO_LOOKUP;
   const report = classifyDependency(dependency, lookup.info, selection);
@@ -113,6 +120,8 @@ function reportEntry(dependency: DeclaredDependency, selection: RuntimeSelection
     advisoryError: advisory?.error ?? null,
     // Stryker disable next-line ConditionalExpression: sin producto no hay ciclos y supportStatus da null, mutante equivalente.
     support: product === null ? null : supportStatus(product, report.current, cyclesOf(product, calendars), today),
+    usage: usage.get(usageKey(dependency)) ?? null,
+    group: upgradeGroup(dependency.ecosystem, dependency.name),
   };
 }
 
@@ -132,6 +141,7 @@ function summarize(dependencies: DependencyReportEntry[]): DependencyReportResul
     vulnerable: count((entry) => entry.security.vulnerabilities.length > 0),
     bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, count((entry) => entry.security.maxSeverity === severity)])) as Record<Severity, number>,
     endOfLife: count((entry) => entry.support?.isEol === true),
+    unused: count((entry) => entry.usage?.unused === true),
   };
 }
 

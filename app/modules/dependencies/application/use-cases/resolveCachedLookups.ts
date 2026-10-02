@@ -10,7 +10,11 @@ export type ResolveCachedLookupsInput<T> = {
   ttlMs: number;
   refresh: boolean;
   concurrency: number;
+  /** Sin red: solo cache (vencida = stale); lo que no esta queda sin valor. */
+  offline?: boolean;
 };
+
+const NOT_CACHED = "sin datos en cache";
 
 // Una consulta por llave distinta: cache fresca si la hay; si no, consulta (con limite de
 // concurrencia). Una falla cae a la cache vieja (stale) o queda sin valor, sin frenar las demas.
@@ -30,10 +34,14 @@ export async function resolveCachedLookups<T>(input: ResolveCachedLookupsInput<T
   return new Map(keys.map((key) => [key, lookups.get(key) as Lookup<T>]));
 }
 
-async function lookup<T>(key: string, { fetch, cache, now, ttlMs, refresh }: ResolveCachedLookupsInput<T>): Promise<Lookup<T>> {
+async function lookup<T>(key: string, { fetch, cache, now, ttlMs, refresh, offline }: ResolveCachedLookupsInput<T>): Promise<Lookup<T>> {
   const cached = cache.get(key);
+  const fresh = cached !== null && now.getTime() - Date.parse(cached.fetchedAt) < ttlMs;
 
-  if (cached && !refresh && now.getTime() - Date.parse(cached.fetchedAt) < ttlMs) {
+  if (offline) {
+    return cached ? { value: cached.value, fetchedAt: cached.fetchedAt, error: null, stale: !fresh } : { value: null, fetchedAt: null, error: NOT_CACHED, stale: false };
+  }
+  if (cached && !refresh && fresh) {
     return { value: cached.value, fetchedAt: cached.fetchedAt, error: null, stale: false };
   }
 

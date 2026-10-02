@@ -40,7 +40,7 @@ Casos reales que guian el trabajo:
 | **F2 Registros** | Puerto `PackageRegistry` + adaptadores npm (`registry.npmjs.org`) y Packagist (`repo.packagist.org/p2`); cache SQLite con TTL; `/dependencies.json?php=&node=&npm=&refresh=1` con el reporte clasificado. Spec: `app/modules/dependencies/specs/package-registries.md` | Completa |
 | **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar. Spec: `resources/js/react/modules/dependencies-explorer/specs/dependencies-explorer.md` | Completa |
 | **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`). Specs: `app/modules/dependencies/specs/security-and-support.md` y la seccion F4 de `dependencies-explorer.md` | Completa |
-| **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors) | Pendiente |
+| **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors). Specs: `app/modules/dependencies/specs/usage-and-plan.md`, `app/modules/plan/specs/plan-tasks.md` (tareas de dependencias) | Completa |
 | **F6 Librerias copiadas** | Reconocer librerias vendorizadas sin manifiesto por nombre de archivo y cabecera (`/*! jQuery v1.7.1`), y manifiestos anidados que son copias de una libreria | Pendiente |
 
 ### F1 — validacion contra los proyectos reales
@@ -80,6 +80,18 @@ Casos reales que guian el trabajo:
   local sin soporte.
 - El selector de runtime usa los ciclos de endoflife.date (Node 26 → 26.10.0, etc.) con su soporte;
   npm sigue con lineas fijas (no esta en endoflife.date).
+
+### F5 — validacion
+
+- brandsites: 7 paquetes de produccion sin referencias (`detect-browser`, `react-device-detect`,
+  `react-currency-formatter`, `react-tag-manager`, `@elgorditosalsero/react-gtm-hook`, `semver`,
+  `write`); las herramientas (eslint, babel, jest, loaders, `node-sass`) no se marcan. Medicion:
+  ~0.4 s (se extraen los literales una vez por archivo; buscando paquete por archivo eran 6 s).
+- Los de desarrollo nunca son "sin uso": en ChangoArchscope y mc daban falsos positivos
+  (`@stryker-mutator/*` por CLI/config, plugins de gulp cargados indirectamente).
+- Plan: ChangoArchscope (sin hallazgos de auditoria) pasa a tener 4 tareas de dependencias
+  encadenadas (vulnerables, runtime → patch/minor → majors) con sus items; mc suma 6 a las de la
+  auditoria. El Plan lee el reporte sin red (solo cache): ~0.2–0.5 s con cache caliente.
 
 ## 3. Decisiones
 

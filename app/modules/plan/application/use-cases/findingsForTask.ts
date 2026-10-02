@@ -1,12 +1,12 @@
 import type { AuditSnapshot } from "../../../audit/domain/value-objects/AuditSnapshot.js";
-import type { PlanFinding, PlanTaskFindings } from "../../domain/value-objects/Plan.js";
+import type { DependencySignals, PlanFinding, PlanTaskFindings } from "../../domain/value-objects/Plan.js";
 import { findDuplicateMigrationPairs } from "../../domain/services/findDuplicateMigrationPairs.js";
 import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, matchesSelectors } from "../../domain/services/planTaskRules.js";
 
 const ITEMS_LIMIT = 100;
 
-export function findingsForTask(snapshot: AuditSnapshot, taskKey: string): PlanTaskFindings {
-  const items = collectItems(snapshot, taskKey);
+export function findingsForTask(snapshot: AuditSnapshot, taskKey: string, dependencies?: DependencySignals): PlanTaskFindings {
+  const items = dependencies?.items[taskKey] ?? collectItems(snapshot, taskKey);
 
   return { taskKey, total: items.length, items: items.slice(0, ITEMS_LIMIT) };
 }

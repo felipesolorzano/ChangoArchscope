@@ -1,16 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
 
 import type { AuditSnapshotProvider } from "../../application/contracts/AuditSnapshotProvider.js";
+import type { DependencySignalsProvider } from "../../application/contracts/DependencySignalsProvider.js";
 import type { PlanTaskStateRepository } from "../../application/contracts/PlanTaskStateRepository.js";
 import { buildPlan } from "../../application/use-cases/buildPlan.js";
 import { findingsForTask } from "../../application/use-cases/findingsForTask.js";
 import { updateTaskState } from "../../application/use-cases/updateTaskState.js";
+import type { DependencySignals } from "../../domain/value-objects/Plan.js";
 
 export type PlanControllerDeps = {
   snapshots: AuditSnapshotProvider;
   repository: PlanTaskStateRepository;
   /** Proyecto (raiz del stack) del target: el estado del plan se guarda por proyecto. */
   projectOf: (target: string) => string;
+  /** Tareas de actualizacion de paquetes; si falta o falla, el plan sale sin ellas. */
+  dependencySignals?: DependencySignalsProvider;
 };
 
 export class PlanController {
@@ -21,7 +25,7 @@ export class PlanController {
       const target = targetFromRequest(request);
       const snapshot = await this.deps.snapshots.getSnapshot(target);
 
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target)));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target)));
     } catch (error) {
       next(error);
     }
@@ -36,7 +40,7 @@ export class PlanController {
       updateTaskState(this.deps.repository, target, project, String(request.params.key), state);
 
       const snapshot = await this.deps.snapshots.getSnapshot(target);
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, project));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, project, await this.dependencies(target)));
     } catch (error) {
       next(error);
     }
@@ -44,13 +48,19 @@ export class PlanController {
 
   findings = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
+      const target = targetFromRequest(request);
+      const snapshot = await this.deps.snapshots.getSnapshot(target);
 
-      response.status(200).json(findingsForTask(snapshot, String(request.params.key)));
+      response.status(200).json(findingsForTask(snapshot, String(request.params.key), await this.dependencies(target)));
     } catch (error) {
       next(error);
     }
   };
+
+  // El reporte de dependencias es opcional: si no hay proveedor o falla, el plan sale sin esas tareas.
+  private async dependencies(target: "laravel" | "react"): Promise<DependencySignals | undefined> {
+    return this.deps.dependencySignals?.getSignals(target).catch(() => undefined);
+  }
 }
 
 function targetFromRequest(request: Request): "laravel" | "react" {

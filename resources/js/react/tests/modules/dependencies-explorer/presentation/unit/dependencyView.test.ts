@@ -6,6 +6,8 @@ import {
   dependencyKey,
   filterDependencies,
   groupByStatus,
+  groupMates,
+  usageLabel,
   manifestLabel,
   runtimeKindLabel,
   securityBadge,
@@ -206,6 +208,27 @@ describe("runtimeOptions", () => {
   });
 });
 
+describe("uso y grupos", () => {
+  it("usageLabel", () => {
+    const usage = (files: number, inManifest: boolean, unused = false) => entry({ usage: { files, inManifest, unused } });
+
+    expect(usageLabel(entry())).toBe("");
+    expect(usageLabel(usage(0, false, true))).toBe("sin uso");
+    expect(usageLabel(usage(1, false))).toBe("1 archivo");
+    expect(usageLabel(usage(12, false))).toBe("12 archivos");
+    expect(usageLabel(usage(3, true))).toBe("3 archivos + manifiesto");
+    expect(usageLabel(usage(0, true))).toBe("en el manifiesto");
+  });
+
+  it("groupMates: los otros del mismo grupo, por nombre", () => {
+    const all = [entry({ name: "react-dom", group: "react" }), entry({ name: "react", group: "react" }), entry({ name: "@types/react", group: "react" }), entry({ name: "jest", group: "jest" }), entry({ name: "lodash" }), entry({ name: "moment" })];
+
+    expect(groupMates(all[1], all)).toEqual(["@types/react", "react-dom"]);
+    expect(groupMates(all[3], all)).toEqual([]);
+    expect(groupMates(all[4], all)).toEqual([]);
+  });
+});
+
 describe("versionText", () => {
   it("actual → recomendada solo si hay salto", () => {
     expect(versionText(entry({ current: null }))).toBe("—");
@@ -225,6 +248,7 @@ describe("upToDatePercent", () => {
       vulnerable: 0,
       bySeverity: { critical: 0, high: 0, moderate: 0, low: 0, unknown: 0 },
       endOfLife: 0,
+      unused: 0,
     });
 
     expect(upToDatePercent(summary(1, 3))).toBe(33);

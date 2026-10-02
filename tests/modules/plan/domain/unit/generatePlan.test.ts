@@ -12,6 +12,79 @@ function counts(byRule: Record<string, number>, severity = "high"): PlanSignals[
   return Object.fromEntries(Object.entries(byRule).map(([rule, count]) => [rule, { [severity]: count }]));
 }
 
+describe("generatePlan con tareas de dependencias", () => {
+  const dependencies = (counts: Record<string, number>) => ({ counts, items: {} });
+
+  it("sin señales de dependencias no hay tareas de dependencias", () => {
+    expect(generatePlan(signals({ dependencies: dependencies({}) }))).toEqual([]);
+  });
+
+  it("cada tarea de dependencias con su metrica, orden de roadmap y dependencias podadas", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "sql-concatenation": 1, "untested-component": 5, "large-component": 2 }),
+        duplicatePairs: 1,
+        dependencies: dependencies({
+          "fix-vulnerable-packages": 3,
+          "update-unsupported-runtime": 1,
+          "remove-unused-packages": 7,
+          "replace-abandoned-packages": 2,
+          "apply-safe-updates": 9,
+          "upgrade-major-versions": 4,
+        }),
+      }),
+    );
+
+    expect(plan.map((task) => task.key)).toEqual([
+      "close-sql-injections",
+      "fix-vulnerable-packages",
+      "update-unsupported-runtime",
+      "remove-unused-packages",
+      "replace-abandoned-packages",
+      "resolve-duplicate-migrations",
+      "add-component-tests",
+      "split-large-components",
+      "apply-safe-updates",
+      "upgrade-major-versions",
+      "validate-risk-reduction",
+    ]);
+
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+    expect(byKey["fix-vulnerable-packages"]).toMatchObject({ category: "dependencies", metric: 3, dependsOn: [], title: "Corregir paquetes vulnerables" });
+    expect(byKey["update-unsupported-runtime"]).toMatchObject({ metric: 1, dependsOn: [], title: "Actualizar runtime sin soporte" });
+    expect(byKey["remove-unused-packages"]).toMatchObject({ metric: 7, dependsOn: [], title: "Quitar dependencias sin uso" });
+    expect(byKey["replace-abandoned-packages"]).toMatchObject({ metric: 2, dependsOn: ["add-component-tests"], title: "Reemplazar paquetes abandonados o deprecated" });
+    expect(byKey["apply-safe-updates"]).toMatchObject({ metric: 9, dependsOn: ["fix-vulnerable-packages", "remove-unused-packages"], title: "Aplicar actualizaciones patch y minor" });
+    expect(byKey["upgrade-major-versions"]).toMatchObject({
+      metric: 4,
+      dependsOn: ["apply-safe-updates", "update-unsupported-runtime", "add-component-tests"],
+      title: "Migrar versiones major",
+    });
+    expect(byKey["replace-abandoned-packages"].description).not.toBe("");
+    expect(plan.every((task) => task.description.length > 0)).toBe(true);
+  });
+
+  it("los majors y los reemplazos esperan a los tests de caracterizacion si existen", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "untested-complex-method": 3 }),
+        dependencies: dependencies({ "replace-abandoned-packages": 1, "upgrade-major-versions": 1 }),
+      }),
+    );
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+
+    expect(byKey["replace-abandoned-packages"].dependsOn).toEqual(["add-characterization-tests"]);
+    expect(byKey["upgrade-major-versions"].dependsOn).toEqual(["add-characterization-tests"]);
+  });
+
+  it("una sola tarea de dependencias tambien genera el validate final", () => {
+    expect(generatePlan(signals({ dependencies: dependencies({ "upgrade-major-versions": 1 }) })).map((task) => [task.key, task.dependsOn])).toEqual([
+      ["upgrade-major-versions", []],
+      ["validate-risk-reduction", ["upgrade-major-versions"]],
+    ]);
+  });
+});
+
 describe("generatePlan", () => {
   it("deriva tareas solo para las senales presentes (metric > 0)", () => {
     const plan = generatePlan(

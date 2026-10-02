@@ -12,6 +12,28 @@ function memoryCache<T>(rows: Record<string, { value: T; fetchedAt: string }> = 
 
 const base = { now: NOW, ttlMs: 24 * HOUR, refresh: false, concurrency: 4 };
 
+describe("resolveCachedLookups offline", () => {
+  it("no consulta: usa la cache aunque este vencida (stale) y lo que no esta queda sin valor", async () => {
+    const fetch = vi.fn(async () => "x");
+    const old = "2026-01-01T00:00:00.000Z";
+    const fresh = NOW.toISOString();
+
+    const lookups = await resolveCachedLookups({
+      ...base,
+      offline: true,
+      refresh: true,
+      keys: ["old", "fresh", "none"],
+      fetch,
+      cache: memoryCache<string>({ old: { value: "viejo", fetchedAt: old }, fresh: { value: "nuevo", fetchedAt: fresh } }),
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(lookups.get("old")).toEqual({ value: "viejo", fetchedAt: old, error: null, stale: true });
+    expect(lookups.get("fresh")).toEqual({ value: "nuevo", fetchedAt: fresh, error: null, stale: false });
+    expect(lookups.get("none")).toEqual({ value: null, fetchedAt: null, error: "sin datos en cache", stale: false });
+  });
+});
+
 describe("resolveCachedLookups", () => {
   it("consulta llaves distintas, guarda en cache y respeta la cache fresca", async () => {
     const fetch = vi.fn(async (key: string) => `v-${key}`);

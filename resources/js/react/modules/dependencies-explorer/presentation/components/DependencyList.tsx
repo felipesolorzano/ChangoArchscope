@@ -54,6 +54,7 @@ function DependencyRow({ dependency, now }: { dependency: DependencyEntry; now: 
           </span>
         )}
         {dependency.support?.isEol && <span className="deps-tag deps-tag--eol">sin soporte</span>}
+        {dependency.usage?.unused && <span className="deps-tag deps-tag--unused">sin uso</span>}
       </span>
       <span className="deps-row__versions">{versionText(dependency)}</span>
       <span className="deps-row__age">{ageLabel(dependency.currentPublishedAt, now)}</span>

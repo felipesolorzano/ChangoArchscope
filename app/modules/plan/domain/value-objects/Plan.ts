@@ -10,6 +10,13 @@ export type PlanSignals = {
   categoryCounts: Record<string, number>;
   duplicatePairs: number;
   skippedFiles: number;
+  /** Trabajo de actualizacion de paquetes (modulo dependencies): metrica e items por tarea. */
+  dependencies?: DependencySignals;
+};
+
+export type DependencySignals = {
+  counts: Record<string, number>;
+  items: Record<string, PlanFinding[]>;
 };
 
 // Tarea derivada (plantilla): estructura sin estado.

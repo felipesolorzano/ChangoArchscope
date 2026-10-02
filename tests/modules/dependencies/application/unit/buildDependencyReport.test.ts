@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { buildDependencyReport } from "../../../../../app/modules/dependencies/application/use-cases/buildDependencyReport.js";
 import type { PackageLookup } from "../../../../../app/modules/dependencies/application/use-cases/resolvePackageInfos.js";
 import type { Lookup } from "../../../../../app/modules/dependencies/application/use-cases/resolveCachedLookups.js";
+import { usageKey } from "../../../../../app/modules/dependencies/application/use-cases/measureUsage.js";
+import type { Usage } from "../../../../../app/modules/dependencies/domain/services/packageUsage.js";
 import type { Advisory, SupportCycle } from "../../../../../app/modules/dependencies/domain/value-objects/Security.js";
 import type { DeclaredDependency, DependencyInventory, PackageInfo } from "../../../../../app/modules/dependencies/domain/value-objects/Dependency.js";
 
@@ -39,8 +41,10 @@ const lookups = new Map<string, PackageLookup>([
 const noAdvisories = new Map<string, Lookup<Advisory[]>>();
 const noCalendars = new Map<string, Lookup<SupportCycle[] | null>>();
 
-const build = (requested = {}, advisories = noAdvisories, calendars = noCalendars) =>
-  buildDependencyReport({ inventory, lookups, requested, generatedAt: "2026-10-02T12:00:00.000Z", advisories, calendars, today: "2026-10-02" });
+const noUsage = new Map<string, Usage>();
+
+const build = (requested = {}, advisories = noAdvisories, calendars = noCalendars, usage = noUsage) =>
+  buildDependencyReport({ inventory, lookups, requested, generatedAt: "2026-10-02T12:00:00.000Z", advisories, calendars, today: "2026-10-02", usage });
 
 const lookup = <T,>(value: T, error: string | null = null): Lookup<T> => ({ value, fetchedAt: "2026-10-02T00:00:00.000Z", error, stale: false });
 
@@ -85,7 +89,25 @@ describe("buildDependencyReport", () => {
       vulnerable: 0,
       bySeverity: { critical: 0, high: 0, moderate: 0, low: 0, unknown: 0 },
       endOfLife: 0,
+      unused: 0,
     });
+  });
+
+  it("agrega uso (null si no se midio), grupo y cuenta los sin uso", () => {
+    const usage = new Map<string, Usage>([
+      [usageKey(inventory.dependencies[0]), { files: 3, inManifest: false, unused: false }],
+      [usageKey(inventory.dependencies[1]), { files: 0, inManifest: false, unused: true }],
+      [usageKey(inventory.dependencies[3]), { files: 0, inManifest: false, unused: true }],
+    ]);
+    const report = build({}, noAdvisories, noCalendars, usage);
+
+    expect(report.dependencies[0]).toMatchObject({ usage: { files: 3, inManifest: false, unused: false }, group: null });
+    expect(report.dependencies[1].usage).toEqual({ files: 0, inManifest: false, unused: true });
+    expect(report.dependencies[2].usage).toBeNull();
+    expect(report.summary.unused).toBe(2);
+
+    const grouped = buildDependencyReport({ inventory: { ...inventory, dependencies: [dep("react-dom", "1.0.0")] }, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars: noCalendars, today: "", usage: noUsage });
+    expect(grouped.dependencies[0].group).toBe("react");
   });
 
   it("agrega vulnerabilidades por paquete, el error de la consulta y el resumen por severidad", () => {
@@ -126,7 +148,7 @@ describe("buildDependencyReport", () => {
       ["react", lookup<SupportCycle[] | null>([{ cycle: "16", latest: "16.14.0", releaseDate: null, eol: true, support: null }])],
     ]);
 
-    const report = buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars, today: "2026-10-02" });
+    const report = buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars, today: "2026-10-02", usage: noUsage });
 
     expect(report.runtimes[0]).toMatchObject({
       kind: "node",
@@ -142,6 +164,6 @@ describe("buildDependencyReport", () => {
     expect(report.summary.endOfLife).toBe(1);
 
     const unknownCalendar = new Map([["nodejs", lookup<SupportCycle[] | null>(null)]]);
-    expect(buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars: unknownCalendar, today: "2026-10-02" }).runtimes[0]).toMatchObject({ support: null, cycles: [] });
+    expect(buildDependencyReport({ inventory: reactInventory, lookups, requested: {}, generatedAt: "", advisories: noAdvisories, calendars: unknownCalendar, today: "2026-10-02", usage: noUsage }).runtimes[0]).toMatchObject({ support: null, cycles: [] });
   });
 });

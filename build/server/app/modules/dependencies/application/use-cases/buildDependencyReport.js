@@ -1,8 +1,10 @@
 import { assessSecurity } from "../../domain/services/advisoryMatching.js";
 import { classifyDependency } from "../../domain/services/classifyDependency.js";
+import { upgradeGroup } from "../../domain/services/upgradeGroups.js";
 import { runtimeProduct, supportProductFor } from "../../domain/services/supportProducts.js";
 import { isPast, supportStatus } from "../../domain/services/supportStatus.js";
 import { normalizeVersion } from "../../domain/services/versioning.js";
+import { usageKey } from "./measureUsage.js";
 import { lookupKey } from "./resolvePackageInfos.js";
 const STATUSES = ["up_to_date", "patch", "minor", "major", "deprecated", "abandoned", "unknown"];
 const SEVERITIES = ["critical", "high", "moderate", "low", "unknown"];
@@ -36,7 +38,7 @@ function selectedRuntime(runtime, { requested, calendars, today }) {
         cycles: cycles.map((cycle) => ({ cycle: cycle.cycle, latest: cycle.latest, eol: cycle.eol, isEol: isPast(cycle.eol, today) })),
     };
 }
-function reportEntry(dependency, selection, { lookups, advisories, calendars, today }) {
+function reportEntry(dependency, selection, { lookups, advisories, calendars, today, usage }) {
     const key = lookupKey(dependency.ecosystem, dependency.name);
     const lookup = lookups.get(key) ?? NO_LOOKUP;
     const report = classifyDependency(dependency, lookup.info, selection);
@@ -51,6 +53,8 @@ function reportEntry(dependency, selection, { lookups, advisories, calendars, to
         advisoryError: advisory?.error ?? null,
         // Stryker disable next-line ConditionalExpression: sin producto no hay ciclos y supportStatus da null, mutante equivalente.
         support: product === null ? null : supportStatus(product, report.current, cyclesOf(product, calendars), today),
+        usage: usage.get(usageKey(dependency)) ?? null,
+        group: upgradeGroup(dependency.ecosystem, dependency.name),
     };
 }
 function cyclesOf(product, calendars) {
@@ -67,6 +71,7 @@ function summarize(dependencies) {
         vulnerable: count((entry) => entry.security.vulnerabilities.length > 0),
         bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, count((entry) => entry.security.maxSeverity === severity)])),
         endOfLife: count((entry) => entry.support?.isEol === true),
+        unused: count((entry) => entry.usage?.unused === true),
     };
 }
 function selectedVersion(raw) {

@@ -10,7 +10,7 @@ export class PlanController {
         try {
             const target = targetFromRequest(request);
             const snapshot = await this.deps.snapshots.getSnapshot(target);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target)));
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target)));
         }
         catch (error) {
             next(error);
@@ -24,7 +24,7 @@ export class PlanController {
             const project = this.deps.projectOf(target);
             updateTaskState(this.deps.repository, target, project, String(request.params.key), state);
             const snapshot = await this.deps.snapshots.getSnapshot(target);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository, project));
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, project, await this.dependencies(target)));
         }
         catch (error) {
             next(error);
@@ -32,13 +32,18 @@ export class PlanController {
     };
     findings = async (request, response, next) => {
         try {
-            const snapshot = await this.deps.snapshots.getSnapshot(targetFromRequest(request));
-            response.status(200).json(findingsForTask(snapshot, String(request.params.key)));
+            const target = targetFromRequest(request);
+            const snapshot = await this.deps.snapshots.getSnapshot(target);
+            response.status(200).json(findingsForTask(snapshot, String(request.params.key), await this.dependencies(target)));
         }
         catch (error) {
             next(error);
         }
     };
+    // El reporte de dependencias es opcional: si no hay proveedor o falla, el plan sale sin esas tareas.
+    async dependencies(target) {
+        return this.deps.dependencySignals?.getSignals(target).catch(() => undefined);
+    }
 }
 function targetFromRequest(request) {
     return request.query.target === "react" ? "react" : "laravel";

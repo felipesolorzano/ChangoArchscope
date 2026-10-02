@@ -174,6 +174,32 @@ function updateHint(dependency: DependencyEntry): string {
   return VERSION_GAPS.has(dependency.status) ? `Actualizar a ${recommended}` : "Al dia";
 }
 
+export function usageLabel(dependency: DependencyEntry): string {
+  const { usage } = dependency;
+
+  if (usage === null) {
+    return "";
+  }
+  if (usage.unused) {
+    return "sin uso";
+  }
+  if (usage.files === 0) {
+    return "en el manifiesto";
+  }
+  return `${usage.files} ${usage.files === 1 ? "archivo" : "archivos"}${usage.inManifest ? " + manifiesto" : ""}`;
+}
+
+// Los otros paquetes del mismo grupo (se actualizan juntos), por nombre.
+export function groupMates(dependency: DependencyEntry, all: DependencyEntry[]): string[] {
+  if (dependency.group === null) {
+    return [];
+  }
+  return all
+    .filter((other) => other.group === dependency.group && other.name !== dependency.name)
+    .map((other) => other.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function versionText(dependency: DependencyEntry): string {
   if (dependency.current === null) {
     return "—";

@@ -52,6 +52,31 @@ Las tareas basadas en reglas solo aparecen si el stack produce esas reglas: un p
 genera las de React y viceversa (salvo `close-code-injection` y `break-god-classes`, que aplican a
 los dos).
 
+## Tareas de dependencias (F5 de `docs/dependencies-plan.md`)
+
+- `PlanSignals.dependencies?: { counts: Record<taskKey, number>; items: Record<taskKey, PlanFinding[]> }`
+  (lo arma `dependencyReportToSignals` a partir del reporte de `dependencies` generado SIN red, desde
+  su cache: el Plan nunca espera a npm/OSV; ver `app/modules/dependencies/specs/usage-and-plan.md`).
+  Sin `dependencies` las metricas son 0.
+- Nuevas plantillas (metrica = `counts[key]`), en este lugar del roadmap:
+
+| key | categoria | dependsOn |
+|---|---|---|
+| `fix-vulnerable-packages` | dependencies | — (despues de `close-xss-sinks`) |
+| `update-unsupported-runtime` | dependencies | — |
+| `remove-unused-packages` | dependencies | — |
+| `replace-abandoned-packages` | dependencies | `add-characterization-tests`, `add-component-tests` |
+| `apply-safe-updates` | dependencies | `fix-vulnerable-packages`, `remove-unused-packages` |
+| `upgrade-major-versions` | dependencies | `apply-safe-updates`, `update-unsupported-runtime`, `add-characterization-tests`, `add-component-tests` |
+
+  (las cuatro primeras van antes de `resolve-duplicate-migrations`; las dos ultimas despues de
+  `split-large-components`, antes de `validate-risk-reduction`).
+- `findingsForTask(snapshot, taskKey, dependencies?)`: para estas tareas devuelve
+  `dependencies.items[taskKey]` (maximo 100; `total` completo); sin `dependencies`, vacio.
+- `PlanController` pide las señales a un puerto `DependencySignalsProvider.getSignals(target)` en
+  show, update y findings; si falla, el plan sale sin tareas de dependencias (no rompe el plan).
+- `buildPlan(snapshot, repository, project, dependencies?)`.
+
 ## Pares de migracion a medias (`findDuplicateMigrationPairs`, puro, `domain/services`)
 
 Fuente UNICA de `duplicatePairs` (metrica) y de los items de `resolve-duplicate-migrations` (panel):
