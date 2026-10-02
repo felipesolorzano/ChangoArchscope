@@ -59,4 +59,6 @@ export type DependencyReport = DeclaredDependency & {
   deprecation: string | null;
   replacement: string | null;
   limitedByRuntime: boolean;
+  currentPublishedAt: string | null;
+  latestPublishedAt: string | null;
 };

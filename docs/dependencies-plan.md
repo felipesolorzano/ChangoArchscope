@@ -38,7 +38,7 @@ Casos reales que guian el trabajo:
 |---|---|---|
 | **F1 Deteccion** | Manifiestos (`package.json`/lock v1-3, `composer.json`/lock) abajo de la raiz del stack y el mas cercano hacia arriba (hasta la raiz git); runtimes declarados (o locales); helpers de versiones (npm y composer); clasificacion pura de un paquete contra sus releases y el runtime elegido; `GET /dependencies.json` (inventario). Spec: `app/modules/dependencies/specs/dependency-detection.md` | Completa |
 | **F2 Registros** | Puerto `PackageRegistry` + adaptadores npm (`registry.npmjs.org`) y Packagist (`repo.packagist.org/p2`); cache SQLite con TTL; `/dependencies.json?php=&node=&npm=&refresh=1` con el reporte clasificado. Spec: `app/modules/dependencies/specs/package-registries.md` | Completa |
-| **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar | Pendiente |
+| **F3 Pestaña** | `dependencies-explorer`: selector de runtime (default = detectado), KPI, lista por estado (actual → recomendada → ultima, antiguedad), drawer de detalle, boton Refrescar. Spec: `resources/js/react/modules/dependencies-explorer/specs/dependencies-explorer.md` | Completa |
 | **F4 Seguridad y soporte** | Advisories de `api.osv.dev` (npm y Packagist) y fin de soporte de runtimes/frameworks (`endoflife.date`) | Pendiente |
 | **F5 Uso y Plan** | Archivos que importan cada paquete (esfuerzo), dependencias declaradas sin uso, grupos que se actualizan juntos; tareas en Plan ordenadas (seguridad → deprecated/abandonado → patch/minor → majors) | Pendiente |
 | **F6 Librerias copiadas** | Reconocer librerias vendorizadas sin manifiesto por nombre de archivo y cabecera (`/*! jQuery v1.7.1`), y manifiestos anidados que son copias de una libreria | Pendiente |
@@ -63,6 +63,13 @@ Casos reales que guian el trabajo:
   limitados por runtime (p. ej. `jest` → 29.7.0, `@testing-library/react` → 14.3.1); con Node 22,
   solo 4. `eslint` no tiene version no deprecated compatible con Node 22.0.0 (la 10 pide `^22.13`):
   la UI (F3) debe explicar "requiere un runtime mas nuevo".
+
+### F3 — validacion en el navegador
+
+- React (ChangoArchscope): 48% al dia; elegir Node 14.21.3 recalcula (11 limitados por el runtime
+  en vez de 7). Chips filtran, el drawer muestra versiones con antiguedad y el link al registro.
+- Laravel (mc): 14% al dia, 2 deprecated (`gulp-foreach`, `gulp-util`) con su mensaje. Sin errores
+  de consola. El reporte trae ahora `currentPublishedAt`/`latestPublishedAt` (backend, F3).
 
 ## 3. Decisiones
 

@@ -113,7 +113,8 @@ type DependencyStatus = "up_to_date" | "patch" | "minor" | "major" | "deprecated
 ```
 
 `classifyDependency(dependency, info | null, selection)` → `DependencyReport` = la dependencia +
-`{ current, latest, recommended, gap, status, deprecation, replacement, limitedByRuntime }`:
+`{ current, latest, recommended, gap, status, deprecation, replacement, limitedByRuntime,
+currentPublishedAt, latestPublishedAt }`:
 
 - `current`: `installed`, si no `minVersionOf(constraint)`, si no `null`.
 - Releases estables: version valida sin prerelease. `latest`: la mayor estable (`null` si no hay).
@@ -129,6 +130,8 @@ type DependencyStatus = "up_to_date" | "patch" | "minor" | "major" | "deprecated
 - `status`: sin `info` o sin releases estables → `unknown`; `abandoned` no nulo → `abandoned`; la
   release igual a `current` esta deprecated → `deprecated`; si no, `gap` (`none` → `up_to_date`).
 - `deprecation`: mensaje de la release `current` (o `null`). `replacement`: `abandoned` si es string.
+- `currentPublishedAt` / `latestPublishedAt`: `publishedAt` de la release estable igual a `current` /
+  `latest` (`null` si no esta o no tiene fecha). Sirven para mostrar la antiguedad (F3).
 
 ## Endpoint
 

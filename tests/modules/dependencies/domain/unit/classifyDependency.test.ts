@@ -43,7 +43,20 @@ describe("classifyDependency", () => {
       deprecation: null,
       replacement: null,
       limitedByRuntime: false,
+      currentPublishedAt: null,
+      latestPublishedAt: null,
     });
+  });
+
+  it("expone la fecha de la release actual y de la ultima", () => {
+    const releases = [
+      release("1.0.0", { publishedAt: "2018-01-01T00:00:00Z" }),
+      release("1.2.0", { publishedAt: "2019-01-01T00:00:00Z" }),
+      release("1.3.0", { publishedAt: "2024-05-01T00:00:00Z" }),
+    ];
+
+    expect(classifyDependency(dep(), info(releases), {})).toMatchObject({ currentPublishedAt: "2019-01-01T00:00:00Z", latestPublishedAt: "2024-05-01T00:00:00Z" });
+    expect(classifyDependency(dep({ installed: "0.9.0" }), info(releases), {})).toMatchObject({ currentPublishedAt: null, latestPublishedAt: "2024-05-01T00:00:00Z" });
   });
 
   it("patch / minor / major segun la distancia a la recomendada; ignora prereleases", () => {

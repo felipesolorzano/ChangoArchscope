@@ -8,6 +8,8 @@ import PlanExplorer from "../../plan-explorer/presentation/pages/PlanExplorer.js
 import { createPlanExplorerDependencies } from "../../plan-explorer/infrastructure/factory/createPlanExplorerDependencies.js";
 import MigrationExplorer from "../../migration-explorer/presentation/pages/MigrationExplorer.js";
 import { createMigrationExplorerDependencies } from "../../migration-explorer/infrastructure/factory/createMigrationExplorerDependencies.js";
+import DependenciesExplorer from "../../dependencies-explorer/presentation/pages/DependenciesExplorer.js";
+import { createDependenciesExplorerDependencies } from "../../dependencies-explorer/infrastructure/factory/createDependenciesExplorerDependencies.js";
 import { mapTargetFor, type ProjectTarget } from "../domain/projectTarget.js";
 import { useProjectTargetStore } from "./store/projectTargetStore.js";
 
@@ -28,7 +30,9 @@ const planDependencies = createPlanExplorerDependencies({
   taskUrl: "/plan/tasks",
 });
 
-type AppView = "architecture" | "audit" | "plan" | "migration" | "design";
+const dependenciesDependencies = createDependenciesExplorerDependencies({ reportUrl: "/dependencies.json" });
+
+type AppView = "architecture" | "audit" | "plan" | "migration" | "design" | "dependencies";
 
 const TABS: Array<{ id: AppView; label: string }> = [
   { id: "architecture", label: "Arquitectura" },
@@ -36,6 +40,7 @@ const TABS: Array<{ id: AppView; label: string }> = [
   { id: "plan", label: "Plan" },
   { id: "migration", label: "Migración" },
   { id: "design", label: "Diseño" },
+  { id: "dependencies", label: "Dependencias" },
 ];
 
 const TARGETS: Array<{ id: ProjectTarget; label: string }> = [
@@ -108,6 +113,8 @@ function ActiveView({ view, target }: { view: AppView; target: ProjectTarget }) 
       return <AuditExplorer key={key} target={target} dependencies={auditDependencies} />;
     case "plan":
       return <PlanExplorer key={key} target={target} dependencies={planDependencies} />;
+    case "dependencies":
+      return <DependenciesExplorer key={key} target={target} dependencies={dependenciesDependencies} />;
     default:
       return <MigrationExplorer key={key} dependencies={mapDependencies[view]} />;
   }

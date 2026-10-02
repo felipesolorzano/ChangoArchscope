@@ -7,11 +7,13 @@ export function classifyDependency(dependency, info, selection) {
     const stable = stableReleases(info?.releases ?? []);
     const usable = stable.filter((release) => release.deprecated === null);
     const compatible = usable.filter((release) => fitsRuntime(release, selection, dependency.ecosystem));
-    const latest = stable.at(-1)?.version ?? null;
+    const latestRelease = stable.at(-1);
+    const latest = latestRelease?.version ?? null;
     const bestUsable = usable.at(-1)?.version ?? null;
     const recommended = compatible.at(-1)?.version ?? null;
     const gap = current !== null && recommended !== null ? versionGap(current, recommended) : "none";
-    const deprecation = stable.find((release) => release.version === current)?.deprecated ?? null;
+    const currentRelease = stable.find((release) => release.version === current);
+    const deprecation = currentRelease?.deprecated ?? null;
     return {
         ...dependency,
         current,
@@ -22,6 +24,8 @@ export function classifyDependency(dependency, info, selection) {
         deprecation,
         replacement: typeof abandoned === "string" ? abandoned : null,
         limitedByRuntime: bestUsable !== recommended,
+        currentPublishedAt: currentRelease?.publishedAt ?? null,
+        latestPublishedAt: latestRelease?.publishedAt ?? null,
     };
 }
 // Releases con version valida y sin prerelease, de menor a mayor.

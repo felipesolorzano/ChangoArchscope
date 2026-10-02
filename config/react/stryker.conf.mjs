@@ -10,6 +10,7 @@ export default {
     "resources/js/react/modules/architecture-explorer/infrastructure/react-flow/architectureFlowMapping.ts",
     "resources/js/react/modules/architecture-explorer/infrastructure/react-flow/architectureFlowLayout.ts",
     "resources/js/react/modules/architecture-explorer/presentation/utils/selectedNodeFor.ts",
+    "resources/js/react/modules/dependencies-explorer/presentation/utils/dependencyView.ts",
     "!resources/js/react/tests/**/*.test.{ts,tsx}",
   ],
   vitest: {
