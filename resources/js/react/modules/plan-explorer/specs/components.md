@@ -38,3 +38,23 @@ componente muestra para un estado dado. Las interacciones viven en stores/hooks.
 
 - `usePlanController` se compone de `usePlanGraph` (grafo, carga, error, recarga y cambio de estado) y
   `useTaskFindings` (tarea enfocada y sus hallazgos). Mismo contrato que antes.
+
+## Red de seguridad (XRay X3)
+
+`/protection.json?target=` (ver `app/modules/protection/specs/protection-baseline.md`) →
+`{ root, tests: { testFiles, sourceFiles }, coverage, mutation, e2e, level }`.
+
+- `PlanProvider.getProtection(target)`; `HttpPlanProvider` con `protectionUrl` (target en la query;
+  error HTTP → lanza con el status). `createPlanExplorerDependencies({ planUrl, taskUrl,
+  protectionUrl })`; el shell usa `"/protection.json"`.
+- `usePlanController` carga tambien la proteccion (`protection`, `null` mientras carga o si falla:
+  no rompe el plan).
+- Helpers puros (`presentation/constants/protectionView.ts`):
+  - `protectionLevelLabel(level)`: Ninguna, Baja, Media, Alta. `protectionLevelColor`: none `#dc2626`,
+    low `#ea580c`, medium `#ca8a04`, high `#16a34a`.
+  - `protectionParts(baseline)`: `["<testFiles> archivos de test · <sourceFiles> fuente",
+    "Cobertura <percent>%" | "Cobertura: sin reporte", "Mutation <score>%" | "Mutation: sin reporte",
+    "E2E <passed>/<passed+failed>" | "E2E: sin reporte"]`.
+- `ProtectionStrip({ protection })` en el encabezado de Plan (nada si es `null`): "Red de seguridad:
+  <nivel>" con el color del nivel, las partes separadas, y con nivel `none` la ayuda "Sin red de
+  seguridad: empezar por tests de caracterizacion".

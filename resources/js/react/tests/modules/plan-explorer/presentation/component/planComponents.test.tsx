@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { PlanGraph, PlanGraphNode, PlanTaskFindings } from "../../../../../modules/plan-explorer/domain/value-objects/PlanGraph";
+import { ProtectionStrip } from "../../../../../modules/plan-explorer/presentation/components/ProtectionStrip";
 import type { PlanExplorerDependencies } from "../../../../../modules/plan-explorer/infrastructure/factory/createPlanExplorerDependencies";
 import { PlanCanvas } from "../../../../../modules/plan-explorer/presentation/components/PlanCanvas";
 import { PlanFindingsDrawer, findingsCountLabel } from "../../../../../modules/plan-explorer/presentation/components/PlanFindingsDrawer";
@@ -150,3 +151,29 @@ describe("PlanExplorer", () => {
     expect(markup).toContain("Cargando plan de remediacion...");
   });
 });
+
+describe("ProtectionStrip", () => {
+  const protection = {
+    root: "/p",
+    tests: { testFiles: 0, sourceFiles: 269 },
+    coverage: null,
+    mutation: null,
+    e2e: null,
+    level: "none" as const,
+  };
+
+  it("sin datos no renderiza; con nivel none muestra la ayuda", () => {
+    expect(renderToStaticMarkup(<ProtectionStrip protection={null} />)).toBe("");
+
+    const markup = renderToStaticMarkup(<ProtectionStrip protection={protection} />);
+    expect(markup).toMatch(/Red de seguridad: <strong style="color:#dc2626">Ninguna<\/strong>/);
+    expect(markup).toContain("0 archivos de test · 269 fuente");
+    expect(markup).toContain("Cobertura: sin reporte");
+    expect(markup).toContain("Sin red de seguridad: empezar por tests de caracterizacion");
+  });
+
+  it("con nivel distinto de none no muestra la ayuda", () => {
+    expect(renderToStaticMarkup(<ProtectionStrip protection={{ ...protection, level: "medium" }} />)).not.toContain("Sin red de seguridad");
+  });
+});
+

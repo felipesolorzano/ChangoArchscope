@@ -5,6 +5,7 @@ import type { PlanExplorerDependencies } from "../../infrastructure/factory/crea
 import { toPlanFlowEdges, toPlanFlowNodes } from "../../infrastructure/react-flow/planFlowAdapter";
 import { PlanCanvas } from "../components/PlanCanvas";
 import { PlanFindingsDrawer } from "../components/PlanFindingsDrawer";
+import { ProtectionStrip } from "../components/ProtectionStrip";
 import { PLAN_STATE_OPTIONS, stateColor, stateLabel } from "../constants/planView";
 import { usePlanController } from "../hooks/usePlanController";
 import { registerPlanInteractions } from "../store/planInteractionsStore";
@@ -17,7 +18,7 @@ interface PlanExplorerProps {
 }
 
 export default function PlanExplorer({ dependencies, target }: PlanExplorerProps) {
-  const { graph, loading, error, setTaskState, focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask } =
+  const { graph, loading, error, setTaskState, focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask, protection } =
     usePlanController(dependencies, target);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
           <p className="plan-explorer__sub">
             {total} tareas derivadas de la auditoria · click en un estado para marcar avance (se guarda)
           </p>
+          <ProtectionStrip protection={protection} />
         </div>
         <PlanProgress byState={graph?.summary.by_state ?? {}} />
       </header>

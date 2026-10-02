@@ -8,11 +8,13 @@ export interface PlanExplorerDependencies {
 export function createPlanExplorerDependencies({
   planUrl,
   taskUrl,
+  protectionUrl,
 }: {
   planUrl: string;
   taskUrl: string;
+  protectionUrl: string;
 }): PlanExplorerDependencies {
   return {
-    planProvider: new HttpPlanProvider(planUrl, taskUrl),
+    planProvider: new HttpPlanProvider(planUrl, taskUrl, protectionUrl),
   };
 }

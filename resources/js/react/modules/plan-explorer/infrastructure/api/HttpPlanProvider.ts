@@ -1,5 +1,6 @@
 import type { PlanProvider } from "../../application/contracts/PlanProvider";
 import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
+import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 
 async function readJson<T>(response: Response, message: string): Promise<T> {
   if (!response.ok) {
@@ -10,7 +11,20 @@ async function readJson<T>(response: Response, message: string): Promise<T> {
 }
 
 export class HttpPlanProvider implements PlanProvider {
-  constructor(private readonly planUrl: string, private readonly taskUrl: string) {}
+  constructor(
+    private readonly planUrl: string,
+    private readonly taskUrl: string,
+    private readonly protectionUrl: string,
+  ) {}
+
+  async getProtection(target: "laravel" | "react" = "laravel"): Promise<ProtectionBaseline> {
+    const url = new URL(this.protectionUrl, window.location.origin);
+    url.searchParams.set("target", target);
+
+    const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+
+    return readJson<ProtectionBaseline>(response, "No se pudo cargar la proteccion");
+  }
 
   async getPlan(target: "laravel" | "react" = "laravel"): Promise<PlanGraph> {
     const url = new URL(this.planUrl, window.location.origin);

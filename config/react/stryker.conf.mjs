@@ -12,6 +12,7 @@ export default {
     "resources/js/react/modules/architecture-explorer/presentation/utils/selectedNodeFor.ts",
     "resources/js/react/modules/dependencies-explorer/presentation/utils/dependencyView.ts",
     "resources/js/react/modules/architecture-explorer/presentation/utils/architectureHealthView.ts",
+    "resources/js/react/modules/plan-explorer/presentation/constants/protectionView.ts",
     "!resources/js/react/tests/**/*.test.{ts,tsx}",
   ],
   vitest: {

@@ -19,7 +19,8 @@ export default {
     ignoredPaths: ["**/__tests__/**", "**/*.test.*"],
     ignoreHidden: true,
     // Tests fuera de modulesPath: el audit los usa solo como evidencia de testing.
-    testPaths: ["resources/js/react/tests"],
+    // brandsites no tiene tests; para ChangoArchscope: ["resources/js/react/tests"].
+    testPaths: [],
     // Arbol plano legacy: carpetas de arriba (entrada) hacia abajo (base). Importar una carpeta de
     // mas arriba es una violacion de arquitectura. Un array agrupa carpetas del mismo nivel.
     folderOrder: ["routes", "pages", "partials", ["components", "stripes", "customStripe"], "globals", "languages", "configs"],

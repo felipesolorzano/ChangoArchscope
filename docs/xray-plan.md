@@ -17,7 +17,7 @@ estado), Migracion/Diseño (bounded contexts).
 | **X1 Ciclos y salud de arquitectura** | Ciclos de imports (SCC) y KPIs del grafo (imports entre modulos, pares de modulos, archivos mas importados / que mas importan) en `/graph.json`; ciclos en el check → hallazgos `import-cycle` en Auditoria → tarea `break-import-cycles` en Plan; panel "Salud" en Arquitectura. Spec: `app/modules/architecture/specs/architecture-health.md` | Completa |
 | **X1b Grafo de includes PHP** | Resolver `include`/`require` del PHP legacy (rutas literales, relativas y con constantes declaradas en la config: `_PRIVATE_DIR`, `_COMPUMATIC_DIR`...) para que mc tenga grafo, ciclos y hubs. Spec: `app/modules/architecture/specs/php-includes.md` | Completa |
 | **X2 Exports muertos** | Exports que nadie importa (estilo Knip) en JS/TS: el parser registra `exports`, regla `unused-export` en Auditoria (dead_code), tarea `remove-unused-exports` en Plan. Specs: `js-source-parser.md`, `react-analyzers.md`, `plan-tasks.md` | Completa |
-| **X3 Linea base de proteccion** | Leer reportes que el proyecto ya genera (coverage, Stryker, Playwright) → KPI "Legacy Protection" | Pendiente |
+| **X3 Linea base de proteccion** | Bounded context `protection`: evidencia de tests + reportes existentes (Istanbul/lcov/clover, Stryker JSON/HTML, Infection, Playwright) → nivel none/low/medium/high; `/protection.json`; franja "Red de seguridad" en Plan. Spec: `app/modules/protection/specs/protection-baseline.md` | Completa |
 | **X4 Objetivos de caracterizacion** | Ranking de componentes/flujos a proteger (riesgo × sin tests × uso) + esqueletos MSW/RTL/Playwright descargables | Pendiente |
 | **X5 Candidatos a codemod** | Patrones AST (lifecycles deprecated, imports de librerias deprecated, jQuery) con archivos afectados y tests que los cubren | Pendiente |
 | **X6 Plan por fases con quality gates** | Fases 0–10 con metas medibles que se validan solas contra las metricas | Pendiente |
@@ -60,4 +60,15 @@ estado), Migracion/Diseño (bounded contexts).
   `validateOtherField`); el legacy usa sobre todo `export default` de componentes que si se importan.
   Plan: `remove-unused-exports` despues de `remove-unused-files` (39).
 - Solo JS/TS: el PHP legacy no exporta (funciones/clases sin uso es otra regla).
+
+### X3 — validacion
+
+- mc: 8 tests reales (4 `*.test.php` y 4 de navegador `*.test.mjs` en `admin/reports-src/tests`),
+  1733 fuentes, sin reportes → nivel "Baja". Los `*Test.php` sueltos de los ejemplos de PHPExcel
+  ya no cuentan (PHPUnit: solo dentro de `tests/` o `test/`).
+- brandsites: 0 tests propios; con la config actual `react.testPaths` sigue apuntando a los tests de
+  ChangoArchscope (por eso muestra 28): hay que actualizarlo al cambiar `modulesPath`.
+- ChangoArchscope: 28 tests, mutation 100% leido de sus reportes HTML de Stryker (formato con
+  `app.report = …` y uniones `"+"`), sin reporte de cobertura → "Media".
+- Los tests cuentan aunque `ignoredPaths` los excluya del analisis.
 

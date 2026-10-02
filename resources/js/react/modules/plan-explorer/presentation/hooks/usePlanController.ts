@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
 import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
+import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 
 type PlanTarget = "laravel" | "react";
 
@@ -75,6 +76,24 @@ function useTaskFindings(dependencies: PlanExplorerDependencies, target: PlanTar
   return { focusedTaskKey, taskFindings, findingsLoading, openTask, closeTask };
 }
 
+// Red de seguridad del stack (XRay X3); null mientras carga o si falla (no rompe el plan).
+function useProtection(dependencies: PlanExplorerDependencies, target: PlanTarget) {
+  const [protection, setProtection] = useState<ProtectionBaseline | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    dependencies.planProvider
+      .getProtection(target)
+      .then((baseline) => active && setProtection(baseline))
+      .catch(() => active && setProtection(null));
+    return () => {
+      active = false;
+    };
+  }, [dependencies.planProvider, target]);
+
+  return { protection };
+}
+
 export function usePlanController(dependencies: PlanExplorerDependencies, target: PlanTarget) {
-  return { ...usePlanGraph(dependencies, target), ...useTaskFindings(dependencies, target) };
+  return { ...usePlanGraph(dependencies, target), ...useTaskFindings(dependencies, target), ...useProtection(dependencies, target) };
 }

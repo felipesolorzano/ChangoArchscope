@@ -28,6 +28,7 @@ const auditDependencies = createAuditExplorerDependencies({
 const planDependencies = createPlanExplorerDependencies({
   planUrl: "/plan.json",
   taskUrl: "/plan/tasks",
+  protectionUrl: "/protection.json",
 });
 
 const dependenciesDependencies = createDependenciesExplorerDependencies({ reportUrl: "/dependencies.json" });
