@@ -88,7 +88,7 @@ describe("resolveAuditSnapshot — compatibilidad PHP", () => {
 
 describe("resolveAuditSnapshot — react.testPaths", () => {
   const jsParser = {
-    parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+    parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [], legacyReactApis: [] }),
   };
   const withTests = (): ArchitectureConfig => ({ ...config(), react: { ...config().react, testPaths: ["/react-tests"] } });
 
@@ -121,7 +121,7 @@ describe("resolveAuditSnapshot — react.testPaths", () => {
 describe("resolveAuditSnapshot — fingerprint combinado", () => {
   it("las huellas se separan: (ab, c) y (a, bc) no colisionan", async () => {
     const jsParser = {
-      parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+      parse: (file: string) => ({ file, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [], legacyReactApis: [] }),
     };
     let prints = { src: "ab", tests: "c" };
     const fingerprint = vi.fn(async (root: string) => (root === "/react-tests" ? prints.tests : prints.src));

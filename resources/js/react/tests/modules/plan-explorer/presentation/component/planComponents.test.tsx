@@ -1,17 +1,24 @@
 import { ReactFlowProvider } from "@xyflow/react";
+import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { copyText } from "../../../../../modules/plan-explorer/infrastructure/browser/copyText";
 
 import type { PlanGraph, PlanGraphNode, PlanTaskFindings } from "../../../../../modules/plan-explorer/domain/value-objects/PlanGraph";
 import { CharacterizationDrawer } from "../../../../../modules/plan-explorer/presentation/components/CharacterizationDrawer";
 import { CharacterizationList } from "../../../../../modules/plan-explorer/presentation/components/CharacterizationList";
-import { useCharacterizationStore } from "../../../../../modules/plan-explorer/presentation/store/characterizationStore";
+import { CodemodDrawer } from "../../../../../modules/plan-explorer/presentation/components/CodemodDrawer";
+import { CodemodList } from "../../../../../modules/plan-explorer/presentation/components/CodemodList";
+import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/presentation/store/planDrawerStore";
 import { ProtectionStrip } from "../../../../../modules/plan-explorer/presentation/components/ProtectionStrip";
 import type { PlanExplorerDependencies } from "../../../../../modules/plan-explorer/infrastructure/factory/createPlanExplorerDependencies";
 import { PlanCanvas } from "../../../../../modules/plan-explorer/presentation/components/PlanCanvas";
 import { PlanFindingsDrawer, findingsCountLabel } from "../../../../../modules/plan-explorer/presentation/components/PlanFindingsDrawer";
 import { PlanTaskCard } from "../../../../../modules/plan-explorer/presentation/components/PlanTaskCard";
 import PlanExplorer from "../../../../../modules/plan-explorer/presentation/pages/PlanExplorer";
+
+vi.mock("../../../../../modules/plan-explorer/infrastructure/browser/copyText", () => ({ copyText: vi.fn() }));
 
 const task = (over: Partial<PlanGraphNode> = {}): PlanGraphNode => ({
   id: "remove-jquery",
@@ -174,6 +181,7 @@ describe("ProtectionStrip", () => {
     expect(markup).toContain("Cobertura: sin reporte");
     expect(markup).toContain("Sin red de seguridad: empezar por tests de caracterizacion");
     expect(markup).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Que proteger primero<\/button>/);
+    expect(markup).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Codemods<\/button>/);
   });
 
   it("con nivel distinto de none no muestra la ayuda", () => {
@@ -220,15 +228,94 @@ describe("CharacterizationDrawer", () => {
   const provider = { getCharacterization: () => new Promise(() => {}) } as never;
 
   it("cerrado no renderiza; abierto muestra la carga y el boton Cerrar", () => {
-    useCharacterizationStore.setState({ open: false });
+    usePlanDrawerStore.setState({ drawer: "codemods" });
     expect(renderToStaticMarkup(<CharacterizationDrawer provider={provider} target="react" />)).toBe("");
 
-    useCharacterizationStore.setState({ open: true });
+    usePlanDrawerStore.setState({ drawer: "characterization" });
     const markup = renderToStaticMarkup(<CharacterizationDrawer provider={provider} target="react" />);
     expect(markup).toContain("Que proteger primero");
     expect(markup).toContain("Calculando objetivos…");
     expect(markup).toContain(">Cerrar<");
-    useCharacterizationStore.setState({ open: false });
+    usePlanDrawerStore.setState({ drawer: null });
+  });
+});
+
+describe("CodemodList (XRay X5)", () => {
+  const automatic = {
+    pattern: "unsafe-lifecycles",
+    title: "Lifecycles deprecados",
+    tool: "react-codemod",
+    command: 'npx react-codemod rename-unsafe-lifecycles "a.js" "b.js"',
+    note: "Solo renombra a UNSAFE_*",
+    files: [
+      { file: "a.js", occurrences: 3, testedBy: ["a.test.js", "a.spec.js"] },
+      { file: "b.js", occurrences: 1, testedBy: [] },
+    ],
+    occurrences: 4,
+    protectedFiles: 1,
+  };
+  const manual = { ...automatic, pattern: "money-format", title: "money_format", tool: null, command: null, note: "", files: [{ file: "c.php", occurrences: 2, testedBy: ["CTest.php"] }], occurrences: 2, protectedFiles: 1 };
+
+  it("titulo, herramienta, resumen, aviso, nota, comando con Copiar y archivos", () => {
+    const markup = renderToStaticMarkup(<CodemodList plan={{ candidates: [automatic, manual] }} />);
+
+    expect(markup).toContain("Lifecycles deprecados");
+    expect(markup).toContain("Automatico · react-codemod");
+    expect(markup).toContain("2 archivos · 4 ocurrencias · 1/2 con tests");
+    expect(markup).toContain("Caracterizar antes: 1 archivo sin tests");
+    expect(markup).toContain("Solo renombra a UNSAFE_*");
+    expect(markup).toContain("<code>npx react-codemod rename-unsafe-lifecycles &quot;a.js&quot; &quot;b.js&quot;</code>");
+    expect(markup.match(/>Copiar<\/button>/g)).toHaveLength(1);
+    expect(markup).toContain("<summary>Archivos</summary>");
+    expect(markup).toMatch(/a\.js<\/span><span[^>]*>3<\/span><span class="plan-codemods__tested" title="a\.test\.js, a\.spec\.js">con tests<\/span>/);
+    expect(markup).toMatch(/b\.js<\/span><span[^>]*>1<\/span><span class="plan-codemods__untested" title="">sin tests<\/span>/);
+    expect(markup).toContain("Manual");
+  });
+
+  it("un candidato manual con todo cubierto no muestra aviso, nota ni comando", () => {
+    const markup = renderToStaticMarkup(<CodemodList plan={{ candidates: [manual] }} />);
+
+    expect(markup).not.toContain("plan-codemods__warning");
+    expect(markup).not.toContain("<code>");
+    expect(markup).not.toContain("plan-codemods__note");
+  });
+
+  it("Copiar copia el comando del candidato", () => {
+    const copy = vi.mocked(copyText);
+    copy.mockClear();
+    const buttons: Array<{ props: { onClick?: () => void; children?: unknown } }> = [];
+    const collect = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(collect);
+      if (!isValidElement(node)) return;
+      // Los subcomponentes de la lista no usan hooks: se expanden llamandolos.
+      if (typeof node.type === "function") return collect((node.type as (props: unknown) => unknown)(node.props));
+      if (node.type === "button") buttons.push(node as never);
+      collect((node.props as { children?: unknown }).children);
+    };
+    collect(CodemodList({ plan: { candidates: [automatic, manual] } }));
+
+    buttons.find((button) => button.props.children === "Copiar")!.props.onClick!();
+    expect(copy).toHaveBeenCalledWith('npx react-codemod rename-unsafe-lifecycles "a.js" "b.js"');
+  });
+
+  it("sin candidatos lo dice", () => {
+    expect(renderToStaticMarkup(<CodemodList plan={{ candidates: [] }} />)).toContain("No hay APIs legacy con reemplazo conocido");
+  });
+});
+
+describe("CodemodDrawer (XRay X5)", () => {
+  const provider = { getCodemods: () => new Promise(() => {}) } as never;
+
+  it("solo con el panel codemods: carga y boton Cerrar", () => {
+    usePlanDrawerStore.setState({ drawer: "characterization" });
+    expect(renderToStaticMarkup(<CodemodDrawer provider={provider} target="react" />)).toBe("");
+
+    usePlanDrawerStore.setState({ drawer: "codemods" });
+    const markup = renderToStaticMarkup(<CodemodDrawer provider={provider} target="react" />);
+    expect(markup).toContain("Candidatos a codemod");
+    expect(markup).toContain("Buscando APIs legacy…");
+    expect(markup).toContain(">Cerrar<");
+    usePlanDrawerStore.setState({ drawer: null });
   });
 });
 

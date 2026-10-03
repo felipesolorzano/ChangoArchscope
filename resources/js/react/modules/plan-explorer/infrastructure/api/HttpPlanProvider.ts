@@ -1,5 +1,6 @@
 import type { PlanProvider } from "../../application/contracts/PlanProvider";
 import type { CharacterizationPlan } from "../../domain/value-objects/Characterization";
+import type { CodemodPlan } from "../../domain/value-objects/Codemod";
 import type { PlanGraph, PlanTaskFindings, PlanTaskState } from "../../domain/value-objects/PlanGraph";
 import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 
@@ -17,7 +18,17 @@ export class HttpPlanProvider implements PlanProvider {
     private readonly taskUrl: string,
     private readonly protectionUrl: string,
     private readonly characterizationUrl: string,
+    private readonly codemodsUrl: string,
   ) {}
+
+  async getCodemods(target: "laravel" | "react" = "laravel"): Promise<CodemodPlan> {
+    const url = new URL(this.codemodsUrl, window.location.origin);
+    url.searchParams.set("target", target);
+
+    const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+
+    return readJson<CodemodPlan>(response, "No se pudieron calcular los candidatos a codemod");
+  }
 
   async getCharacterization(target: "laravel" | "react" = "laravel"): Promise<CharacterizationPlan> {
     const url = new URL(this.characterizationUrl, window.location.origin);

@@ -54,7 +54,7 @@ const reader: SourceTreeReader = {
 };
 
 const parser: PhpSourceParser = {
-  parse: () => ({ file: "", classes: [], functions: [], referencedNames: [], securityIssues: [], sqlLiterals: [] }),
+  parse: () => ({ file: "", classes: [], functions: [], referencedNames: [], securityIssues: [], sqlLiterals: [], functionCalls: [] }),
 };
 
 function fakeResponse() {
@@ -181,7 +181,7 @@ describe("AuditGraphController", async () => {
     );
     const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => [file], readText: () => "" };
     const phpParser: PhpSourceParser = {
-      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [{ rule: "eval-usage", line: 1 }], sqlLiterals: [] }),
+      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [{ rule: "eval-usage", line: 1 }], sqlLiterals: [], functionCalls: [] }),
     };
     const jsParser: JsSourceParser = {
       parse: (path) => ({
@@ -193,6 +193,7 @@ describe("AuditGraphController", async () => {
         securityIssues: [{ rule: "eval-usage", line: 1 }],
         httpCalls: [],
         globalAccesses: [],
+        legacyReactApis: [],
       }),
     };
     const controller = new AuditGraphController({ getConfig: buildConfig, reader: scanningReader, parser: phpParser, check, jsParser });
@@ -241,7 +242,7 @@ describe("AuditHealthController", () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) => checkResult(options.target, options.module));
     const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => ["/abs/react/pages/a.js"], readText: () => "" };
     const jsParser: JsSourceParser = {
-      parse: (path) => ({ file: path, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] }),
+      parse: (path) => ({ file: path, linesCount: 1, classes: [], functions: [], imports: [], securityIssues: [], httpCalls: [], globalAccesses: [], legacyReactApis: [] }),
     };
     const controller = new AuditHealthController({ getConfig: buildConfig, reader: scanningReader, parser, check, jsParser });
     const { status, json, response } = fakeResponse();
@@ -258,7 +259,7 @@ describe("AuditHealthController", () => {
     const check = vi.fn((_c, _r, options: { target: string; module: string | null }) => checkResult(options.target, options.module));
     const scanningReader: SourceTreeReader = { ...reader, walkFiles: () => ["/abs/app/modules/admin/X.php"], readText: () => "" };
     const phpParser: PhpSourceParser = {
-      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [], sqlLiterals: [] }),
+      parse: (path) => ({ file: path, classes: [], functions: [], referencedNames: [], securityIssues: [], sqlLiterals: [], functionCalls: [] }),
     };
     const controller = new AuditHealthController({ getConfig: buildConfig, reader: scanningReader, parser: phpParser, check });
     const { json, response } = fakeResponse();

@@ -65,4 +65,6 @@ export type AuditSnapshot = {
   skippedFiles: PhpParseFailure[];
   /** Archivos analizados por los analizadores nativos (con y sin hallazgos), rutas absolutas ordenadas. */
   scannedFiles: string[];
+  /** Por archivo (ruta absoluta), los tests que lo cubren (XRay X5); solo archivos con tests. */
+  testedBy: Record<string, string[]>;
 };

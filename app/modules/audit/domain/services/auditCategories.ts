@@ -9,6 +9,7 @@ const COMMON: AuditCategoryCheck[] = [
   { category: "coupling_low_level", label: "Acoplamiento de bajo nivel" },
   { category: "dead_code", label: "Código muerto" },
   { category: "testing", label: "Tests" },
+  { category: "legacy_api", label: "APIs legacy" },
 ];
 
 const BY_TARGET: Record<"laravel" | "react", AuditCategoryCheck[]> = {

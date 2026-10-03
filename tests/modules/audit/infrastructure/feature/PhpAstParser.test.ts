@@ -778,4 +778,25 @@ function f() {
 
     expect(structure.sqlLiterals).toHaveLength(2);
   });
+
+  it("registra las llamadas a funciones globales por nombre literal, en orden de aparicion (XRay X5)", () => {
+    const source = `<?php
+function run($rows) {
+  $parts = SPLIT(",", $row);
+  while (list($k, $v) = \\each($rows)) {
+    $obj->each($rows);
+    Foo::each($rows);
+    $fn($rows);
+    (function () {})();
+  }
+}
+utf8_encode($x);
+`;
+
+    expect(parser.parse("a.php", source).functionCalls).toEqual([
+      { name: "split", line: 3 },
+      { name: "each", line: 4 },
+      { name: "utf8_encode", line: 11 },
+    ]);
+  });
 });

@@ -41,6 +41,13 @@ describe("accentStroke", () => {
     expect(others.map(accentStroke)).not.toContain(accentStroke("api_access"));
   });
 
+  it("legacy_api tiene su propio color, distinto de 'mixed' y de los demas accents (XRay X5)", () => {
+    const others = ["security", "database", "complexity", "testing", "dead_code", "coupling_low_level", "php_compatibility", "api_access", "mixed"] as const;
+
+    expect(accentStroke("legacy_api")).toMatch(/^#/);
+    expect(others.map(accentStroke)).not.toContain(accentStroke("legacy_api"));
+  });
+
   it("php_compatibility tiene su propio color, distinto de 'mixed'", () => {
     expect(accentStroke("php_compatibility")).not.toBe(accentStroke("mixed"));
   });

@@ -159,7 +159,8 @@ salvo que se declaren en `react.testPaths` (ver Integracion).
   mismas extensiones (sin `ignoredPaths`) y sus archivos se pasan SOLO a `jsTestingAnalyzer` como
   evidencia; no generan findings propios ni cuentan como uso para `dead_code`.
 - `auditProject` acepta `js?: { root, extensions, ignoredPaths, parser, testRoots? }`. Si viene, escanea con
-  `scanJsFiles` (o el `scanJsFiles` inyectado) y suma los findings de los 6 analizadores; los
+  `scanJsFiles` (o el `scanJsFiles` inyectado) y suma los findings de los 6 analizadores (mas
+  `jsLegacyApiAnalyzer` y `testedBy`, XRay X5: ver `legacy-api.md`); los
   archivos que no parsean van a `skippedFiles`; `riskBreakdown` deriva modulos desde `js.root`
   cuando no hay raiz PHP.
 - HTTP (`resolveAuditSnapshot`) y CLI (`audit --target react`) pasan `js` con

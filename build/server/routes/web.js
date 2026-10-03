@@ -7,6 +7,7 @@ import { migrationApiRoutes } from "../app/modules/migration/presentation/routes
 import { dependenciesApiRoutes } from "../app/modules/dependencies/presentation/routes/api.js";
 import { protectionApiRoutes } from "../app/modules/protection/presentation/routes/api.js";
 import { characterizationApiRoutes } from "../app/modules/characterization/presentation/routes/api.js";
+import { codemodApiRoutes } from "../app/modules/codemods/presentation/routes/api.js";
 export function webRoutes() {
     const router = Router();
     router.use(architectureWebRoutes());
@@ -18,6 +19,7 @@ export function webRoutes() {
     router.use(dependenciesApiRoutes());
     router.use(protectionApiRoutes());
     router.use(characterizationApiRoutes());
+    router.use(codemodApiRoutes());
     router.use(coreWebRoutes());
     return router;
 }

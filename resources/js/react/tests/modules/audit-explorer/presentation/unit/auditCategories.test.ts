@@ -12,6 +12,7 @@ describe("auditCategoriesFor", () => {
       { accent: "testing", label: "Testing" },
       { accent: "dead_code", label: "Codigo muerto" },
       { accent: "coupling_low_level", label: "Acoplamiento" },
+      { accent: "legacy_api", label: "APIs legacy" },
     ]);
   });
 
@@ -23,6 +24,7 @@ describe("auditCategoriesFor", () => {
       { accent: "testing", label: "Testing" },
       { accent: "dead_code", label: "Codigo muerto" },
       { accent: "coupling_low_level", label: "Acoplamiento" },
+      { accent: "legacy_api", label: "APIs legacy" },
     ]);
   });
 });

@@ -14,6 +14,7 @@ const CATEGORIES_BY_TARGET: Record<AuditTarget, AuditCategory[]> = {
     { accent: "testing", label: "Testing" },
     { accent: "dead_code", label: "Codigo muerto" },
     { accent: "coupling_low_level", label: "Acoplamiento" },
+    { accent: "legacy_api", label: "APIs legacy" },
   ],
   react: [
     { accent: "security", label: "Seguridad" },
@@ -22,6 +23,7 @@ const CATEGORIES_BY_TARGET: Record<AuditTarget, AuditCategory[]> = {
     { accent: "testing", label: "Testing" },
     { accent: "dead_code", label: "Codigo muerto" },
     { accent: "coupling_low_level", label: "Acoplamiento" },
+    { accent: "legacy_api", label: "APIs legacy" },
   ],
 };
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { skeletonLabel, targetKindLabel, targetReasons } from "../../../../../modules/plan-explorer/presentation/constants/characterizationView";
-import { useCharacterizationStore } from "../../../../../modules/plan-explorer/presentation/store/characterizationStore";
+import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/presentation/store/planDrawerStore";
 import type { CharacterizationTarget } from "../../../../../modules/plan-explorer/domain/value-objects/Characterization";
 
 const target = (overrides: Partial<CharacterizationTarget> = {}): CharacterizationTarget => ({
@@ -42,14 +42,17 @@ describe("characterizationView", () => {
   });
 });
 
-describe("characterizationStore", () => {
-  beforeEach(() => useCharacterizationStore.setState({ open: false }));
+describe("planDrawerStore (XRay X5)", () => {
+  beforeEach(() => usePlanDrawerStore.setState({ drawer: null }));
 
-  it("abre y cierra; el snapshot de servidor es el estado actual", () => {
-    expect(useCharacterizationStore.getInitialState().open).toBe(false);
-    useCharacterizationStore.getState().setOpen(true);
+  it("un solo panel abierto a la vez; el snapshot de servidor es el estado actual", () => {
+    expect(usePlanDrawerStore.getInitialState().drawer).toBeNull();
+    usePlanDrawerStore.getState().setDrawer("characterization");
+    usePlanDrawerStore.getState().setDrawer("codemods");
 
-    expect(useCharacterizationStore.getState().open).toBe(true);
-    expect((useCharacterizationStore as unknown as { getServerState: () => { open: boolean } }).getServerState().open).toBe(true);
+    expect(usePlanDrawerStore.getState().drawer).toBe("codemods");
+    expect((usePlanDrawerStore as unknown as { getServerState: () => { drawer: string | null } }).getServerState().drawer).toBe("codemods");
+    usePlanDrawerStore.getState().setDrawer(null);
+    expect(usePlanDrawerStore.getState().drawer).toBeNull();
   });
 });

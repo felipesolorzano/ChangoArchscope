@@ -35,6 +35,7 @@ nivel, codigo muerto, seguridad, datos/API, testing). Es el equivalente de `PhpS
   securityIssues: JsSecurityIssue[];
   httpCalls: JsHttpCall[];
   globalAccesses: JsGlobalAccess[];
+  legacyReactApis: JsLegacyReactApi[]; // XRay X5, ver legacy-api.md
 }
 ```
 

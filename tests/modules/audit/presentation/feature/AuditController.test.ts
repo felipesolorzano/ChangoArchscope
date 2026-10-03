@@ -70,6 +70,7 @@ const parser: PhpSourceParser = {
     referencedNames: [],
     securityIssues: [{ rule: "eval-usage", line: 1 }],
     sqlLiterals: [],
+    functionCalls: [],
   }),
 };
 
@@ -135,6 +136,7 @@ describe("AuditController", async () => {
         securityIssues: [{ rule: "eval-usage", line: 1 }],
         httpCalls: [],
         globalAccesses: [],
+        legacyReactApis: [],
       }),
     };
     const config = () => ({ ...buildConfig(), react: { ...buildConfig().react, ignoredPaths: ["**/__tests__/**"] } });
@@ -165,6 +167,7 @@ describe("AuditController", async () => {
         securityIssues: [],
         httpCalls: [],
         globalAccesses: [],
+        legacyReactApis: [],
       })),
     };
     const fingerprint = vi.fn(async () => "fp-1");

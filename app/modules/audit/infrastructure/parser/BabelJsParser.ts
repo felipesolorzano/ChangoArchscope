@@ -12,6 +12,7 @@ import type {
   JsGlobalAccess,
   JsHttpCall,
   JsImport,
+  JsLegacyReactApi,
   JsSecurityIssue,
 } from "../../domain/value-objects/JsFileStructure.js";
 
@@ -26,7 +27,13 @@ type FileFacts = {
   securityIssues: JsSecurityIssue[];
   httpCalls: JsHttpCall[];
   globalAccesses: JsGlobalAccess[];
+  legacyReactApis: JsLegacyReactApi[];
 };
+
+type LegacyApi = JsLegacyReactApi["api"];
+
+// Locales importados de `react-dom`: objetos (default/namespace) y funciones nombradas con su API.
+type ReactDomBindings = { objects: Set<string | null>; functions: Map<string | null, LegacyApi> };
 
 const FUNCTION_KINDS: Record<string, JsFunctionKind> = {
   FunctionDeclaration: "function",
@@ -52,15 +59,17 @@ const JQUERY_NAMES = new Set<string | null>(["$", "jQuery"]);
 const JQUERY_HTTP_METHODS = new Set<string | null>(["ajax", "get", "post", "getJSON"]);
 const CRUD_METHODS = new Set<string | null>(["all", "single", "edit", "create", "delete"]);
 const HTML_SINK_PROPERTIES = new Set<string | null>(["innerHTML", "outerHTML"]);
+const REACT_DOM_APIS = new Set<string | null>(["render", "hydrate", "unmountComponentAtNode", "findDOMNode"]);
 
 export class BabelJsParser implements JsSourceParser {
   parse(file: string, source: string): JsFileStructure {
     const program = (parse(source, { sourceType: "unambiguous", plugins: pluginsFor(file) }) as unknown as { program: AstNode })
       .program;
     const body = program.body as AstNode[];
-    const facts: FileFacts = { imports: [], securityIssues: [], httpCalls: [], globalAccesses: [] };
+    const facts: FileFacts = { imports: [], securityIssues: [], httpCalls: [], globalAccesses: [], legacyReactApis: [] };
+    const reactDom = reactDomBindings(body);
 
-    walk(program, (node, ancestors) => collectFileFacts(node, facts, scopeOf(ancestors)));
+    walk(program, (node, ancestors) => collectFileFacts(node, facts, scopeOf(ancestors), reactDom));
 
     return {
       file,
@@ -258,7 +267,7 @@ function stateObjectOf(node: AstNode): AstNode | null {
 
 // ---------- Hechos a nivel archivo ----------
 
-function collectFileFacts(node: AstNode, facts: FileFacts, scope: AstNode): void {
+function collectFileFacts(node: AstNode, facts: FileFacts, scope: AstNode, reactDom: ReactDomBindings): void {
   const importRef = importOf(node);
   if (importRef !== null) facts.imports.push(importRef);
 
@@ -270,6 +279,49 @@ function collectFileFacts(node: AstNode, facts: FileFacts, scope: AstNode): void
 
   const globalKind = globalAccessOf(node);
   if (globalKind !== null) facts.globalAccesses.push({ kind: globalKind, line: lineOf(node) });
+
+  const legacyApi = legacyReactApiOf(node, reactDom);
+  if (legacyApi !== null) facts.legacyReactApis.push({ api: legacyApi, line: lineOf(node) });
+}
+
+// ---------- APIs legacy de React (XRay X5) ----------
+
+// Los imports son de nivel superior: se leen antes del recorrido.
+function reactDomBindings(body: AstNode[]): ReactDomBindings {
+  const bindings: ReactDomBindings = { objects: new Set(), functions: new Map() };
+
+  for (const statement of body.filter((node) => node.type === "ImportDeclaration" && (node.source as AstNode).value === "react-dom")) {
+    for (const specifier of statement.specifiers as AstNode[]) {
+      const local = identifierName(specifier.local);
+      if (specifier.type !== "ImportSpecifier") {
+        bindings.objects.add(local);
+      } else if (REACT_DOM_APIS.has(keyName(specifier.imported as AstNode))) {
+        bindings.functions.set(local, keyName(specifier.imported as AstNode) as LegacyApi);
+      }
+    }
+  }
+
+  return bindings;
+}
+
+// `ReactDOM.render(…)`, `render(…)` importado de react-dom, `ref="x"` y `this.refs`.
+function legacyReactApiOf(node: AstNode, reactDom: ReactDomBindings): LegacyApi | null {
+  if (node.type === "JSXAttribute" && (node.name as AstNode).name === "ref" && (node.value as AstNode | null)?.type === "StringLiteral") {
+    return "string-ref";
+  }
+  if (node.type === "MemberExpression" && (node.object as AstNode).type === "ThisExpression" && !node.computed && identifierName(node.property) === "refs") {
+    return "string-ref";
+  }
+  if (node.type !== "CallExpression") {
+    return null;
+  }
+  const callee = node.callee as AstNode;
+  const named = reactDom.functions.get(identifierName(callee));
+  if (named !== undefined) {
+    return named;
+  }
+  const member = identifierName(callee.property);
+  return !callee.computed && reactDom.objects.has(identifierName(callee.object)) && REACT_DOM_APIS.has(member) ? (member as LegacyApi) : null;
 }
 
 // ---------- Exports (XRay X2) ----------

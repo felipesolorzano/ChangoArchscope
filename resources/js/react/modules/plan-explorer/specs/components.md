@@ -68,8 +68,9 @@ content }] }] }`.
 - `PlanProvider.getCharacterization(target)` (`characterizationUrl`, target en la query, error HTTP →
   lanza con el status); `createPlanExplorerDependencies({ …, characterizationUrl })`; el shell usa
   `"/characterization.json"`.
-- Store Zustand `characterizationStore`: `open` (default `false`) y `setOpen`; `getServerState` =
-  `getState` (render estatico de los tests).
+- Store Zustand `planDrawerStore` (X5, reemplaza a `characterizationStore`): `drawer`:
+  `"characterization" | "codemods" | null` (default `null`: un solo panel abierto a la vez) y
+  `setDrawer`; `getServerState` = `getState` (render estatico de los tests).
 - Helpers puros (`presentation/constants/characterizationView.ts`):
   - `targetKindLabel`: page → "Pagina", component → "Componente", php → "PHP".
   - `skeletonLabel`: rtl → "Test RTL", msw → "Handlers MSW", playwright → "Playwright", phpunit →
@@ -82,7 +83,34 @@ content }] }] }`.
   riesgoso ya tiene evidencia de test"; si no, un item por objetivo con `file`, la etiqueta del kind,
   `score`, las razones unidas por `" · "` y un boton por esqueleto (`skeletonLabel`) con `title` = su
   `path`.
-- `CharacterizationDrawer({ provider, target })`: solo con `open`; al abrir pide el plan (una vez por
+- `CharacterizationDrawer({ provider, target })`: solo con `drawer === "characterization"`; al abrir pide el plan (una vez por
   montaje); "Calculando objetivos…" mientras carga, el error si falla, y la lista; boton "Cerrar".
   Click en un esqueleto lo descarga (`infrastructure/browser/downloadText(path, content)`: Blob +
   ancla con `download` = nombre del archivo; adaptador de navegador, fuera de mutation).
+
+## Codemods (XRay X5)
+
+`/codemods.json?target=` (ver `app/modules/codemods/specs/codemod-candidates.md`) → `{ candidates:
+[{ pattern, title, tool, command, note, files: [{ file, occurrences, testedBy }], occurrences,
+protectedFiles }] }`.
+
+- `PlanProvider.getCodemods(target)` (`codemodsUrl`, target en la query, error HTTP → lanza
+  `"No se pudieron calcular los candidatos a codemod (<status>)"`); `createPlanExplorerDependencies({
+  …, codemodsUrl })`; el shell usa `"/codemods.json"`.
+- `ProtectionStrip`: boton "Codemods" (`setDrawer("codemods")`) junto a "Que proteger primero"
+  (`setDrawer("characterization")`).
+- Helpers puros (`presentation/constants/codemodView.ts`):
+  - `codemodToolLabel(candidate)`: `"Automatico · <tool>"` o `"Manual"` sin tool.
+  - `codemodSummary(candidate)`: `"<n> archivo(s) · <m> ocurrencia(s) · <p>/<n> con tests"`
+    (singular con 1).
+  - `codemodWarning(candidate)`: `null` si todos los archivos tienen tests; si no
+    `"Caracterizar antes: <n - p> archivo(s) sin tests"`.
+- `CodemodList({ plan })` (presentacional): sin candidatos, "No hay APIs legacy con reemplazo
+  conocido"; si no, un item por candidato con `title`, la etiqueta de la herramienta, el resumen, el
+  aviso (si hay), la nota (si no esta vacia), el `command` en un `<code>` con boton "Copiar" (si hay)
+  y un `<details>` "Archivos" con cada `file`, sus ocurrencias y "con tests" / "sin tests" (`title` =
+  los tests separados por `", "`).
+- `CodemodDrawer({ provider, target })`: solo con `drawer === "codemods"`; al abrir pide el plan
+  (una vez por montaje); "Buscando APIs legacy…" mientras carga, el error si falla, y la lista; boton
+  "Cerrar". "Copiar" usa `infrastructure/browser/copyText(text)` (`navigator.clipboard.writeText`;
+  adaptador de navegador, fuera de mutation).

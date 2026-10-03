@@ -1,12 +1,11 @@
 import { jsComponentsOf } from "../../domain/services/jsComponents.js";
-import { resolveJsImport } from "../../domain/services/jsImportResolution.js";
+import { isJsTestFile, jsTestImporters } from "../../domain/services/jsTestImporters.js";
 import { jsFinding } from "./jsFinding.js";
-const TEST_FILE_PATTERN = /\.(?:test|spec)\.|\/__tests__\//;
 const HIGH_RISK_COMPLEXITY = 10;
 export function jsTestingAnalyzer(files) {
-    const tested = testedFiles(files);
+    const tested = new Set(Object.keys(jsTestImporters(files)));
     return files
-        .filter((file) => !TEST_FILE_PATTERN.test(file.file) && !tested.has(file.file))
+        .filter((file) => !isJsTestFile(file.file) && !tested.has(file.file))
         .flatMap((file) => jsComponentsOf(file).map((component) => jsFinding({
         category: "testing",
         rule: "untested-component",
@@ -25,15 +24,4 @@ function exportedAs(name, exports) {
         return "default";
     }
     return exports.some((entry) => entry.name === name) ? name : null;
-}
-// Archivos que algun test importa directamente.
-function testedFiles(files) {
-    const known = new Set(files.map((file) => file.file));
-    const tested = new Set();
-    for (const file of files.filter((candidate) => TEST_FILE_PATTERN.test(candidate.file))) {
-        for (const importRef of file.imports) {
-            resolveJsImport(file.file, importRef.source, known).forEach((target) => tested.add(target));
-        }
-    }
-    return tested;
 }

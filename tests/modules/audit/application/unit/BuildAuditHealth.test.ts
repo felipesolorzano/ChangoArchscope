@@ -53,6 +53,7 @@ describe("buildAuditHealth", () => {
       { category: "coupling_low_level", label: "Acoplamiento de bajo nivel", findings: 0 },
       { category: "dead_code", label: "Código muerto", findings: 0 },
       { category: "testing", label: "Tests", findings: 0 },
+      { category: "legacy_api", label: "APIs legacy", findings: 0 },
       { category: "api_access", label: "API / HTTP", findings: 2 },
     ]);
   });

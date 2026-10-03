@@ -39,6 +39,10 @@ describe("dominantAccent", () => {
     expect(dominantAccent({ api_access: 12, security: 3 })).toBe("api_access");
   });
 
+  it("reconoce legacy_api como accent propio (XRay X5)", () => {
+    expect(dominantAccent({ legacy_api: 12, security: 3 })).toBe("legacy_api");
+  });
+
   it("reconoce php_compatibility como accent propio", () => {
     expect(dominantAccent({ php_compatibility: 12, security: 3 })).toBe("php_compatibility");
   });

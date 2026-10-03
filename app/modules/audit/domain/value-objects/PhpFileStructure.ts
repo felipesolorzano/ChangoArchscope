@@ -29,6 +29,12 @@ export type PhpSqlLiteral = {
   insideLoop: boolean;
 };
 
+/** Llamada a una funcion global por nombre literal (XRay X5): nombre en minusculas, sin `\`. */
+export type PhpFunctionCall = {
+  name: string;
+  line: number;
+};
+
 export type PhpFileStructure = {
   file: string;
   classes: PhpClassStructure[];
@@ -36,6 +42,7 @@ export type PhpFileStructure = {
   referencedNames: string[];
   securityIssues: PhpSecurityIssue[];
   sqlLiterals: PhpSqlLiteral[];
+  functionCalls: PhpFunctionCall[];
 };
 
 export type PhpParseFailure = {

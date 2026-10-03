@@ -49,6 +49,12 @@ export type JsGlobalAccess = {
   line: number;
 };
 
+/** API de React eliminada en React 19 (XRay X5): llamadas de `react-dom` y string refs. */
+export type JsLegacyReactApi = {
+  api: "render" | "hydrate" | "unmountComponentAtNode" | "findDOMNode" | "string-ref";
+  line: number;
+};
+
 export type JsFileStructure = {
   file: string;
   linesCount: number;
@@ -59,6 +65,7 @@ export type JsFileStructure = {
   securityIssues: JsSecurityIssue[];
   httpCalls: JsHttpCall[];
   globalAccesses: JsGlobalAccess[];
+  legacyReactApis: JsLegacyReactApi[];
 };
 
 export type JsParseFailure = {

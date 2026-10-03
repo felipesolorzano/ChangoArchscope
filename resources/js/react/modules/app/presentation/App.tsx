@@ -30,6 +30,7 @@ const planDependencies = createPlanExplorerDependencies({
   taskUrl: "/plan/tasks",
   protectionUrl: "/protection.json",
   characterizationUrl: "/characterization.json",
+  codemodsUrl: "/codemods.json",
 });
 
 const dependenciesDependencies = createDependenciesExplorerDependencies({ reportUrl: "/dependencies.json" });

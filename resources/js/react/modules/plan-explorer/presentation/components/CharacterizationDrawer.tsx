@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { PlanProvider } from "../../application/contracts/PlanProvider";
 import type { CharacterizationPlan } from "../../domain/value-objects/Characterization";
-import { useCharacterizationStore } from "../store/characterizationStore";
+import { usePlanDrawerStore } from "../store/planDrawerStore";
 import { CharacterizationList } from "./CharacterizationList";
 
 interface CharacterizationDrawerProps {
@@ -12,13 +12,13 @@ interface CharacterizationDrawerProps {
 
 // XRay X4: "Que proteger primero". Solo existe abierto; cada apertura vuelve a pedir el plan.
 export function CharacterizationDrawer(props: CharacterizationDrawerProps) {
-  const open = useCharacterizationStore((state) => state.open);
+  const open = usePlanDrawerStore((state) => state.drawer === "characterization");
 
   return open ? <CharacterizationPanel {...props} /> : null;
 }
 
 function CharacterizationPanel({ provider, target }: CharacterizationDrawerProps) {
-  const setOpen = useCharacterizationStore((state) => state.setOpen);
+  const setDrawer = usePlanDrawerStore((state) => state.setDrawer);
   const [plan, setPlan] = useState<CharacterizationPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +42,7 @@ function CharacterizationPanel({ provider, target }: CharacterizationDrawerProps
           <span className="plan-drawer__eyebrow">Tests de caracterizacion</span>
           <h2 className="plan-drawer__title">Que proteger primero</h2>
         </div>
-        <button type="button" className="plan-characterization__close" onClick={() => setOpen(false)}>
+        <button type="button" className="plan-characterization__close" onClick={() => setDrawer(null)}>
           Cerrar
         </button>
       </header>

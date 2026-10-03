@@ -32,7 +32,7 @@ calcula layout**: solo mapea el grafo a nodos/edges de React Flow y los renderiz
   low amarillo tenue, none gris.
 - **Borde** = `accentStroke(node.accent)` (categoria dominante): security rojo, database azul,
   complexity morado, testing ambar, dead_code gris, coupling_low_level teal,
-  php_compatibility verde lima, api_access rosa, mixed neutro.
+  php_compatibility verde lima, api_access rosa, legacy_api naranja (XRay X5), mixed neutro.
 - **Mini-barra apilada** dentro del nodo con `severityBarSegments(node.severityMix)` (high/medium/low).
 - **Badges** (`node.badges`) como etiquetas colgando del nodo.
 - **Metrica** visible: `findings` y `risk`.
@@ -68,8 +68,9 @@ general (regla de React de `docs/development-rules.md`): se valida la logica via
 categorias `{ accent, label }` que tienen sentido para el stack, en este orden:
 
 - `laravel`: Compatibilidad PHP, Seguridad, Base de datos, Complejidad, Testing, Codigo muerto,
-  Acoplamiento.
-- `react`: Seguridad, API / HTTP (`api_access`), Complejidad, Testing, Codigo muerto, Acoplamiento.
+  Acoplamiento, APIs legacy.
+- `react`: Seguridad, API / HTTP (`api_access`), Complejidad, Testing, Codigo muerto, Acoplamiento,
+  APIs legacy (`legacy_api`, XRay X5).
 
 El filtro de categoria antepone "Todas las categorias"; la leyenda agrega "Mixto" al final.
 
@@ -78,6 +79,7 @@ Criterios de aceptacion:
 - `auditCategoriesFor("laravel")` incluye `php_compatibility` y `database`, no `api_access`.
 - `auditCategoriesFor("react")` incluye `api_access`, no `php_compatibility` ni `database`.
 - `accentStroke("api_access")` es un color propio, distinto de `mixed` y de los demas acentos.
+- `accentStroke("legacy_api")` es un color propio, distinto de `mixed` y de los demas acentos.
 
 ## Contrato de render de los componentes (tests con `react-dom/server`)
 

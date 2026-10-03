@@ -24,6 +24,7 @@ describe("BabelJsParser — archivo", () => {
       securityIssues: [],
       httpCalls: [],
       globalAccesses: [],
+      legacyReactApis: [],
     });
   });
 
@@ -529,5 +530,67 @@ describe("BabelJsParser — accesos globales", () => {
 
   it("no cuenta identificadores parecidos ni propiedades llamadas window/document/$", () => {
     expect(parse("other.window.x;\nobj.$.y;\nconst w = win.x;\ndoc.x;\nfoo();\n").globalAccesses).toEqual([]);
+  });
+});
+
+describe("BabelJsParser — APIs legacy de React (XRay X5)", () => {
+  it("llamadas a react-dom por default, namespace y nombrado con alias", () => {
+    const source = `import ReactDOM from "react-dom";
+import * as RD from "react-dom";
+import { render as paint, findDOMNode, createPortal } from "react-dom";
+ReactDOM.render(<App />, root);
+RD.hydrate(<App />, root);
+ReactDOM.unmountComponentAtNode(root);
+paint(<App />, root);
+findDOMNode(this);
+ReactDOM.findDOMNode(this);
+`;
+
+    expect(parse(source).legacyReactApis).toEqual([
+      { api: "render", line: 4 },
+      { api: "hydrate", line: 5 },
+      { api: "unmountComponentAtNode", line: 6 },
+      { api: "render", line: 7 },
+      { api: "findDOMNode", line: 8 },
+      { api: "findDOMNode", line: 9 },
+    ]);
+  });
+
+  it("no cuentan otras APIs, otros modulos, computados ni un render sin importar", () => {
+    const source = `import ReactDOM from "react-dom";
+import { createPortal } from "react-dom";
+import Other from "react-dom/client";
+import { render as r } from "@testing-library/react";
+ReactDOM.createPortal(a, b);
+createPortal(a, b);
+ReactDOM["render"](a, b);
+ReactDOM[render](a, b);
+Other.render(a);
+r(<App />);
+render(<App />);
+this.render();
+ReactDOM.render;
+`;
+
+    expect(parse(source).legacyReactApis).toEqual([]);
+  });
+
+  it("string refs: atributo ref con string y this.refs", () => {
+    const source = `class A extends React.Component {
+  render() {
+    const node = this.refs.input;
+    return <div><input ref="input" /><b ref={this.box} /><i ref={"x"} /><u ref className="refs" /></div>;
+  }
+}
+this["refs"];
+other.refs;
+const options = { ref: "x", value: "y" };
+const label = <p className="x" />;
+`;
+
+    expect(parse(source).legacyReactApis).toEqual([
+      { api: "string-ref", line: 3 },
+      { api: "string-ref", line: 4 },
+    ]);
   });
 });

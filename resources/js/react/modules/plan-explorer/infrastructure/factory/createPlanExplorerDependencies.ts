@@ -10,13 +10,15 @@ export function createPlanExplorerDependencies({
   taskUrl,
   protectionUrl,
   characterizationUrl,
+  codemodsUrl,
 }: {
   planUrl: string;
   taskUrl: string;
   protectionUrl: string;
   characterizationUrl: string;
+  codemodsUrl: string;
 }): PlanExplorerDependencies {
   return {
-    planProvider: new HttpPlanProvider(planUrl, taskUrl, protectionUrl, characterizationUrl),
+    planProvider: new HttpPlanProvider(planUrl, taskUrl, protectionUrl, characterizationUrl, codemodsUrl),
   };
 }

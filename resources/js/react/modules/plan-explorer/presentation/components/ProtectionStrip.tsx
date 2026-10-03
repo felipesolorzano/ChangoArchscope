@@ -1,10 +1,10 @@
 import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
-import { useCharacterizationStore } from "../store/characterizationStore";
+import { usePlanDrawerStore } from "../store/planDrawerStore";
 import { protectionLevelColor, protectionLevelLabel, protectionParts } from "../constants/protectionView";
 
-// XRay X3: cuanta red de seguridad hay antes de refactorizar.
+// XRay X3: cuanta red de seguridad hay antes de refactorizar (y desde aca, los paneles X4/X5).
 export function ProtectionStrip({ protection }: { protection: ProtectionBaseline | null }) {
-  const setOpen = useCharacterizationStore((state) => state.setOpen);
+  const setDrawer = usePlanDrawerStore((state) => state.setDrawer);
 
   if (protection === null) {
     return null;
@@ -20,8 +20,11 @@ export function ProtectionStrip({ protection }: { protection: ProtectionBaseline
           {part}
         </span>
       ))}
-      <button type="button" className="plan-protection__action" onClick={() => setOpen(true)}>
+      <button type="button" className="plan-protection__action" onClick={() => setDrawer("characterization")}>
         Que proteger primero
+      </button>
+      <button type="button" className="plan-protection__action" onClick={() => setDrawer("codemods")}>
+        Codemods
       </button>
       {protection.level === "none" && <span className="plan-protection__hint">Sin red de seguridad: empezar por tests de caracterizacion</span>}
     </div>

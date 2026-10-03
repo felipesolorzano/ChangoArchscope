@@ -50,6 +50,7 @@ function fileStructure(file: string): PhpFileStructure {
     referencedNames: [],
     securityIssues: [{ rule: "eval-usage", line: 7 }],
     sqlLiterals: [],
+    functionCalls: [],
   };
 }
 
@@ -173,6 +174,27 @@ describe("auditProject", () => {
 
     expect(walkFiles).not.toHaveBeenCalled();
     expect(snapshot.findings.every((finding) => finding.source === "architecture")).toBe(true);
+  });
+
+  it("PHP: legacy_api y testedBy desde las clases de test (XRay X5)", () => {
+    const structures: Record<string, PhpFileStructure> = {
+      "/mc/Trafic.php": { ...fileStructure("/mc/Trafic.php"), classes: [{ name: "Trafic", startLine: 1, endLine: 9, extendsName: null, methods: [] }], functionCalls: [{ name: "each", line: 4 }] },
+      "/mc/tests/TraficTest.php": { ...fileStructure("/mc/tests/TraficTest.php"), classes: [{ name: "TraficTest", startLine: 1, endLine: 9, extendsName: "TestCase", methods: [] }], referencedNames: ["Trafic"] },
+    };
+
+    const snapshot = auditProject({
+      checkResult: buildCheckResult(),
+      reader: fakeReader(Object.keys(structures)),
+      parser: { parse: (file) => structures[file] },
+      phpRoot: "/mc",
+      phpExtensions: [".php"],
+      ignoredPaths: [],
+    });
+
+    expect(snapshot.testedBy).toEqual({ "/mc/Trafic.php": ["/mc/tests/TraficTest.php"] });
+    expect(snapshot.findings.filter((finding) => finding.category === "legacy_api")).toEqual([
+      expect.objectContaining({ rule: "removed-php-function", file: "/mc/Trafic.php", line: 4 }),
+    ]);
   });
 
   it("scannedFiles incluye los PHP parseados", () => {
@@ -301,6 +323,7 @@ describe("auditProject", () => {
       securityIssues: [{ rule: "eval-usage", line: 2 }],
       httpCalls: [],
       globalAccesses: [],
+      legacyReactApis: [],
     });
     const jsParser: JsSourceParser = {
       parse: (file) => {
@@ -331,12 +354,13 @@ describe("auditProject", () => {
       expect(snapshot.findings[0].source).toBe("architecture");
     });
 
-    it("corre los seis analizadores JS", () => {
+    it("corre los analizadores JS (incluye legacy_api, XRay X5)", () => {
       const file: JsFileStructure = {
         ...jsStructure("/src/pages/a_old.js"),
         functions: [{ name: "A", kind: "function", startLine: 1, endLine: 400, parametersCount: 0, decisionPointsCount: 0, containsJsx: true }],
         httpCalls: [{ client: "fetch", endpoint: "/x", line: 3 }],
         globalAccesses: [{ kind: "jquery", line: 4 }],
+        legacyReactApis: [{ api: "render", line: 5 }],
       };
 
       const snapshot = auditProject({
@@ -350,7 +374,7 @@ describe("auditProject", () => {
       });
 
       expect(new Set(snapshot.findings.filter((finding) => finding.source === "native").map((finding) => finding.category))).toEqual(
-        new Set(["complexity", "coupling_low_level", "dead_code", "security", "api_access", "testing"]),
+        new Set(["complexity", "coupling_low_level", "dead_code", "security", "api_access", "testing", "legacy_api"]),
       );
     });
 
@@ -446,6 +470,33 @@ describe("auditProject", () => {
       expect(snapshot.findings.filter((finding) => finding.rule === "untested-component").map((finding) => finding.file)).toEqual([
         "/src/pages/Orphan.tsx",
       ]);
+    });
+
+    it("testedBy: tests del escaneo y de testRoots que importan cada archivo; legacy_api sin findings de testRoots (XRay X5)", () => {
+      const legacy = { legacyReactApis: [{ api: "render" as const, line: 1 }] };
+      const snapshot = auditProject({
+        checkResult: buildCheckResult({ target: "react", reports: [] }),
+        reader: fakeReader([]),
+        parser: fakeParser,
+        phpRoot: null,
+        phpExtensions: [".php"],
+        ignoredPaths: [],
+        js: {
+          ...jsInput,
+          root: "/src",
+          testRoots: ["/tests"],
+          scanFiles: (root: string) => ({
+            files:
+              root === "/tests"
+                ? [{ ...jsStructure("/tests/a.test.js"), imports: [{ source: "../src/a", names: [], line: 1 }] }, { ...jsStructure("/tests/support/mount.js"), ...legacy }]
+                : [{ ...jsStructure("/src/a.js"), ...legacy }, { ...jsStructure("/src/a.spec.js"), imports: [{ source: "./a", names: [], line: 1 }] }],
+            skipped: [],
+          }),
+        },
+      });
+
+      expect(snapshot.testedBy).toEqual({ "/src/a.js": ["/src/a.spec.js", "/tests/a.test.js"] });
+      expect(snapshot.findings.filter((finding) => finding.category === "legacy_api").map((finding) => finding.file)).toEqual(["/src/a.js"]);
     });
 
     it("scannedFiles: los JS analizados (no los de testRoots), ordenados", () => {

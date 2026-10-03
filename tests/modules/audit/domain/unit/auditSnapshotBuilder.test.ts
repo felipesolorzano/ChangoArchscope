@@ -124,4 +124,11 @@ describe("buildAuditSnapshot", () => {
     expect(buildAuditSnapshot([], context).scannedFiles).toEqual([]);
     expect(buildAuditSnapshot([], { ...context, scannedFiles: ["/src/a.js", "/src/b.js"] }).scannedFiles).toEqual(["/src/a.js", "/src/b.js"]);
   });
+
+  it("testedBy viene del contexto (vacio por defecto) (XRay X5)", () => {
+    const context = { target: "react", module: null, filesScanned: 2, modules: 1 };
+
+    expect(buildAuditSnapshot([], context).testedBy).toEqual({});
+    expect(buildAuditSnapshot([], { ...context, testedBy: { "/src/a.js": ["/src/a.test.js"] } }).testedBy).toEqual({ "/src/a.js": ["/src/a.test.js"] });
+  });
 });

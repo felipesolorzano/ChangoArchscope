@@ -1,7 +1,7 @@
 import { Engine } from "php-parser";
 
 import type { PhpSourceParser } from "../../domain/repositories/PhpSourceParser.js";
-import type { PhpClassStructure, PhpFileStructure, PhpMethodStructure, PhpSecurityIssue, PhpSqlLiteral } from "../../domain/value-objects/PhpFileStructure.js";
+import type { PhpClassStructure, PhpFileStructure, PhpFunctionCall, PhpMethodStructure, PhpSecurityIssue, PhpSqlLiteral } from "../../domain/value-objects/PhpFileStructure.js";
 
 type PhpAstNode = {
   kind?: string;
@@ -43,6 +43,7 @@ export class PhpAstParser implements PhpSourceParser {
       referencedNames: [...collectReferencedNames(ast.children)],
       securityIssues: collectSecurityIssues(ast.children),
       sqlLiterals: collectSqlLiterals(ast.children),
+      functionCalls: collectFunctionCalls(ast.children),
     };
   }
 }
@@ -287,4 +288,30 @@ function isGetInstanceLookup(staticLookup: PhpAstNode): boolean {
   const offset = staticLookup.offset as PhpAstNode;
 
   return (offset.name as string).toLowerCase() === "getinstance";
+}
+
+// Llamadas `f(…)` / `\f(…)` a funciones globales (XRay X5), en orden de aparicion.
+function collectFunctionCalls(node: unknown): PhpFunctionCall[] {
+  const calls: PhpFunctionCall[] = [];
+
+  accumulateFunctionCalls(node, calls);
+
+  return calls;
+}
+
+function accumulateFunctionCalls(node: unknown, calls: PhpFunctionCall[]): void {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  const record = node as Record<string, unknown>;
+
+  if (record.kind === "call" && isKind(record.what, "name")) {
+    const name = (record.what as PhpAstNode).name as string;
+    calls.push({ name: (name.startsWith("\\") ? name.slice(1) : name).toLowerCase(), line: (record.loc as { start: { line: number } }).start.line });
+  }
+
+  for (const value of Object.values(record)) {
+    accumulateFunctionCalls(value, calls);
+  }
 }

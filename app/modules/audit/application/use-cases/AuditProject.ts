@@ -5,17 +5,21 @@ import type { JsSourceParser } from "../../domain/repositories/JsSourceParser.js
 import type { PhpSourceParser } from "../../domain/repositories/PhpSourceParser.js";
 import type { AuditFinding, AuditScannerStatus, AuditSnapshot } from "../../domain/value-objects/AuditSnapshot.js";
 import { buildAuditSnapshot } from "../../domain/services/auditSnapshotBuilder.js";
+import { jsTestImporters } from "../../domain/services/jsTestImporters.js";
+import { phpTestReferrers } from "../../domain/services/phpTestReferrers.js";
 import { phpCompatibilityAnalyzer } from "../analyzers/phpCompatibilityAnalyzer.js";
 import { phpComplexityAnalyzer } from "../analyzers/phpComplexityAnalyzer.js";
 import { phpCouplingAnalyzer } from "../analyzers/phpCouplingAnalyzer.js";
 import { phpDatabaseAnalyzer } from "../analyzers/phpDatabaseAnalyzer.js";
 import { phpDeadCodeAnalyzer } from "../analyzers/phpDeadCodeAnalyzer.js";
+import { phpLegacyApiAnalyzer } from "../analyzers/phpLegacyApiAnalyzer.js";
 import { phpSecurityAnalyzer } from "../analyzers/phpSecurityAnalyzer.js";
 import { phpTestingAnalyzer } from "../analyzers/phpTestingAnalyzer.js";
 import { jsApiAnalyzer } from "../analyzers/jsApiAnalyzer.js";
 import { jsComplexityAnalyzer } from "../analyzers/jsComplexityAnalyzer.js";
 import { jsCouplingAnalyzer } from "../analyzers/jsCouplingAnalyzer.js";
 import { jsDeadCodeAnalyzer } from "../analyzers/jsDeadCodeAnalyzer.js";
+import { jsLegacyApiAnalyzer } from "../analyzers/jsLegacyApiAnalyzer.js";
 import { jsSecurityAnalyzer } from "../analyzers/jsSecurityAnalyzer.js";
 import { jsTestingAnalyzer } from "../analyzers/jsTestingAnalyzer.js";
 import { scanJsFiles, type JsScanResult } from "./ScanJsFiles.js";
@@ -73,6 +77,7 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     ...phpSecurityAnalyzer(files),
     ...phpDatabaseAnalyzer(files),
     ...phpTestingAnalyzer(files),
+    ...phpLegacyApiAnalyzer(files),
   ];
 
   const scanJs = (root: string, ignored: string[]): JsScanResult =>
@@ -92,6 +97,7 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     ...jsSecurityAnalyzer(jsScan.files),
     ...jsApiAnalyzer(jsScan.files),
     ...jsTestingAnalyzer([...jsScan.files, ...testFiles]).filter((finding) => !testFiles.some((file) => file.file === finding.file)),
+    ...jsLegacyApiAnalyzer(jsScan.files),
   ];
 
   const compatibilityFindings =
@@ -106,6 +112,7 @@ export function auditProject(input: AuditProjectInput): AuditSnapshot {
     sourceRoot: phpRoot ?? js?.root,
     skippedFiles: [...skipped, ...jsScan.skipped],
     scannedFiles: [...files, ...jsScan.files].map((file) => file.file).sort(),
+    testedBy: { ...phpTestReferrers(files), ...jsTestImporters([...jsScan.files, ...testFiles]) },
     phpCompatibilityStatus: compatibilityStatus(compatibilityScan),
   });
 }

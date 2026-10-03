@@ -19,6 +19,7 @@ const ACCENT_STROKE: Record<AuditGraphAccent, string> = {
   coupling_low_level: "#14b8a6",
   php_compatibility: "#84cc16",
   api_access: "#f472b6",
+  legacy_api: "#fb923c",
   mixed: "#cbd5e1",
 };
 

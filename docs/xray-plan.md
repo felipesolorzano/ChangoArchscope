@@ -19,7 +19,7 @@ estado), Migracion/Diseño (bounded contexts).
 | **X2 Exports muertos** | Exports que nadie importa (estilo Knip) en JS/TS: el parser registra `exports`, regla `unused-export` en Auditoria (dead_code), tarea `remove-unused-exports` en Plan. Specs: `js-source-parser.md`, `react-analyzers.md`, `plan-tasks.md` | Completa |
 | **X3 Linea base de proteccion** | Bounded context `protection`: evidencia de tests + reportes existentes (Istanbul/lcov/clover, Stryker JSON/HTML, Infection, Playwright) → nivel none/low/medium/high; `/protection.json`; franja "Red de seguridad" en Plan. Spec: `app/modules/protection/specs/protection-baseline.md` | Completa |
 | **X4 Objetivos de caracterizacion** | Bounded context `characterization`: ranking (riesgo × uso, sin tests, sin copias ni muertos) + esqueletos RTL/MSW/Playwright/PHPUnit golden master; `/characterization.json`; panel "Que proteger primero" en Plan. Spec: `app/modules/characterization/specs/characterization-targets.md` | Completa |
-| **X5 Candidatos a codemod** | Patrones AST (lifecycles deprecated, imports de librerias deprecated, jQuery) con archivos afectados y tests que los cubren | Pendiente |
+| **X5 Candidatos a codemod** | Categoria `legacy_api` en Auditoria (React: lifecycles deprecados, `ReactDOM.render`/`findDOMNode`, string refs, `withRouter`, moment/request/react-ga; PHP: `mysql_*`, `ereg`/`split`, `each`, `create_function`, `utf8_encode`…) + `testedBy` por archivo en el snapshot; bounded context `codemods` (patron → herramienta y comando, archivos, tests que los cubren); `/codemods.json`; panel "Codemods" en Plan. Specs: `app/modules/audit/specs/legacy-api.md`, `app/modules/codemods/specs/codemod-candidates.md` | Completa |
 | **X6 Plan por fases con quality gates** | Fases 0–10 con metas medibles que se validan solas contra las metricas | Pendiente |
 
 ## 2. Hallazgos que guian X1
@@ -84,4 +84,22 @@ estado), Migracion/Diseño (bounded contexts).
   `MSTraficSys.lib.inc`; un golden master de PHPUnit por clase. ~12 s en frio (incluye el audit).
 - UI: boton "Que proteger primero" en la franja de proteccion → panel con score, razones y descarga de
   cada esqueleto (archivo con el nombre de su ruta). Sin errores de consola.
+
+### X5 — validacion
+
+- brandsites: 9 patrones en ~0.9 s. Automaticos: lifecycles deprecados (38 archivos, 42 metodos →
+  `react-codemod rename-unsafe-lifecycles`), `ReactDOM.render` (2) y string refs (2, 3 usos). Manuales:
+  `withRouter` 115 archivos (React Router v6), jQuery 79 archivos / 360 accesos, moment 21, `findDOMNode`
+  2, request 2, react-ga 1. Ningun archivo tiene tests: todos piden caracterizar antes (X4).
+- mc: 7 patrones (~11 s en frio, incluye el audit). `utf8_encode`/`utf8_decode` 1412 llamadas en 50
+  archivos y `ereg`/`split` 126 en 9 (Rector); `mysql_*` 23 en 7, magic quotes, `money_format`, mcrypt
+  (manuales). `each()`: el grep daba 967, el AST encuentra 1 llamada real (el resto eran `->each()` y
+  `.each()` de jQuery dentro del PHP).
+- Las copias manuales y los archivos sin uso no cuentan (se borran, no se migran).
+- UI: boton "Codemods" junto a "Que proteger primero" (un solo panel a la vez) con herramienta,
+  resumen, aviso "Caracterizar antes", comando con "Copiar" y archivos con "con/sin tests"; filtro
+  "APIs legacy" en Auditoria. Sin errores de consola.
+- Mutation: 100% en parser, analizadores, `testedBy`, modulo `codemods` (salvo rutas, composition
+  root) y helpers/store/provider/lista del front; los drawers con efectos no se pueden ejercitar sin DOM
+  (igual que X4).
 

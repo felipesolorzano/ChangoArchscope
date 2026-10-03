@@ -23,6 +23,7 @@ export class PhpAstParser {
             referencedNames: [...collectReferencedNames(ast.children)],
             securityIssues: collectSecurityIssues(ast.children),
             sqlLiterals: collectSqlLiterals(ast.children),
+            functionCalls: collectFunctionCalls(ast.children),
         };
     }
 }
@@ -203,4 +204,23 @@ function isGetInstanceLookup(staticLookup) {
     // El "what" de un "call" cuyo kind es "staticlookup" siempre trae "offset" (el metodo invocado).
     const offset = staticLookup.offset;
     return offset.name.toLowerCase() === "getinstance";
+}
+// Llamadas `f(…)` / `\f(…)` a funciones globales (XRay X5), en orden de aparicion.
+function collectFunctionCalls(node) {
+    const calls = [];
+    accumulateFunctionCalls(node, calls);
+    return calls;
+}
+function accumulateFunctionCalls(node, calls) {
+    if (!node || typeof node !== "object") {
+        return;
+    }
+    const record = node;
+    if (record.kind === "call" && isKind(record.what, "name")) {
+        const name = record.what.name;
+        calls.push({ name: (name.startsWith("\\") ? name.slice(1) : name).toLowerCase(), line: record.loc.start.line });
+    }
+    for (const value of Object.values(record)) {
+        accumulateFunctionCalls(value, calls);
+    }
 }

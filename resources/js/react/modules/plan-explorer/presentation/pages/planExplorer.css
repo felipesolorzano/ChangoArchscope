@@ -313,3 +313,15 @@
 .plan-characterization__skeletons { display: flex; flex-wrap: wrap; gap: 5px; }
 .plan-characterization__download { padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(30, 41, 59, 0.9); color: #e2e8f0; font-size: 11px; cursor: pointer; }
 .plan-characterization__download:hover, .plan-protection__action:hover { filter: brightness(1.2); }
+.plan-codemods__title { font-size: 12px; font-weight: 800; color: #f1f5f9; }
+.plan-codemods__warning { color: #fbbf24; font-weight: 700; }
+.plan-codemods__note { color: #94a3b8; }
+.plan-codemods__command { display: flex; align-items: flex-start; gap: 6px; }
+.plan-codemods__command code { flex: 1; min-width: 0; max-height: 54px; overflow: auto; padding: 4px 6px; border-radius: 6px; background: rgba(15, 23, 42, 0.95); color: #a5f3fc; font-size: 10px; word-break: break-all; }
+.plan-codemods__files summary { cursor: pointer; color: #cbd5e1; }
+.plan-codemods__files { max-height: 180px; overflow: auto; }
+.plan-codemods__file { display: flex; align-items: center; gap: 8px; padding: 2px 0 2px 10px; }
+.plan-codemods__file .plan-drawer__file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-codemods__count { font-variant-numeric: tabular-nums; color: #e2e8f0; }
+.plan-codemods__tested { color: #4ade80; }
+.plan-codemods__untested { color: #f87171; }

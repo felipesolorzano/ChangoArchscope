@@ -10,7 +10,7 @@ describe("HttpPlanProvider.getProtection", () => {
     vi.stubGlobal("window", { location: { origin: "http://x" } });
     vi.stubGlobal("fetch", fetchMock);
 
-    const protection = await new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json").getProtection("react");
+    const protection = await new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json", "/codemods.json").getProtection("react");
 
     expect(fetchMock.mock.calls[0]).toEqual(["http://x/protection.json?target=react", { headers: { Accept: "application/json" } }]);
     expect(protection).toEqual({ level: "none" });
@@ -21,7 +21,7 @@ describe("HttpPlanProvider.getProtection", () => {
     const fetchMock = vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json").getProtection()).rejects.toThrow("No se pudo cargar la proteccion (500)");
+    await expect(new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json", "/codemods.json").getProtection()).rejects.toThrow("No se pudo cargar la proteccion (500)");
     expect(fetchMock.mock.calls[0][0]).toBe("http://x/protection.json?target=laravel");
   });
 });
@@ -33,7 +33,7 @@ describe("HttpPlanProvider.getCharacterization", () => {
     vi.stubGlobal("window", { location: { origin: "http://x" } });
     const ok = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ targets: [] }) }));
     vi.stubGlobal("fetch", ok);
-    const provider = new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json");
+    const provider = new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json", "/codemods.json");
 
     expect(await provider.getCharacterization("react")).toEqual({ targets: [] });
     expect(ok.mock.calls[0]).toEqual(["http://x/characterization.json?target=react", { headers: { Accept: "application/json" } }]);
@@ -45,3 +45,22 @@ describe("HttpPlanProvider.getCharacterization", () => {
   });
 });
 
+
+describe("HttpPlanProvider.getCodemods (XRay X5)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("pide los candidatos del target; sin target laravel; error con status", async () => {
+    vi.stubGlobal("window", { location: { origin: "http://x" } });
+    const ok = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ candidates: [] }) }));
+    vi.stubGlobal("fetch", ok);
+    const provider = new HttpPlanProvider("/plan.json", "/plan/tasks", "/protection.json", "/characterization.json", "/codemods.json");
+
+    expect(await provider.getCodemods("react")).toEqual({ candidates: [] });
+    expect(ok.mock.calls[0]).toEqual(["http://x/codemods.json?target=react", { headers: { Accept: "application/json" } }]);
+
+    const failing = vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) }));
+    vi.stubGlobal("fetch", failing);
+    await expect(provider.getCodemods()).rejects.toThrow("No se pudieron calcular los candidatos a codemod (503)");
+    expect(failing.mock.calls[0][0]).toBe("http://x/codemods.json?target=laravel");
+  });
+});

@@ -15,6 +15,7 @@ export function jsFile(file: string, overrides: Partial<JsFileStructure> = {}): 
     securityIssues: [],
     httpCalls: [],
     globalAccesses: [],
+    legacyReactApis: [],
     ...overrides,
   };
 }

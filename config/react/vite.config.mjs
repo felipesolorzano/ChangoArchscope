@@ -30,6 +30,7 @@ export default defineConfig({
       "/dependencies.json": "http://localhost:4590",
       "/protection.json": "http://localhost:4590",
       "/characterization.json": "http://localhost:4590",
+      "/codemods.json": "http://localhost:4590",
     },
   },
 });

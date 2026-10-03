@@ -24,6 +24,7 @@ function structure(file: string, source: string): JsFileStructure {
     securityIssues: [],
     httpCalls: [],
     globalAccesses: [],
+    legacyReactApis: [],
   };
 }
 
