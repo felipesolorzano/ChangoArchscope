@@ -1,6 +1,6 @@
 import { buildPlan } from "../../application/use-cases/buildPlan.js";
 import { findingsForTask } from "../../application/use-cases/findingsForTask.js";
-import { updateTaskState } from "../../application/use-cases/updateTaskState.js";
+import { assertTaskUnlocked, updateTaskState } from "../../application/use-cases/updateTaskState.js";
 export class PlanController {
     deps;
     constructor(deps) {
@@ -22,9 +22,14 @@ export class PlanController {
             const target = targetFromRequest(request);
             const state = typeof request.body?.state === "string" ? request.body.state : "";
             const project = this.deps.projectOf(target);
-            updateTaskState(this.deps.repository, target, project, String(request.params.key), state);
+            const key = String(request.params.key);
             const snapshot = await this.deps.snapshots.getSnapshot(target);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository, project, await this.dependencies(target), await this.protectionLevel(target)));
+            const dependencies = await this.dependencies(target);
+            const level = await this.protectionLevel(target);
+            // El flujo se hace cumplir: una tarea bloqueada no se empieza (XRay X6).
+            assertTaskUnlocked(buildPlan(snapshot, this.deps.repository, project, dependencies, level), key, state);
+            updateTaskState(this.deps.repository, target, project, key, state);
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, project, dependencies, level));
         }
         catch (error) {
             next(error);

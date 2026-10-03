@@ -252,4 +252,22 @@ describe("PlanController", async () => {
     );
     expect(failing.json.mock.calls[0][0].phases[2].gates[0]).toMatchObject({ value: null, status: "unknown" });
   });
+
+  it("update rechaza empezar una tarea bloqueada sin guardar (XRay X6)", async () => {
+    const locked = { ...snapshot(), findings: [...snapshot().findings, { ...snapshot().findings[0], rule: "untested-complex-method" }] };
+    const repo = repository();
+    const next = vi.fn();
+    const { status, response } = fakeResponse();
+
+    await new PlanController({ snapshots: { getSnapshot: async () => locked }, repository: repo, projectOf }).update(
+      { params: { key: "close-sql-injections" }, body: { state: "in_progress" }, query: {} } as unknown as Request,
+      response,
+      next as unknown as NextFunction,
+    );
+
+    expect(repo.setState).not.toHaveBeenCalled();
+    expect(status).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('La tarea "Cerrar inyecciones SQL" esta bloqueada.') }));
+  });
 });
+

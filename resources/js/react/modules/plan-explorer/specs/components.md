@@ -150,3 +150,11 @@ goal, status, current, gates: [{ key, label, value, target, comparator, format, 
 - El minimapa colorea los encabezados con el color de su estado y las tareas con el de su estado.
 - Codemods: cada candidato muestra `codemodTimingLabel` ("Antes de actualizar" /
   "Despues de actualizar") junto a la herramienta.
+
+## Bloqueo automatico (XRay X6)
+
+- `PlanGraphNode.lockReason?: string | null` (ver `plan-phases.md`, "Bloqueo automatico").
+- `PlanTaskCard`: con `lockReason`, la tarjeta lleva la clase `plan-task--locked`, muestra
+  `"🔒 <motivo>"` y los botones "En progreso" y "Hecho" quedan deshabilitados (con el motivo como
+  `title`); "Pendiente" y "Bloqueado" siguen activos.
+- Si el servidor rechaza el cambio, el error se muestra como hoy (`setError`).

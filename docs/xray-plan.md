@@ -136,4 +136,9 @@ estado), Migracion/Diseño (bounded contexts).
 - Runtime antes de los majors (las versiones nuevas de librerias suelen exigir el runtime nuevo; en
   PHP las funciones eliminadas ya se migraron en la fase 5).
 - brandsites: fase actual 1 Limpieza; mc: fase 0 Linea base.
+- Bloqueo automatico: una tarea con dependencias sin hacer, o de una fase posterior a la abierta, no
+  se puede pasar a "En progreso" ni "Hecho" (el servidor responde 400 con el motivo). La fase abierta
+  es la primera no cerrada: se cierra por gates, por no tener tareas, o marcando hechas todas sus
+  tareas (salida manual ante falsos positivos). brandsites: solo se pueden empezar "Eliminar copias
+  manuales" y "Quitar dependencias sin uso"; los tests esperan a cerrar la Limpieza.
 

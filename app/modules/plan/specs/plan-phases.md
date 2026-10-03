@@ -91,6 +91,26 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 - Flechas: reduccion transitiva de `dependsOn` entre las tareas incluidas (si A→B y B→C, no se dibuja
   A→C). `dependsOn` de cada tarea no cambia.
 
+## Bloqueo automatico (`domain/services/planLocks.ts`, puro)
+
+El flujo se hace cumplir: no se puede empezar lo que todavia no toca.
+
+`planLocks({ tasks, phases, states })` → `Record<taskKey, string | null>` (motivo del bloqueo):
+
+- Dependencias: las de `dependsOn` cuyo estado no es `"done"` → `"Espera a: <hasta 3 titulos separados
+  por ', '>"` + `" (+<resto>)"` si hay mas.
+- Fase abierta: la primera fase no cerrada. Una fase esta cerrada si su `status` es `passed` o
+  `not-applicable`, si no tiene tareas en el plan, o si todas sus tareas estan `"done"` (salida manual
+  cuando un gate no llega a la meta por falsos positivos). Una tarea de una fase posterior a la abierta
+  → `"Hasta cerrar la fase <n> · <titulo>"`.
+- Si aplican los dos, gana el de dependencias; sin bloqueo, `null`. Una tarea sin fase solo se bloquea
+  por dependencias.
+- `PlanGraphNode.lockReason: string | null` (lo arma `buildPlanGraph` con los estados).
+- Cambiar una tarea bloqueada a `in_progress` o `done` falla (`assertTaskUnlocked(graph, taskKey,
+  state)` en `PlanController.update`, antes de guardar): `La tarea "<titulo>" esta bloqueada. <motivo>.`
+  (HTTP 400 como los demas errores). `pending` y `blocked` siempre se permiten; una tarea que no esta
+  en el plan no se valida (la valida `updateTaskState` como antes).
+
 ## Integracion
 
 - `PlanGraph.phases: PlanPhase[]` en `/plan.json` (y en la respuesta de actualizar una tarea).
@@ -107,4 +127,6 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 - Estados de fase y fase actual (incluye todo pasado y fases que no aplican).
 - `tasks` filtradas a las del plan; tareas nuevas con sus reglas y dependencias.
 - Señales `topRiskUntested` (top 10, exclusiones, solo escaneados) y `healthyPercent`.
+- Bloqueo: por dependencias, por fase abierta (cerrada por gates, por no tener tareas o por tareas
+  hechas), prioridad del motivo y rechazo de `in_progress`/`done` en el update.
 - Validacion real: brandsites y mc con su fase actual y gates.

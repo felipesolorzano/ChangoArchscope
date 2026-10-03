@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PlanTaskStateRepository } from "../../../../../app/modules/plan/application/contracts/PlanTaskStateRepository.js";
-import { updateTaskState } from "../../../../../app/modules/plan/application/use-cases/updateTaskState.js";
+import { assertTaskUnlocked, updateTaskState } from "../../../../../app/modules/plan/application/use-cases/updateTaskState.js";
 
 function fakeRepository(): PlanTaskStateRepository {
   return { getStates: vi.fn(() => ({})), setState: vi.fn() };
@@ -31,3 +31,25 @@ describe("updateTaskState", () => {
     expect(repository.setState).not.toHaveBeenCalled();
   });
 });
+
+describe("assertTaskUnlocked (XRay X6)", () => {
+  const graph = {
+    nodes: [
+      { id: "a", title: "Tests", lockReason: null },
+      { id: "b", title: "Migrar versiones major", lockReason: "Espera a: Tests" },
+    ],
+  } as never;
+
+  it("una tarea bloqueada no pasa a en progreso ni a hecho", () => {
+    expect(() => assertTaskUnlocked(graph, "b", "in_progress")).toThrow('La tarea "Migrar versiones major" esta bloqueada. Espera a: Tests.');
+    expect(() => assertTaskUnlocked(graph, "b", "done")).toThrow("esta bloqueada");
+  });
+
+  it("pendiente y bloqueado siempre; una tarea libre o fuera del plan no se valida", () => {
+    expect(() => assertTaskUnlocked(graph, "b", "pending")).not.toThrow();
+    expect(() => assertTaskUnlocked(graph, "b", "blocked")).not.toThrow();
+    expect(() => assertTaskUnlocked(graph, "a", "done")).not.toThrow();
+    expect(() => assertTaskUnlocked(graph, "nope", "done")).not.toThrow();
+  });
+});
+

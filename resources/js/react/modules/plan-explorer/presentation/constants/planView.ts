@@ -30,3 +30,8 @@ export function stateColor(state: PlanTaskState): string {
 export function stateLabel(state: PlanTaskState): string {
   return STATE_LABEL[state] ?? STATE_LABEL.pending;
 }
+
+/** XRay X6: estados que una tarea bloqueada no puede tomar (empezar o dar por hecha). */
+export function isStartingState(state: PlanTaskState): boolean {
+  return state === "in_progress" || state === "done";
+}

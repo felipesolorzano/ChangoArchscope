@@ -75,6 +75,8 @@ export type PlanGraphNode = {
   metric: number;
   stage: number;
   position: { x: number; y: number };
+  /** XRay X6: por que todavia no se puede empezar (null = se puede). */
+  lockReason: string | null;
 };
 
 export type PlanGraphEdge = {

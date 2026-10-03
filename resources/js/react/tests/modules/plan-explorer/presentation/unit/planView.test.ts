@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PLAN_STATE_OPTIONS, stateColor, stateLabel } from "../../../../../modules/plan-explorer/presentation/constants/planView";
+import { PLAN_STATE_OPTIONS, isStartingState, stateColor, stateLabel } from "../../../../../modules/plan-explorer/presentation/constants/planView";
 
 describe("stateColor", () => {
   it("devuelve un color por cada estado", () => {
@@ -30,3 +30,15 @@ describe("PLAN_STATE_OPTIONS", () => {
     expect(PLAN_STATE_OPTIONS.map((option) => option.state)).toEqual(["pending", "in_progress", "done", "blocked"]);
   });
 });
+
+describe("isStartingState (XRay X6)", () => {
+  it("en progreso y hecho son los que una tarea bloqueada no puede tomar", () => {
+    expect(PLAN_STATE_OPTIONS.map((option) => [option.state, isStartingState(option.state)])).toEqual([
+      ["pending", false],
+      ["in_progress", true],
+      ["done", true],
+      ["blocked", false],
+    ]);
+  });
+});
+

@@ -77,4 +77,14 @@ describe("buildPlanGraph", () => {
 
     expect(buildPlanGraph(chain, {}, "2026-01-01T00:00:00.000Z").edges.map((edge) => edge.id)).toEqual(["dep:a:b", "dep:b:c", "dep:c:d", "dep:a:e"]);
   });
+
+  it("lockReason por nodo con los estados (XRay X6)", () => {
+    const graph = buildPlanGraph(tasks, {}, "2026-01-01T00:00:00.000Z", [phase(1, ["a"]), phase(3, ["b"])]);
+
+    expect(graph.nodes.map((node) => [node.id, node.lockReason])).toEqual([
+      ["a", null],
+      ["b", "Espera a: A"],
+    ]);
+    expect(buildPlanGraph(tasks, { a: "done" }, "2026-01-01T00:00:00.000Z").nodes[1].lockReason).toBeNull();
+  });
 });

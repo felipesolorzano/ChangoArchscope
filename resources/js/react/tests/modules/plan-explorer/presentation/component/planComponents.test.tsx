@@ -20,6 +20,7 @@ import type { PlanExplorerDependencies } from "../../../../../modules/plan-explo
 import { PlanCanvas } from "../../../../../modules/plan-explorer/presentation/components/PlanCanvas";
 import { PlanFindingsDrawer, findingsCountLabel } from "../../../../../modules/plan-explorer/presentation/components/PlanFindingsDrawer";
 import { PlanTaskCard } from "../../../../../modules/plan-explorer/presentation/components/PlanTaskCard";
+import { stateColor } from "../../../../../modules/plan-explorer/presentation/constants/planView";
 import PlanExplorer from "../../../../../modules/plan-explorer/presentation/pages/PlanExplorer";
 
 vi.mock("../../../../../modules/plan-explorer/infrastructure/browser/copyText", () => ({ copyText: vi.fn() }));
@@ -139,12 +140,29 @@ describe("PlanTaskCard", () => {
     expect(markup).not.toContain("Ver hallazgos");
   });
 
+  it("bloqueada: motivo y sin en progreso ni hecho (XRay X6)", () => {
+    const markup = card(task({ lockReason: "Espera a: Tests" }));
+
+    expect(markup).toContain('class="plan-task plan-task--locked"');
+    expect(markup).toContain("🔒 Espera a: Tests");
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*title="Espera a: Tests"[^>]*>En progreso</);
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*title="Espera a: Tests"[^>]*>Hecho</);
+    expect(markup.match(/disabled=""/g)).toHaveLength(2);
+    expect(card(task())).not.toContain("plan-task--locked");
+    expect(card(task())).not.toContain("disabled");
+    expect(card(task())).not.toContain("🔒");
+  });
+
   it("un boton por estado con el actual activo", () => {
     const markup = card(task({ state: "done" }));
 
     for (const label of ["Pendiente", "En progreso", "Hecho", "Bloqueado"]) expect(markup).toContain(label);
     expect(markup.match(/plan-task__state--active/g)).toHaveLength(1);
     expect(markup).toMatch(/plan-task__state--active"[^>]*>Hecho</);
+    const done = stateColor("done");
+    expect(markup).toContain(`<div class="plan-task" style="border-color:${done}">`);
+    expect(markup).toContain(`<button type="button" class="plan-task__state plan-task__state--active" style="background:${done};border-color:${done}">Hecho</button>`);
+    expect(markup).toContain('<button type="button" class="plan-task__state">Pendiente</button>');
   });
 });
 
