@@ -1,3 +1,4 @@
+import semver from "semver";
 // Adaptador entre bounded contexts: el reporte de `dependencies` → tareas del plan (metrica + items).
 const KIND_LABELS = { php: "PHP", node: "Node", npm: "npm" };
 export function dependencyReportToSignals(report) {
@@ -15,7 +16,7 @@ export function dependencyReportToSignals(report) {
     };
     const majorSteps = majorStepsOf(deps.filter((dep) => dep.status === "major"));
     for (const [key, list] of majorSteps) {
-        items[key] = list.map((dep) => item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}`));
+        items[key] = list;
     }
     return { counts: Object.fromEntries(Object.entries(items).map(([key, list]) => [key, list.length])), items, majorSteps: majorSteps.map(([key]) => key) };
 }
@@ -32,7 +33,37 @@ function majorStepsOf(majors) {
     const rank = (group) => (group === LOOSE ? STEP_ORDER.length + 1 : STEP_ORDER.includes(group) ? STEP_ORDER.indexOf(group) : STEP_ORDER.length);
     return [...byGroup]
         .sort(([left], [right]) => rank(left) - rank(right) || left.localeCompare(right))
-        .map(([group, list]) => [`upgrade-major:${group}`, list]);
+        .flatMap(([group, list]) => (HOP_GROUPS.has(group) ? hopSteps(group, list) : null) ?? [[`upgrade-major:${group}`, list.map(groupedItem)]]);
+}
+// Frameworks: cada major tiene su guia de migracion, asi que van de a un major por paso.
+const HOP_GROUPS = new Set(["react", "react-router", "laravel"]);
+function hopSteps(group, list) {
+    // Lider: el que se llama como el grupo; si no, el que pasa por mas majors (empate, el primero).
+    const lead = list.find((dep) => dep.name === group) ?? list.reduce((best, dep) => (dep.majorPath.length > best.majorPath.length ? dep : best));
+    if (lead.majorPath.length === 0) {
+        return null;
+    }
+    const reached = new Map(list.map((dep) => [dep, dep.current]));
+    return lead.majorPath.map((version, index) => {
+        const major = semver.major(version);
+        const last = index === lead.majorPath.length - 1;
+        const jumpTo = (dep, target) => {
+            const from = reached.get(dep);
+            reached.set(dep, target);
+            return item(dep, "dependency-major", "medium", `${dep.name} ${from} → ${target}`);
+        };
+        const inMajor = list.flatMap((dep) => dep.majorPath.filter((candidate) => semver.major(candidate) === major).map((target) => jumpTo(dep, target)));
+        // El ultimo paso lleva a cada paquete a su recomendada (los que no compartieron un major con el lider,
+        // o los que siguen mas alla).
+        const leftovers = last ? list.filter((dep) => reached.get(dep) !== dep.recommended).map((dep) => jumpTo(dep, dep.recommended)) : [];
+        return [`upgrade-major:${group}@${major}`, [...inMajor, ...leftovers]];
+    });
+}
+// Grupos sin pasos intermedios: un item por paquete, con el camino de majors si pasa por mas de uno.
+function groupedItem(dep) {
+    const majors = dep.majorPath.map((version) => semver.major(version)).join(" → ");
+    const path = dep.majorPath.length > 1 ? ` (majors: ${majors})` : "";
+    return item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}${path}`);
 }
 function item(dep, rule, severity, message) {
     return { file: dep.manifest, line: 0, rule, severity, message };

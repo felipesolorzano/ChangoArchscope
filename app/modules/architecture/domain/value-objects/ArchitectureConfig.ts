@@ -51,8 +51,14 @@ export type ArchitectureServerConfig = {
   port: number;
 };
 
+export type PlanConfig = {
+  /** Metas de los quality gates del Plan por clave de gate (XRay X6), p. ej. `{ "healthy-files": 70 }`. */
+  gateTargets?: Record<string, number>;
+};
+
 export type ArchitectureConfig = {
   laravel: LaravelArchitectureConfig;
   react: ReactArchitectureConfig;
   server: ArchitectureServerConfig;
+  plan?: PlanConfig;
 };

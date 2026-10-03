@@ -65,4 +65,6 @@ export type DependencyReport = DeclaredDependency & {
   limitedByRuntime: boolean;
   currentPublishedAt: string | null;
   latestPublishedAt: string | null;
+  /** XRay X6: version de cada major intermedio hasta `recommended` (vacio sin salto major). */
+  majorPath: string[];
 };

@@ -37,7 +37,8 @@ export function buildPlanGraph(
     summary: { tasks: nodes.length, by_state: byState },
     lanes: lanesOf(phases, tasks, stages),
     nodes,
-    edges: reducedEdges(tasks),
+    edges: orderEdges(tasks, positions, phaseOf),
+    dependencyEdges: reducedEdges(tasks),
   };
 }
 
@@ -49,6 +50,17 @@ function lanesOf(phases: PlanPhase[], tasks: PlanTask[], stages: Record<string, 
     const first = phase.tasks.find((task) => present.has(task));
     return first === undefined ? [] : [{ phase: phase.number, title: phase.title, status: phase.status, current: phase.current, x: stages[first] * STAGE_X }];
   });
+}
+
+// El orden del flujo: de cada tarea a la siguiente (columna, despues fila). El hotfix es un carril aparte.
+function orderEdges(tasks: PlanTask[], positions: Record<string, { x: number; y: number }>, phaseOf: Record<string, number>): PlanGraphEdge[] {
+  const flow = tasks
+    .filter((task) => (phaseOf[task.key] ?? 0) >= 0)
+    .map((task) => task.key)
+    // Estable: dentro de una columna ya vienen de arriba hacia abajo (orden de roadmap).
+    .sort((left, right) => positions[left].x - positions[right].x);
+
+  return flow.slice(1).map((key, index) => ({ id: `next:${flow[index]}:${key}`, source: flow[index], target: key }));
 }
 
 // Reduccion transitiva: una flecha A→C sobra si C ya llega a A por otra dependencia (A→B→C).

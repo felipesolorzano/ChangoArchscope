@@ -32,6 +32,8 @@ export function planApiRoutes() {
         dependencySignals: {
             getSignals: async (target) => dependencyReportToSignals(await generateDependencyReport(getDependencyReportDeps(), { target, requested: {}, refresh: false, offline: true })),
         },
+        // Metas de los gates de la config (se leen en cada pedido).
+        gateTargets: () => auditDeps.getConfig().plan?.gateTargets ?? {},
         // Fase 3 (XRay X6): el mismo nivel que muestra la franja "Red de seguridad".
         protection: {
             getLevel: async (target) => buildProtectionBaseline({ reader: new NodeFsSourceTreeReader(), ...protectionStackOf(auditDeps.getConfig(), target) }).level,

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { skeletonLabel, targetKindLabel, targetReasons } from "../../../../../modules/plan-explorer/presentation/constants/characterizationView";
 import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/presentation/store/planDrawerStore";
+import { usePlanViewStore } from "../../../../../modules/plan-explorer/presentation/store/planViewStore";
 import type { CharacterizationTarget } from "../../../../../modules/plan-explorer/domain/value-objects/Characterization";
 
 const target = (overrides: Partial<CharacterizationTarget> = {}): CharacterizationTarget => ({
@@ -57,3 +58,15 @@ describe("planDrawerStore (XRay X5)", () => {
     expect(usePlanDrawerStore.getState().drawer).toBeNull();
   });
 });
+
+describe("planViewStore (XRay X6)", () => {
+  it("por defecto el orden; alterna a dependencias y vuelve; el snapshot de servidor es el actual", () => {
+    expect(usePlanViewStore.getInitialState().showDependencies).toBe(false);
+    usePlanViewStore.getState().toggleDependencies();
+    expect(usePlanViewStore.getState().showDependencies).toBe(true);
+    expect((usePlanViewStore as unknown as { getServerState: () => { showDependencies: boolean } }).getServerState().showDependencies).toBe(true);
+    usePlanViewStore.getState().toggleDependencies();
+    expect(usePlanViewStore.getState().showDependencies).toBe(false);
+  });
+});
+

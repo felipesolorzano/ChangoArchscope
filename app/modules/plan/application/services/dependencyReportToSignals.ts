@@ -1,5 +1,7 @@
 import type { DependencyReportEntry, DependencyReportResult, SelectedRuntime } from "../../../dependencies/application/use-cases/buildDependencyReport.js";
 import type { SupportStatus } from "../../../dependencies/domain/value-objects/Security.js";
+import semver from "semver";
+
 import type { DependencySignals, PlanFinding } from "../../domain/value-objects/Plan.js";
 
 // Adaptador entre bounded contexts: el reporte de `dependencies` → tareas del plan (metrica + items).
@@ -21,7 +23,7 @@ export function dependencyReportToSignals(report: DependencyReportResult): Depen
 
   const majorSteps = majorStepsOf(deps.filter((dep) => dep.status === "major"));
   for (const [key, list] of majorSteps) {
-    items[key] = list.map((dep) => item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}`));
+    items[key] = list;
   }
 
   return { counts: Object.fromEntries(Object.entries(items).map(([key, list]) => [key, list.length])), items, majorSteps: majorSteps.map(([key]) => key) };
@@ -32,7 +34,7 @@ export function dependencyReportToSignals(report: DependencyReportResult): Depen
 const STEP_ORDER = ["eslint", "jest", "vite", "webpack", "gulp", "react", "@testing-library", "react-router", "laravel"];
 const LOOSE = "otros";
 
-function majorStepsOf(majors: DependencyReportEntry[]): Array<[string, DependencyReportEntry[]]> {
+function majorStepsOf(majors: DependencyReportEntry[]): Array<[string, PlanFinding[]]> {
   const byGroup = new Map<string, DependencyReportEntry[]>();
   for (const dep of majors) {
     const group = dep.group ?? LOOSE;
@@ -42,7 +44,41 @@ function majorStepsOf(majors: DependencyReportEntry[]): Array<[string, Dependenc
 
   return [...byGroup]
     .sort(([left], [right]) => rank(left) - rank(right) || left.localeCompare(right))
-    .map(([group, list]) => [`upgrade-major:${group}`, list]);
+    .flatMap(([group, list]) => (HOP_GROUPS.has(group) ? hopSteps(group, list) : null) ?? [[`upgrade-major:${group}`, list.map(groupedItem)]]);
+}
+
+// Frameworks: cada major tiene su guia de migracion, asi que van de a un major por paso.
+const HOP_GROUPS = new Set(["react", "react-router", "laravel"]);
+
+function hopSteps(group: string, list: DependencyReportEntry[]): Array<[string, PlanFinding[]]> | null {
+  // Lider: el que se llama como el grupo; si no, el que pasa por mas majors (empate, el primero).
+  const lead = list.find((dep) => dep.name === group) ?? list.reduce((best, dep) => (dep.majorPath.length > best.majorPath.length ? dep : best));
+  if (lead.majorPath.length === 0) {
+    return null;
+  }
+  const reached = new Map(list.map((dep) => [dep, dep.current as string]));
+
+  return lead.majorPath.map((version, index) => {
+    const major = semver.major(version);
+    const last = index === lead.majorPath.length - 1;
+    const jumpTo = (dep: DependencyReportEntry, target: string) => {
+      const from = reached.get(dep)!;
+      reached.set(dep, target);
+      return item(dep, "dependency-major", "medium", `${dep.name} ${from} → ${target}`);
+    };
+    const inMajor = list.flatMap((dep) => dep.majorPath.filter((candidate) => semver.major(candidate) === major).map((target) => jumpTo(dep, target)));
+    // El ultimo paso lleva a cada paquete a su recomendada (los que no compartieron un major con el lider,
+    // o los que siguen mas alla).
+    const leftovers = last ? list.filter((dep) => reached.get(dep) !== dep.recommended).map((dep) => jumpTo(dep, dep.recommended as string)) : [];
+    return [`upgrade-major:${group}@${major}`, [...inMajor, ...leftovers]];
+  });
+}
+
+// Grupos sin pasos intermedios: un item por paquete, con el camino de majors si pasa por mas de uno.
+function groupedItem(dep: DependencyReportEntry): PlanFinding {
+  const majors = dep.majorPath.map((version) => semver.major(version)).join(" → ");
+  const path = dep.majorPath.length > 1 ? ` (majors: ${majors})` : "";
+  return item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}${path}`);
 }
 
 function item(dep: DependencyReportEntry, rule: string, severity: string, message: string): PlanFinding {

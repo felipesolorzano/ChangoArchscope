@@ -269,5 +269,13 @@ describe("PlanController", async () => {
     expect(status).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('La tarea "Cerrar inyecciones SQL" esta bloqueada.') }));
   });
+
+  it("metas de los gates desde la config (XRay X6)", async () => {
+    const { json, response } = fakeResponse();
+
+    await new PlanController({ snapshots, repository: repository(), projectOf, gateTargets: () => ({ "parse-errors": 5 }) }).show({ query: {} } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect(json.mock.calls[0][0].phases[1].gates[0]).toMatchObject({ key: "parse-errors", target: 5 });
+  });
 });
 

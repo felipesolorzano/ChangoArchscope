@@ -174,6 +174,9 @@ describe("buildPlan", () => {
     expect(graph.phases[2].gates.map((gate) => gate.key)).not.toContain("unused-exports");
     expect(buildPlan({ ...healthy, target: "react" }, repository, "/src").phases[2].gates.map((gate) => gate.key)).toContain("unused-exports");
     expect(buildPlan(healthy, repository, "/php").phases[3].gates[0]).toMatchObject({ value: null, status: "unknown" });
+    // Metas de la config (XRay X6).
+    const relaxed = buildPlan(healthy, repository, "/php", undefined, "medium", { "healthy-files": 70 });
+    expect(relaxed.phases[11].gates.find((gate) => gate.key === "healthy-files")).toMatchObject({ target: 70, status: "passed" });
     // Columnas por fase: la fase 3 (seguridad) a la derecha de la 0 (linea base) y un encabezado por fase.
     const sql = graph.nodes.find((node) => node.id === "close-sql-injections")!;
     const third = graph.nodes.find((node) => node.id === "exclude-third-party")!;

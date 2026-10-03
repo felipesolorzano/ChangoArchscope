@@ -29,4 +29,7 @@ export default {
     host: "127.0.0.1",
     port: 4590,
   },
+  // Metas de los quality gates del Plan (opcional). Claves: las de cada gate en el panel "Fases"
+  // (parse-errors, healthy-files, top-risk-untested, protection-level, critical-packages...).
+  // plan: { gateTargets: { "healthy-files": 70, "top-risk-untested": 3 } },
 };

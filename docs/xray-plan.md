@@ -156,4 +156,13 @@ estado), Migracion/Diseño (bounded contexts).
   criticas se parchean ya, solo hasta la version que corrige; es lo unico que se adelanta al flujo, no
   bloquea a nadie, nunca es la fase actual y va primero en "Siguiente paso". mc: fatfree 3.5.1 → 3.7.2 y
   swiper 3.3.1 → 6.5.1 (parches minimos; lo recomendado era 3.9.3 y 14.3.0). brandsites: sin criticas.
+- Pasos intermedios: la clasificacion de dependencias calcula `majorPath` (la mejor version de cada
+  major hasta la recomendada). React, react-router y laravel se migran de a un major por tarea
+  (brandsites: react → 17 → 18 → **createRoot** → 19; react-router → 6 → 7); el codemod de createRoot va
+  despues de llegar a 18 y antes de 19 (React 19 elimina ReactDOM.render). Los demas grupos siguen en
+  un paso que muestra su camino (`jest 24 → 29 (majors: 25 → 26 → 27 → 28 → 29)`).
+- Metas configurables: `plan.gateTargets` en `chango-archscope.config.mjs` (p. ej. `{ "healthy-files": 70 }`).
+- Flechas en el orden del flujo ("termina → sigue"); boton "Ver dependencias" para ver las reales.
+- Una tarea que no esta en el plan actual (p. ej. de paquetes cuando el reporte de dependencias no
+  cargo) no se puede pasar a "En progreso" ni "Hecho": no se puede validar su orden.
 

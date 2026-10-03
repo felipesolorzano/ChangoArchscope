@@ -34,10 +34,25 @@ describe("buildPlanGraph", () => {
     expect(b?.position.x).toBeGreaterThan(a?.position.x ?? 0);
   });
 
-  it("crea un edge por cada dependencia", () => {
+  it("crea un edge de dependencia por cada dependencia", () => {
     const graph = buildPlanGraph(tasks, {}, "2026-01-01T00:00:00.000Z");
 
-    expect(graph.edges).toEqual([{ id: "dep:a:b", source: "a", target: "b" }]);
+    expect(graph.dependencyEdges).toEqual([{ id: "dep:a:b", source: "a", target: "b" }]);
+  });
+
+  it("flechas en el orden del flujo: columna, despues fila; el hotfix no se encadena (XRay X6)", () => {
+    const flow: PlanTask[] = ["h", "a", "b", "c", "d"].map((key) => ({ key, title: key, description: "", category: "x", dependsOn: [], metric: 1 }));
+    const graph = buildPlanGraph(flow, {}, "2026-01-01T00:00:00.000Z", [phase(-1, ["h"]), phase(0, ["b", "a"]), phase(2, ["c"]), phase(1, ["d"])]);
+
+    // Columnas: hotfix | a, b (fase 0, filas en orden de roadmap) | d (fase 1) | c (fase 2).
+    expect(graph.edges).toEqual([
+      { id: "next:a:b", source: "a", target: "b" },
+      { id: "next:b:d", source: "b", target: "d" },
+      { id: "next:d:c", source: "d", target: "c" },
+    ]);
+    expect(buildPlanGraph([], {}, "2026-01-01T00:00:00.000Z").edges).toEqual([]);
+    // Sin fases (columna final) tambien se encadenan.
+    expect(buildPlanGraph(tasks, {}, "2026-01-01T00:00:00.000Z").edges).toEqual([{ id: "next:a:b", source: "a", target: "b" }]);
   });
 
   it("summary cuenta tareas por estado", () => {
@@ -52,6 +67,7 @@ describe("buildPlanGraph", () => {
 
     expect(graph.nodes).toEqual([]);
     expect(graph.edges).toEqual([]);
+    expect(graph.dependencyEdges).toEqual([]);
     expect(graph.summary).toEqual({ tasks: 0, by_state: {} });
   });
 
@@ -75,7 +91,7 @@ describe("buildPlanGraph", () => {
       { key: "e", title: "E", description: "", category: "x", dependsOn: ["a"], metric: 1 },
     ];
 
-    expect(buildPlanGraph(chain, {}, "2026-01-01T00:00:00.000Z").edges.map((edge) => edge.id)).toEqual(["dep:a:b", "dep:b:c", "dep:c:d", "dep:a:e"]);
+    expect(buildPlanGraph(chain, {}, "2026-01-01T00:00:00.000Z").dependencyEdges.map((edge) => edge.id)).toEqual(["dep:a:b", "dep:b:c", "dep:c:d", "dep:a:e"]);
   });
 
   it("lockReason por nodo con los estados (XRay X6)", () => {

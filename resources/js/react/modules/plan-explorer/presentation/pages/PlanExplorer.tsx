@@ -15,6 +15,7 @@ import { ProtectionStrip } from "../components/ProtectionStrip";
 import { PLAN_STATE_OPTIONS, stateColor, stateLabel } from "../constants/planView";
 import { usePlanController } from "../hooks/usePlanController";
 import { registerPlanInteractions } from "../store/planInteractionsStore";
+import { usePlanViewStore } from "../store/planViewStore";
 
 import "./planExplorer.css";
 
@@ -32,7 +33,9 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
   }, [setTaskState, openTask]);
 
   const flowNodes = useMemo(() => [...toPlanLaneNodes(graph?.lanes ?? []), ...toPlanFlowNodes(graph?.nodes ?? [])], [graph]);
-  const flowEdges = useMemo(() => toPlanFlowEdges(graph?.edges ?? []), [graph]);
+  // El orden del flujo, o las dependencias reales a pedido (XRay X6).
+  const showDependencies = usePlanViewStore((state) => state.showDependencies);
+  const flowEdges = useMemo(() => toPlanFlowEdges((showDependencies ? graph?.dependencyEdges : graph?.edges) ?? []), [graph, showDependencies]);
 
   const total = graph?.summary.tasks ?? 0;
 

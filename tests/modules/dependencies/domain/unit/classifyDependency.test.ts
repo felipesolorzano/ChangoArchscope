@@ -45,6 +45,7 @@ describe("classifyDependency", () => {
       limitedByRuntime: false,
       currentPublishedAt: null,
       latestPublishedAt: null,
+      majorPath: [],
     });
   });
 
@@ -159,4 +160,31 @@ describe("classifyDependency", () => {
     expect(classifyDependency(dep(), null, {})).toMatchObject({ status: "unknown", latest: null, recommended: null, current: "1.2.0" });
     expect(classifyDependency(dep(), info([release("2.0.0-rc.1"), release("not-a-version")]), {})).toMatchObject({ status: "unknown", latest: null });
   });
+
+  it("majorPath: la mayor recomendable de cada major hasta la recomendada (XRay X6)", () => {
+    const releases = [
+      release("16.14.0"),
+      release("17.0.0"),
+      release("17.0.2"),
+      release("18.2.0"),
+      release("18.3.1"),
+      release("18.4.0-rc.1"),
+      release("19.0.0", { deprecated: "usar 19.3" }),
+      release("19.3.0"),
+      release("20.0.0", { requires: { node: ">=30" } }),
+      release("21.0.0", { deprecated: "no" }),
+    ];
+    const report = classifyDependency(dep({ installed: "16.14.0" }), info(releases), { node: "20.0.0" });
+
+    expect(report.recommended).toBe("19.3.0");
+    expect(report.majorPath).toEqual(["17.0.2", "18.3.1", "19.3.0"]);
+  });
+
+  it("majorPath: un major sin release recomendable se salta; sin salto major, vacio", () => {
+    const releases = [release("1.0.0"), release("2.0.0", { deprecated: "x" }), release("3.1.0"), release("3.2.0")];
+
+    expect(classifyDependency(dep({ installed: "1.0.0" }), info(releases), {}).majorPath).toEqual(["3.2.0"]);
+    expect(classifyDependency(dep({ installed: "3.1.0" }), info(releases), {}).majorPath).toEqual([]);
+  });
 });
+

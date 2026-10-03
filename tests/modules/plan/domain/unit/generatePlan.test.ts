@@ -205,6 +205,64 @@ describe("generatePlan: un major a la vez (XRay X6)", () => {
     });
   });
 
+  it("pasos intermedios: titulo con el major y createRoot entre React 18 y 19", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "legacy-react-dom-api": 4, "untested-component": 1 }),
+        dependencies: majors({
+          "upgrade-major:react@17": ["react 16.14.0 → 17.0.2"],
+          "upgrade-major:react@18": ["react 17.0.2 → 18.3.1"],
+          "upgrade-major:react@19": ["react 18.3.1 → 19.3.0"],
+          "upgrade-major:otros": ["a 1 → 2"],
+        }),
+      }),
+    );
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+
+    expect(plan.map((task) => task.key)).toEqual([
+      "add-component-tests",
+      "apply-safe-updates",
+      "upgrade-major:react@17",
+      "upgrade-major:react@18",
+      "apply-post-upgrade-codemods",
+      "upgrade-major:react@19",
+      "upgrade-major:otros",
+      "validate-risk-reduction",
+    ]);
+    expect(byKey["upgrade-major:react@17"].title).toBe("Migrar major: react → 17");
+    // Un grupo con scope no es un paso intermedio: la "@" inicial es parte del nombre.
+    const scoped = generatePlan(signals({ dependencies: majors({ "upgrade-major:@testing-library": ["@testing-library/react 9 → 16"], "upgrade-major:@x@2": ["@x/y 1 → 2"] }) }));
+    expect(scoped.map((task) => task.title)).toEqual(["Aplicar actualizaciones patch y minor", "Migrar major: @testing-library", "Migrar major: @x → 2", "Validar reduccion de riesgo"]);
+    expect(byKey["apply-post-upgrade-codemods"].dependsOn).toEqual(["upgrade-major:react@18", "add-component-tests"]);
+    expect(byKey["upgrade-major:react@19"].dependsOn).toEqual(["upgrade-major:react@18", "apply-post-upgrade-codemods", "apply-safe-updates", "add-component-tests"]);
+    expect(byKey["upgrade-major:otros"].dependsOn).toEqual(["upgrade-major:react@19", "apply-safe-updates", "add-component-tests"]);
+  });
+
+  it("si React solo llega hasta 18, createRoot va al final de los pasos", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "legacy-react-dom-api": 1 }),
+        dependencies: majors({ "upgrade-major:react@17": ["react 16 → 17"], "upgrade-major:react@18": ["react 17 → 18"] }),
+      }),
+    );
+
+    expect(plan.map((task) => task.key)).toEqual(["apply-safe-updates", "upgrade-major:react@17", "upgrade-major:react@18", "apply-post-upgrade-codemods", "validate-risk-reduction"]);
+  });
+
+  it("con React ya en 18 (solo el paso a 19), createRoot va antes de subir", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "legacy-react-dom-api": 1 }),
+        dependencies: majors({ "upgrade-major:vite": ["vite 6 → 8"], "upgrade-major:react@19": ["react 18.3.1 → 19.3.0"] }),
+      }),
+    );
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+
+    expect(plan.map((task) => task.key)).toEqual(["apply-safe-updates", "upgrade-major:vite", "apply-post-upgrade-codemods", "upgrade-major:react@19", "validate-risk-reduction"]);
+    expect(byKey["apply-post-upgrade-codemods"].dependsOn).toEqual([]);
+    expect(byKey["upgrade-major:react@19"].dependsOn).toEqual(["upgrade-major:vite", "apply-post-upgrade-codemods", "apply-safe-updates"]);
+  });
+
   it("sin pasos con datos no hay tareas de major; sin majorSteps queda la tarea unica", () => {
     const empty = generatePlan(signals({ dependencies: { ...majors({}), counts: { "upgrade-major-versions": 3 } } }));
     expect(empty.map((task) => task.key)).toEqual([]);

@@ -17,6 +17,8 @@ const MAJOR_STEP_PREFIX = "upgrade-major:";
 // Stryker disable next-line StringLiteral: la constante se usa igual al declarar y al expandir, mutante equivalente.
 const MAJOR_STEPS = "upgrade-major:*";
 const SHOWN_JUMPS = 3;
+const POST_UPGRADE_KEY = "apply-post-upgrade-codemods";
+const REACT_HOP_PREFIX = "upgrade-major:react@";
 
 // Plantillas de remediacion en orden de roadmap = orden de las fases (XRay X6, plan-phases.md). Cada una se incluye solo si su metrica es > 0.
 // Las basadas en reglas miden con sus selectores de TASK_RULES (misma fuente que el panel).
@@ -240,8 +242,14 @@ function ruleTemplate(template: Omit<PlanTemplate, "metric">): PlanTemplate {
 }
 
 // XRay X6: con pasos de major, la tarea unica se reemplaza por un paso por grupo, encadenados.
-function majorStepTemplates(dependencies: DependencySignals, steps: string[]): PlanTemplate[] {
-  return steps.map((key, index) => {
+function majorStepTemplates(dependencies: DependencySignals, steps: string[], postUpgrade: PlanTemplate): PlanTemplate[] {
+  // createRoot necesita React 18 y React 19 elimina ReactDOM.render: el codemod va despues del paso a 18
+  // o, si React ya esta en 18, antes del primer paso de React.
+  const reactHops = steps.filter((key) => key.startsWith(REACT_HOP_PREFIX));
+  const toEighteen = steps.filter((key) => key === `${REACT_HOP_PREFIX}18`);
+  const beforeKey = toEighteen.length === 0 ? reactHops[0] : steps[steps.indexOf(toEighteen[0]) + 1];
+
+  const stepTemplates = steps.map((key, index): PlanTemplate => {
     // Cada paso trae sus items (contrato de dependencyReportToSignals).
     const jumps = dependencies.items[key].map((finding) => finding.message.split(" (grupo ")[0]);
     const rest = jumps.length - SHOWN_JUMPS;
@@ -249,18 +257,48 @@ function majorStepTemplates(dependencies: DependencySignals, steps: string[]): P
 
     return {
       key,
-      title: group === "otros" ? "Migrar majors sueltos" : `Migrar major: ${group}`,
+      title: group === "otros" ? "Migrar majors sueltos" : `Migrar major: ${hopTitle(group)}`,
       description: `${jumps.slice(0, SHOWN_JUMPS).join(", ")}${rest > 0 ? ` (+${rest})` : ""}. Un salto a la vez: tests verdes antes y despues.`,
       category: "dependencies",
-      dependsOn: [...steps.slice(index - 1, index), "apply-safe-updates", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests"],
+      dependsOn: [
+        ...steps.slice(index - 1, index),
+        // Stryker disable next-line ArrayDeclaration: una clave inexistente se poda en generatePlan, mutante equivalente.
+        ...(key === beforeKey ? [postUpgrade.key] : []),
+        "apply-safe-updates",
+        "update-unsupported-runtime",
+        "add-characterization-tests",
+        "add-component-tests",
+      ],
       metric: () => jumps.length,
     };
   });
+  if (reactHops.length === 0) {
+    return stepTemplates;
+  }
+  const placed = { ...postUpgrade, dependsOn: [...toEighteen, "add-component-tests"] };
+  const at = beforeKey === undefined ? steps.length : steps.indexOf(beforeKey);
+  return [...stepTemplates.slice(0, at), placed, ...stepTemplates.slice(at)];
+}
+
+// `react@17` → `react → 17`; la "@" de un scope (`@testing-library`) no es un paso intermedio.
+function hopTitle(group: string): string {
+  const at = group.lastIndexOf("@");
+  return at > 0 ? `${group.slice(0, at)} → ${group.slice(at + 1)}` : group;
 }
 
 function templatesFor(signals: PlanSignals): PlanTemplate[] {
   const steps = signals.dependencies?.majorSteps;
-  return TEMPLATES.flatMap((template) => (template.key === MAJOR_KEY && steps !== undefined ? majorStepTemplates(signals.dependencies!, steps) : [template]));
+  if (steps === undefined) {
+    return TEMPLATES;
+  }
+  const postUpgrade = TEMPLATES.find((template) => template.key === POST_UPGRADE_KEY)!;
+  const withReact = steps.some((key) => key.startsWith(REACT_HOP_PREFIX));
+
+  return TEMPLATES.flatMap((template) => {
+    if (template.key === MAJOR_KEY) return majorStepTemplates(signals.dependencies!, steps, postUpgrade);
+    // Con pasos de React, el codemod de createRoot va entre ellos (no en su lugar habitual).
+    return template.key === POST_UPGRADE_KEY && withReact ? [] : [template];
+  });
 }
 
 export function generatePlan(signals: PlanSignals): PlanTask[] {

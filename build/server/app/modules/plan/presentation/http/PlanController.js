@@ -10,7 +10,7 @@ export class PlanController {
         try {
             const target = targetFromRequest(request);
             const snapshot = await this.deps.snapshots.getSnapshot(target);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target), await this.protectionLevel(target)));
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target), await this.protectionLevel(target), this.gateTargets()));
         }
         catch (error) {
             next(error);
@@ -27,9 +27,10 @@ export class PlanController {
             const dependencies = await this.dependencies(target);
             const level = await this.protectionLevel(target);
             // El flujo se hace cumplir: una tarea bloqueada no se empieza (XRay X6).
-            assertTaskUnlocked(buildPlan(snapshot, this.deps.repository, project, dependencies, level), key, state);
+            const targets = this.gateTargets();
+            assertTaskUnlocked(buildPlan(snapshot, this.deps.repository, project, dependencies, level, targets), key, state);
             updateTaskState(this.deps.repository, target, project, key, state);
-            response.status(200).json(buildPlan(snapshot, this.deps.repository, project, dependencies, level));
+            response.status(200).json(buildPlan(snapshot, this.deps.repository, project, dependencies, level, targets));
         }
         catch (error) {
             next(error);
@@ -48,6 +49,9 @@ export class PlanController {
     // El reporte de dependencias es opcional: si no hay proveedor o falla, el plan sale sin esas tareas.
     async dependencies(target) {
         return this.deps.dependencySignals?.getSignals(target).catch(() => undefined);
+    }
+    gateTargets() {
+        return this.deps.gateTargets?.() ?? {};
     }
     async protectionLevel(target) {
         // Stryker disable next-line ArrowFunction: null y undefined son "sin datos" para las fases, mutante equivalente.

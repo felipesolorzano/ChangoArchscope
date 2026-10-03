@@ -14,6 +14,7 @@ export function buildPlan(
   project: string,
   dependencies?: DependencySignals,
   protectionLevel: PlanProtectionLevel | null = null,
+  gateTargets: Record<string, number> = {},
 ): PlanGraph {
   const stack = snapshot.target === "react" ? "react" : "laravel";
   const signals = {
@@ -23,7 +24,7 @@ export function buildPlan(
     healthyPercent: buildAuditHealth(snapshot, project, stack).summary.healthyPercent,
   };
   const tasks = generatePlan(signals);
-  const phases = planPhases(signals, stack, tasks.map((task) => task.key));
+  const phases = planPhases(signals, stack, tasks.map((task) => task.key), gateTargets);
 
   const graph = buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString(), phases);
 

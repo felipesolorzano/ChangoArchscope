@@ -4,7 +4,7 @@ import { buildPlanGraph } from "../../domain/services/buildPlanGraph.js";
 import { generatePlan } from "../../domain/services/generatePlan.js";
 import { planPhases } from "../../domain/services/planPhases.js";
 import { auditSnapshotToSignals } from "../services/auditSnapshotToSignals.js";
-export function buildPlan(snapshot, repository, project, dependencies, protectionLevel = null) {
+export function buildPlan(snapshot, repository, project, dependencies, protectionLevel = null, gateTargets = {}) {
     const stack = snapshot.target === "react" ? "react" : "laravel";
     const signals = {
         ...auditSnapshotToSignals(snapshot),
@@ -13,7 +13,7 @@ export function buildPlan(snapshot, repository, project, dependencies, protectio
         healthyPercent: buildAuditHealth(snapshot, project, stack).summary.healthyPercent,
     };
     const tasks = generatePlan(signals);
-    const phases = planPhases(signals, stack, tasks.map((task) => task.key));
+    const phases = planPhases(signals, stack, tasks.map((task) => task.key), gateTargets);
     const graph = buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString(), phases);
     return { ...graph, checks: auditedChecks(snapshot, stack), phases };
 }

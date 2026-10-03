@@ -27,7 +27,20 @@ export function classifyDependency(dependency, info, selection) {
         limitedByRuntime: bestUsable !== recommended,
         currentPublishedAt: currentRelease?.publishedAt ?? null,
         latestPublishedAt: latestRelease?.publishedAt ?? null,
+        majorPath: gap === "major" ? majorPathOf(current, compatible) : [],
     };
+}
+// XRay X6, un major a la vez: la mayor release recomendable de cada major despues del actual.
+function majorPathOf(current, compatible) {
+    const from = semver.major(current);
+    const byMajor = new Map();
+    for (const release of compatible) {
+        const major = semver.major(release.version);
+        if (major > from) {
+            byMajor.set(major, release.version);
+        }
+    }
+    return [...byMajor.values()];
 }
 // Releases con version valida y sin prerelease, de menor a mayor.
 function stableReleases(releases) {

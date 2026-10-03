@@ -45,11 +45,18 @@ describe("assertTaskUnlocked (XRay X6)", () => {
     expect(() => assertTaskUnlocked(graph, "b", "done")).toThrow("esta bloqueada");
   });
 
-  it("pendiente y bloqueado siempre; una tarea libre o fuera del plan no se valida", () => {
+  it("pendiente y bloqueado siempre; una tarea libre se puede empezar", () => {
     expect(() => assertTaskUnlocked(graph, "b", "pending")).not.toThrow();
     expect(() => assertTaskUnlocked(graph, "b", "blocked")).not.toThrow();
     expect(() => assertTaskUnlocked(graph, "a", "done")).not.toThrow();
-    expect(() => assertTaskUnlocked(graph, "nope", "done")).not.toThrow();
+    expect(() => assertTaskUnlocked(graph, "a", "in_progress")).not.toThrow();
+  });
+
+  it("una tarea fuera del plan actual no se empieza ni se da por hecha; pendiente y bloqueado si", () => {
+    expect(() => assertTaskUnlocked(graph, "upgrade-major:jest", "done")).toThrow('La tarea "upgrade-major:jest" no esta en el plan actual: no se puede empezar ni dar por hecha.');
+    expect(() => assertTaskUnlocked(graph, "upgrade-major:jest", "in_progress")).toThrow("no esta en el plan actual");
+    expect(() => assertTaskUnlocked(graph, "upgrade-major:jest", "pending")).not.toThrow();
+    expect(() => assertTaskUnlocked(graph, "upgrade-major:jest", "blocked")).not.toThrow();
   });
 });
 

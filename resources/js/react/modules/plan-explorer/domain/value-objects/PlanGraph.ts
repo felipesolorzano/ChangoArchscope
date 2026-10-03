@@ -59,7 +59,10 @@ export interface PlanGraph {
   /** Encabezado de cada columna del grafo (una por fase con tareas, XRay X6). */
   lanes?: PlanLane[];
   nodes: PlanGraphNode[];
+  /** XRay X6: el orden del flujo ("termina → sigue"). */
   edges: PlanGraphEdge[];
+  /** Dependencias reales, para verlas a pedido. */
+  dependencyEdges?: PlanGraphEdge[];
 }
 
 export interface PlanFinding {

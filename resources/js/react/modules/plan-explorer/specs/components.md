@@ -172,3 +172,10 @@ goal, status, current, gates: [{ key, label, value, target, comparator, format, 
 - La fase `-1` (hotfix) se muestra sin numero: `phaseHeading(phase)` = `"<n>. <titulo>"`, o solo el
   titulo si `n < 0`; `laneLabel(phase)` = `"Fase <n>"`, o `"Hotfix"` si `n < 0` (encabezado del grafo).
 - `PhaseList` usa `phaseHeading`; `PlanLaneHeader` usa `laneLabel`.
+
+## Flechas: orden o dependencias (XRay X6)
+
+- `PlanGraph.edges` = el orden ("termina → sigue"); `PlanGraph.dependencyEdges?` = dependencias reales.
+- Store Zustand `planViewStore`: `showDependencies` (default `false`) y `toggleDependencies`.
+- Boton `"Ver dependencias"` / `"Ver orden"` (clase `plan-protection__action`) en el indicador de fase;
+  el grafo dibuja `dependencyEdges` o `edges` segun el store.

@@ -18,6 +18,8 @@ export type PlanControllerDeps = {
   dependencySignals?: DependencySignalsProvider;
   /** Nivel de proteccion para las fases (XRay X6); si falta o falla, el gate queda sin datos. */
   protection?: ProtectionLevelProvider;
+  /** Metas de los gates (config `plan.gateTargets`); sin ella, las de cada fase. */
+  gateTargets?: () => Record<string, number>;
 };
 
 export class PlanController {
@@ -28,7 +30,7 @@ export class PlanController {
       const target = targetFromRequest(request);
       const snapshot = await this.deps.snapshots.getSnapshot(target);
 
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target), await this.protectionLevel(target)));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target), await this.protectionLevel(target), this.gateTargets()));
     } catch (error) {
       next(error);
     }
@@ -46,10 +48,11 @@ export class PlanController {
       const level = await this.protectionLevel(target);
 
       // El flujo se hace cumplir: una tarea bloqueada no se empieza (XRay X6).
-      assertTaskUnlocked(buildPlan(snapshot, this.deps.repository, project, dependencies, level), key, state);
+      const targets = this.gateTargets();
+      assertTaskUnlocked(buildPlan(snapshot, this.deps.repository, project, dependencies, level, targets), key, state);
       updateTaskState(this.deps.repository, target, project, key, state);
 
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, project, dependencies, level));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, project, dependencies, level, targets));
     } catch (error) {
       next(error);
     }
@@ -69,6 +72,10 @@ export class PlanController {
   // El reporte de dependencias es opcional: si no hay proveedor o falla, el plan sale sin esas tareas.
   private async dependencies(target: "laravel" | "react"): Promise<DependencySignals | undefined> {
     return this.deps.dependencySignals?.getSignals(target).catch(() => undefined);
+  }
+
+  private gateTargets(): Record<string, number> {
+    return this.deps.gateTargets?.() ?? {};
   }
 
   private async protectionLevel(target: "laravel" | "react"): Promise<PlanProtectionLevel | null> {

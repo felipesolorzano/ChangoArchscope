@@ -114,7 +114,7 @@ type DependencyStatus = "up_to_date" | "patch" | "minor" | "major" | "deprecated
 
 `classifyDependency(dependency, info | null, selection)` → `DependencyReport` = la dependencia +
 `{ current, latest, recommended, gap, status, deprecation, replacement, limitedByRuntime,
-currentPublishedAt, latestPublishedAt }`:
+currentPublishedAt, latestPublishedAt, majorPath }`:
 
 - `current`: `installed`, si no `minVersionOf(constraint)`, si no `null`.
 - Releases estables: version valida sin prerelease. `latest`: la mayor estable (`null` si no hay).
@@ -127,6 +127,10 @@ currentPublishedAt, latestPublishedAt }`:
 - `deprecated` se evalua solo sobre la release `current`: que otras esten deprecated no cambia el
   estado.
 - `gap`: `versionGap(current, recommended)`; `none` si alguno es `null`.
+- `majorPath` (XRay X6, un major a la vez): con `gap` `major`, por cada major entre el de `current`
+  (exclusive) y el de `recommended` (inclusive), la mayor release de ese major que podria ser
+  `recommended` (estable, no deprecated, compatible con el runtime), en orden; un major sin ninguna
+  se salta. Termina siempre en `recommended`. Sin `gap` major, `[]`.
 - `status`: sin `info` o sin releases estables → `unknown`; `abandoned` no nulo → `abandoned`; la
   release igual a `current` esta deprecated → `deprecated`; si no, `gap` (`none` → `up_to_date`).
 - `deprecation`: mensaje de la release `current`; si `current` no esta entre las releases y todas las

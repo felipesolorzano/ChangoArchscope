@@ -11,6 +11,7 @@ import { CharacterizationList } from "../../../../../modules/plan-explorer/prese
 import { CodemodDrawer } from "../../../../../modules/plan-explorer/presentation/components/CodemodDrawer";
 import { CodemodList } from "../../../../../modules/plan-explorer/presentation/components/CodemodList";
 import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/presentation/store/planDrawerStore";
+import { usePlanViewStore } from "../../../../../modules/plan-explorer/presentation/store/planViewStore";
 import { PhaseDrawer } from "../../../../../modules/plan-explorer/presentation/components/PhaseDrawer";
 import { PhaseIndicator } from "../../../../../modules/plan-explorer/presentation/components/PhaseIndicator";
 import { PhaseList } from "../../../../../modules/plan-explorer/presentation/components/PhaseList";
@@ -382,6 +383,10 @@ describe("Fases (XRay X6)", () => {
     const withNext = renderToStaticMarkup(<PhaseIndicator phases={[passed, current]} next={{ ...task(), title: "Eliminar copias manuales" }} />);
     expect(withNext).toContain('<button type="button" class="plan-phases__next">Siguiente: Eliminar copias manuales</button>');
     expect(renderToStaticMarkup(<PhaseIndicator phases={[]} next={task()} />)).toBe("");
+    expect(markup).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Ver dependencias<\/button>/);
+    usePlanViewStore.setState({ showDependencies: true });
+    expect(renderToStaticMarkup(<PhaseIndicator phases={[passed, current]} />)).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Ver orden<\/button>/);
+    usePlanViewStore.setState({ showDependencies: false });
   });
 
   it("PhaseList: estado, meta, gates con valor y objetivo, tareas por titulo; la actual marcada", () => {

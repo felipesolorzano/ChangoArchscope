@@ -150,18 +150,29 @@ const PHASES = [
     },
 ];
 /** Fases del stack con sus gates evaluados; la actual es la primera no cumplida. */
-export function planPhases(signals, stack, taskKeys) {
+export function planPhases(signals, stack, taskKeys, gateTargets = {}) {
     const present = new Set(taskKeys);
+    // Con pasos de React, createRoot va entre ellos: en la fase 8, no en la 9.
+    const reactHops = taskKeys.some((key) => key.startsWith("upgrade-major:react@"));
+    const inMajors = (key) => key.startsWith("upgrade-major:") || (reactHops && key === "apply-post-upgrade-codemods");
+    const claimed = new Set();
     let currentFound = false;
     return PHASES.map(({ gates, tasks, ...phase }) => {
-        const evaluated = gates.filter((gate) => (gate.stack ?? stack) === stack).map((gate) => evaluateGate(gate, signals));
+        const evaluated = gates.filter((gate) => (gate.stack ?? stack) === stack).map((gate) => evaluateGate(withTarget(gate, gateTargets[gate.key]), signals));
         const status = phaseStatus(evaluated);
         const current = !currentFound && phase.number !== HOTFIX_PHASE && (status === "failed" || status === "unknown");
         currentFound ||= current;
         // El comodin = los pasos de major del plan, en su orden.
-        const planned = tasks.flatMap((task) => (task === MAJOR_STEPS ? taskKeys.filter((key) => key.startsWith("upgrade-major:")) : present.has(task) ? [task] : []));
+        const planned = tasks
+            .flatMap((task) => (task === MAJOR_STEPS ? taskKeys.filter(inMajors) : present.has(task) ? [task] : []))
+            .filter((task) => !claimed.has(task));
+        planned.forEach((task) => claimed.add(task));
         return { ...phase, status, current, gates: evaluated, tasks: planned };
     });
+}
+// Meta de la config (plan.gateTargets): solo un numero finito reemplaza la de la fase.
+function withTarget(gate, target) {
+    return Number.isFinite(target) ? { ...gate, target: target } : gate;
 }
 function evaluateGate({ stack: _stack, value: valueOf, ...gate }, signals) {
     const value = valueOf(signals);

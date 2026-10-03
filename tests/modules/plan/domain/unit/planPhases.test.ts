@@ -150,6 +150,19 @@ describe("planPhases (XRay X6)", () => {
     expect(values("laravel")).toMatchObject({ "n-plus-one": [20, "failed"], "data-layer": [21 + 22, "failed"] });
   });
 
+  it("metas configurables: reemplazan el target; lo que no es un numero finito se ignora", () => {
+    const gateOf = (targets: Record<string, unknown>, key: string, over: Partial<PlanSignals> = {}) =>
+      planPhases(clean(over), "react", [], targets as Record<string, number>).flatMap((phase) => phase.gates).find((item) => item.key === key)!;
+
+    expect(gateOf({ "healthy-files": 70 }, "healthy-files", { healthyPercent: 75 })).toMatchObject({ target: 70, status: "passed" });
+    expect(gateOf({ "top-risk-untested": 3 }, "top-risk-untested", { topRiskUntested: 3 })).toMatchObject({ target: 3, status: "passed" });
+    expect(gateOf({ "top-risk-untested": 3 }, "top-risk-untested", { topRiskUntested: 4 })).toMatchObject({ status: "failed" });
+    for (const invalid of ["70", Number.NaN, Number.POSITIVE_INFINITY, null]) {
+      expect(gateOf({ "healthy-files": invalid }, "healthy-files").target).toBe(80);
+    }
+    expect(gateOf({}, "parse-errors").target).toBe(0);
+  });
+
   it("niveles de proteccion: none 0, low 1, medium 2, high 3", () => {
     const level = (protectionLevel: PlanSignals["protectionLevel"]) => planPhases(clean({ protectionLevel }), "react", [])[3].gates[0].value;
 
@@ -201,6 +214,17 @@ describe("planPhases (XRay X6)", () => {
     const phases = planPhases(clean(), "react", ["upgrade-major:react", "update-unsupported-runtime", "upgrade-major:otros", "replace-abandoned-packages"]);
 
     expect(phases[9].tasks).toEqual(["update-unsupported-runtime", "upgrade-major:react", "upgrade-major:otros", "replace-abandoned-packages"]);
+  });
+
+  it("con pasos de React, createRoot va en la fase 8 entre los pasos (XRay X6)", () => {
+    const keys = ["upgrade-major:react@18", "apply-post-upgrade-codemods", "upgrade-major:react@19"];
+    const phases = planPhases(clean(), "react", ["remove-manual-copies", ...keys, "break-god-classes"]);
+
+    expect(phases[9].tasks).toEqual(keys);
+    expect(phases[2].tasks).toEqual(["remove-manual-copies"]);
+    expect(phases[11].tasks).toEqual(["break-god-classes"]);
+    expect(phases[10].tasks).toEqual([]);
+    expect(planPhases(clean(), "react", ["upgrade-major:vite", "apply-post-upgrade-codemods"])[10].tasks).toEqual(["apply-post-upgrade-codemods"]);
   });
 
   it("tasks: las de la fase que estan en el plan, en el orden de la fase", () => {

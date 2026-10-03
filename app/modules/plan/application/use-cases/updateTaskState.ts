@@ -27,11 +27,18 @@ function isPlanTaskState(value: string): value is PlanTaskState {
 
 const STARTING_STATES = new Set(["in_progress", "done"]);
 
-/** XRay X6: no se empieza (ni se da por hecha) una tarea que el flujo todavia bloquea. */
+/** XRay X6: no se empieza (ni se da por hecha) una tarea que el flujo todavia bloquea o que no esta en el plan. */
 export function assertTaskUnlocked(graph: Pick<PlanGraph, "nodes">, taskKey: string, state: string): void {
+  if (!STARTING_STATES.has(state)) {
+    return;
+  }
   const node = graph.nodes.find((candidate) => candidate.id === taskKey);
 
-  if (node?.lockReason != null && STARTING_STATES.has(state)) {
+  // Sin la tarea en el plan (p. ej. el reporte de dependencias no cargo) no se puede validar su orden.
+  if (node === undefined) {
+    throw new Error(`La tarea "${taskKey}" no esta en el plan actual: no se puede empezar ni dar por hecha.`);
+  }
+  if (node.lockReason !== null) {
     throw new Error(`La tarea "${node.title}" esta bloqueada. ${node.lockReason}.`);
   }
 }

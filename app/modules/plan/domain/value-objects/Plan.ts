@@ -99,7 +99,10 @@ export type PlanGraph = {
   /** Encabezados de columna del grafo: una por fase con tareas (XRay X6). */
   lanes: PlanLane[];
   nodes: PlanGraphNode[];
+  /** XRay X6: el orden del flujo, "termina esta → sigue esta". */
   edges: PlanGraphEdge[];
+  /** Dependencias reales (reduccion transitiva), para verlas a pedido. */
+  dependencyEdges: PlanGraphEdge[];
 };
 
 // Hallazgo concreto que respalda una tarea del plan (puente plan -> audit).

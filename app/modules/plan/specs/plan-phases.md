@@ -82,6 +82,21 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 - `current`: `true` solo en la primera fase `failed` o `unknown`. Si todas pasan (o no aplican),
   ninguna es actual.
 
+## Metas configurables
+
+`chango-archscope.config.mjs` → `plan.gateTargets: Record<gateKey, number>` (opcional): reemplaza la meta
+(`target`) de esos gates, p. ej. `{ "healthy-files": 70, "top-risk-untested": 3 }`. Solo numeros finitos;
+otro valor o una clave desconocida se ignora. `planPhases(signals, stack, taskKeys, gateTargets = {})`;
+`buildPlan(..., gateTargets)`; `PlanController` lo lee con `gateTargets()` (deps), las rutas desde la
+config (se lee en cada pedido).
+
+## Flechas en el orden del flujo
+
+- `PlanGraph.edges`: una flecha de cada tarea a la siguiente en el orden del grafo (columna, despues
+  fila): "termina esta → sigue esta". El carril de hotfix no se encadena. Ids `next:<a>:<b>`.
+- `PlanGraph.dependencyEdges`: las dependencias reales (reduccion transitiva, como antes), para verlas
+  a pedido en el front.
+
 ## Carril de hotfix (fase -1)
 
 Lo unico que se adelanta al flujo: una vulnerabilidad critica de un paquete se parchea ya, con el salto
@@ -112,8 +127,7 @@ minimo, sin esperar a los tests.
 - `phaseOf` sale de `planPhases(...).tasks`.
 - `PlanGraph.lanes: [{ phase, title, status, current, x }]`: un encabezado por columna (fase con
   tareas), en orden.
-- Flechas: reduccion transitiva de `dependsOn` entre las tareas incluidas (si A→B y B→C, no se dibuja
-  A→C). `dependsOn` de cada tarea no cambia.
+- Flechas: ver "Flechas en el orden del flujo".
 
 ## Bloqueo automatico (`domain/services/planLocks.ts`, puro)
 
@@ -132,8 +146,10 @@ El flujo se hace cumplir: no se puede empezar lo que todavia no toca.
 - `PlanGraphNode.lockReason: string | null` (lo arma `buildPlanGraph` con los estados).
 - Cambiar una tarea bloqueada a `in_progress` o `done` falla (`assertTaskUnlocked(graph, taskKey,
   state)` en `PlanController.update`, antes de guardar): `La tarea "<titulo>" esta bloqueada. <motivo>.`
-  (HTTP 400 como los demas errores). `pending` y `blocked` siempre se permiten; una tarea que no esta
-  en el plan no se valida (la valida `updateTaskState` como antes).
+  (HTTP 400 como los demas errores). `pending` y `blocked` siempre se permiten. Una tarea que no esta en
+  el plan en ese momento (p. ej. una de paquetes cuando el reporte de dependencias no cargo) tampoco
+  se puede pasar a `in_progress` ni `done`: `La tarea "<key>" no esta en el plan actual: no se puede
+  empezar ni dar por hecha.` (no se puede validar su orden).
 
 ## Siguiente paso (`planNextTask`, en `domain/services/planLocks.ts`)
 

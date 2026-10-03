@@ -93,6 +93,17 @@ los dos).
   despues."`, categoria `dependencies`, metrica = cantidad de items del paso, dependsOn = paso anterior (si hay),
   `apply-safe-updates`, `update-unsupported-runtime` y los dos de tests. Sin `majorSteps` (señales
   viejas) queda la tarea unica `upgrade-major-versions`.
+- Pasos intermedios (XRay X6): los grupos `react`, `react-router` y `laravel` (frameworks: cada major
+  tiene su guia de migracion) se abren en un paso por major del paquete lider (el que se llama como el
+  grupo, si no el de mas majors; empate, el primero): clave `upgrade-major:<grupo>@<major>`, titulo
+  `"Migrar major: <grupo> → <major>"`, items = los paquetes del grupo con una version de ese major en
+  su `majorPath` (`"<pkg> <anterior> → <version>"`, la anterior = la del paso previo o `current`); el
+  ultimo paso agrega, despues, el salto a `recommended` de cada paquete que todavia no llego. Los demas grupos siguen en un paso; si un
+  paquete pasa por mas de un major, su item agrega `" (majors: 25 → 26 → … → 29)"`.
+- `createRoot` en su lugar: si hay pasos de `react`, `apply-post-upgrade-codemods` va entre el paso que
+  llega a React 18 y el siguiente (si React ya esta en 18, antes del primero): depende de ese paso (y de
+  `add-component-tests`) y el paso siguiente depende de el; en el roadmap y en la fase 8 va en ese
+  lugar. React 19 elimina `ReactDOM.render`: subir a 19 antes del codemod rompe.
 - `dependsOn` acepta comodines `"<prefijo>*"`: se expanden a las tareas incluidas con ese prefijo
   (`apply-post-upgrade-codemods` y `validate-risk-reduction` esperan a todos los pasos de major).
 - `findingsForTask(snapshot, taskKey, dependencies?)`: para estas tareas devuelve

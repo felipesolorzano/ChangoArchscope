@@ -20,6 +20,7 @@ const entry = (overrides: Partial<DependencyReportEntry>): DependencyReportEntry
   limitedByRuntime: false,
   currentPublishedAt: null,
   latestPublishedAt: null,
+  majorPath: [],
   fetchedAt: null,
   lookupError: null,
   stale: false,
@@ -208,6 +209,84 @@ describe("dependencyReportToSignals: un major a la vez (XRay X6)", () => {
 
   it("sin majors no hay pasos", () => {
     expect(dependencyReportToSignals(report([])).majorSteps).toEqual([]);
+  });
+});
+
+describe("dependencyReportToSignals: pasos intermedios de los frameworks (XRay X6)", () => {
+  const major = (name: string, group: string | null, current: string, majorPath: string[]) =>
+    entry({ name, group, current, recommended: majorPath.at(-1)!, status: "major", majorPath });
+
+  it("react, react-router y laravel: un paso por major del lider; el resto del grupo en su major o al final", () => {
+    const signals = dependencyReportToSignals(
+      report([
+        major("react-dom", "react", "16.14.0", ["17.0.2", "18.3.1", "19.3.0"]),
+        major("react", "react", "16.14.0", ["17.0.2", "18.3.1", "19.3.0"]),
+        major("@types/react", "react", "16.9.0", ["19.1.0"]),
+        major("history", "react-router", "4.10.1", ["5.3.0"]),
+        major("react-router-dom", "react-router", "5.3.3", ["6.30.1", "7.18.4"]),
+        major("laravel/framework", "laravel", "9.0.0", ["10.48.0", "11.9.0"]),
+      ]),
+    );
+
+    expect(signals.majorSteps).toEqual([
+      "upgrade-major:react@17",
+      "upgrade-major:react@18",
+      "upgrade-major:react@19",
+      "upgrade-major:react-router@6",
+      "upgrade-major:react-router@7",
+      "upgrade-major:laravel@10",
+      "upgrade-major:laravel@11",
+    ]);
+    const messages = (key: string) => signals.items[key].map((item) => item.message);
+    expect(messages("upgrade-major:react@17")).toEqual(["react-dom 16.14.0 → 17.0.2", "react 16.14.0 → 17.0.2"]);
+    expect(messages("upgrade-major:react@18")).toEqual(["react-dom 17.0.2 → 18.3.1", "react 17.0.2 → 18.3.1"]);
+    expect(messages("upgrade-major:react@19")).toEqual(["react-dom 18.3.1 → 19.3.0", "react 18.3.1 → 19.3.0", "@types/react 16.9.0 → 19.1.0"]);
+    expect(messages("upgrade-major:react-router@6")).toEqual(["react-router-dom 5.3.3 → 6.30.1"]);
+    expect(messages("upgrade-major:react-router@7")).toEqual(["react-router-dom 6.30.1 → 7.18.4", "history 4.10.1 → 5.3.0"]);
+    expect(signals.items["upgrade-major:react@19"][0]).toMatchObject({ rule: "dependency-major", severity: "medium", file: "/p/package.json" });
+    expect(signals.counts["upgrade-major:react@19"]).toBe(3);
+  });
+
+  it("lider: el que se llama como el grupo aunque no tenga mas majors; si no, el de mas (empate, el primero)", () => {
+    const signals = dependencyReportToSignals(
+      report([
+        major("@types/react", "react", "16.9.0", ["17.0.1", "18.0.1", "19.0.1", "20.0.0"]),
+        major("react", "react", "16.14.0", ["17.0.2", "18.3.1", "19.3.0"]),
+        major("laravel/framework", "laravel", "9.0.0", ["10.48.0", "11.9.0"]),
+        major("laravel/tinker", "laravel", "1.0.0", ["2.9.0", "3.1.0"]),
+      ]),
+    );
+
+    expect(signals.majorSteps).toEqual(["upgrade-major:react@17", "upgrade-major:react@18", "upgrade-major:react@19", "upgrade-major:laravel@10", "upgrade-major:laravel@11"]);
+    expect(signals.items["upgrade-major:react@19"].map((item) => item.message)).toEqual([
+      "@types/react 18.0.1 → 19.0.1",
+      "react 18.3.1 → 19.3.0",
+      "@types/react 19.0.1 → 20.0.0",
+    ]);
+    expect(signals.items["upgrade-major:laravel@11"].map((item) => item.message)).toEqual(["laravel/framework 10.48.0 → 11.9.0", "laravel/tinker 1.0.0 → 3.1.0"]);
+  });
+
+  it("los demas grupos: un paso con el camino de majors si pasa por mas de uno", () => {
+    const signals = dependencyReportToSignals(
+      report([
+        major("jest", "jest", "24.9.0", ["25.5.4", "26.6.3", "29.7.0"]),
+        major("babel-jest", "jest", "24.9.0", ["29.7.0"]),
+        major("lodash", null, "3.0.0", ["4.17.21"]),
+      ]),
+    );
+
+    expect(signals.majorSteps).toEqual(["upgrade-major:jest", "upgrade-major:otros"]);
+    expect(signals.items["upgrade-major:jest"].map((item) => item.message)).toEqual([
+      "jest 24.9.0 → 29.7.0 (grupo jest) (majors: 25 → 26 → 29)",
+      "babel-jest 24.9.0 → 29.7.0 (grupo jest)",
+    ]);
+    expect(signals.items["upgrade-major:otros"].map((item) => item.message)).toEqual(["lodash 3.0.0 → 4.17.21"]);
+  });
+
+  it("sin camino (lider sin majorPath) el framework queda en un solo paso", () => {
+    const signals = dependencyReportToSignals(report([entry({ name: "react", group: "react", current: "0.14.0", recommended: "0.15.0", status: "major", majorPath: [] })]));
+
+    expect(signals.majorSteps).toEqual(["upgrade-major:react"]);
   });
 });
 
