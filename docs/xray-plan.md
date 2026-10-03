@@ -145,4 +145,11 @@ estado), Migracion/Diseño (bounded contexts).
   primera pendiente sin bloqueo, en orden de roadmap. Tarjeta resaltada con "▶ Siguiente paso" y boton
   "Siguiente: <tarea>" en la cabecera, que abre sus hallazgos. brandsites: "Eliminar copias manuales";
   mc: "Excluir librerias de terceros".
+- Un major a la vez: "Migrar versiones major" se abre en un paso por grupo (`upgrade-major:<grupo>`),
+  encadenados en orden: herramientas (eslint, jest, vite, webpack, gulp) → framework (react) → lo que lo
+  acompaña (@testing-library, react-router, laravel) → resto de grupos → "majors sueltos". Cada paso
+  lista sus saltos y "tests verdes antes y despues"; "Aplicar codemods de la version nueva" espera a
+  todos. `react-router-dom` + `history` pasan a un grupo propio. brandsites: 9 pasos (React 16.14 →
+  19, react-router-dom 5.3 → 7, 37 sueltos); mc: vite → react → phpmailer → 11 sueltos. Una fase con
+  mas de 5 tareas sigue en sub-columnas para que el grafo entre en pantalla.
 

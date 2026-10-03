@@ -185,6 +185,12 @@ describe("planPhases (XRay X6)", () => {
     expect(planPhases(clean({ skippedFiles: 1 }), "react", [])[0].status).toBe("failed");
   });
 
+  it("tasks: los pasos de major van en la fase 8, en el orden del plan (XRay X6)", () => {
+    const phases = planPhases(clean(), "react", ["upgrade-major:react", "update-unsupported-runtime", "upgrade-major:otros", "replace-abandoned-packages"]);
+
+    expect(phases[8].tasks).toEqual(["update-unsupported-runtime", "upgrade-major:react", "upgrade-major:otros", "replace-abandoned-packages"]);
+  });
+
   it("tasks: las de la fase que estan en el plan, en el orden de la fase", () => {
     const phases = planPhases(clean(), "react", ["validate-risk-reduction", "close-xss-sinks", "close-sql-injections", "unknown"]);
 

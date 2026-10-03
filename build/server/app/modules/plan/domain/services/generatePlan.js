@@ -1,5 +1,11 @@
 import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, countSelected } from "./planTaskRules.js";
 const VALIDATE_KEY = "validate-risk-reduction";
+const MAJOR_KEY = "upgrade-major-versions";
+const MAJOR_STEP_PREFIX = "upgrade-major:";
+// Dependencia comodin: todos los pasos de major incluidos.
+// Stryker disable next-line StringLiteral: la constante se usa igual al declarar y al expandir, mutante equivalente.
+const MAJOR_STEPS = "upgrade-major:*";
+const SHOWN_JUMPS = 3;
 // Plantillas de remediacion en orden de roadmap = orden de las fases (XRay X6, plan-phases.md). Cada una se incluye solo si su metrica es > 0.
 // Las basadas en reglas miden con sus selectores de TASK_RULES (misma fuente que el panel).
 // Stryker disable ArrayDeclaration: equivalente en los `dependsOn: []`. generatePlan poda las
@@ -184,7 +190,7 @@ const TEMPLATES = [
         title: "Aplicar codemods de la version nueva",
         description: "Despues de subir React: ReactDOM.render / hydrate → createRoot.",
         category: "legacy_api",
-        dependsOn: ["upgrade-major-versions", "add-component-tests"],
+        dependsOn: ["upgrade-major-versions", MAJOR_STEPS, "add-component-tests"],
     }),
     // Fase 10 — complejidad (validate se agrega al final)
     ruleTemplate({
@@ -211,8 +217,31 @@ function dependencyTemplate(template) {
 function ruleTemplate(template) {
     return { ...template, metric: (signals) => countSelected(signals, TASK_RULES[template.key]) };
 }
+// XRay X6: con pasos de major, la tarea unica se reemplaza por un paso por grupo, encadenados.
+function majorStepTemplates(dependencies, steps) {
+    return steps.map((key, index) => {
+        // Cada paso trae sus items (contrato de dependencyReportToSignals).
+        const jumps = dependencies.items[key].map((finding) => finding.message.split(" (grupo ")[0]);
+        const rest = jumps.length - SHOWN_JUMPS;
+        const group = key.slice(MAJOR_STEP_PREFIX.length);
+        return {
+            key,
+            title: group === "otros" ? "Migrar majors sueltos" : `Migrar major: ${group}`,
+            description: `${jumps.slice(0, SHOWN_JUMPS).join(", ")}${rest > 0 ? ` (+${rest})` : ""}. Un salto a la vez: tests verdes antes y despues.`,
+            category: "dependencies",
+            dependsOn: [...steps.slice(index - 1, index), "apply-safe-updates", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests"],
+            metric: () => jumps.length,
+        };
+    });
+}
+function templatesFor(signals) {
+    const steps = signals.dependencies?.majorSteps;
+    return TEMPLATES.flatMap((template) => (template.key === MAJOR_KEY && steps !== undefined ? majorStepTemplates(signals.dependencies, steps) : [template]));
+}
 export function generatePlan(signals) {
-    const work = TEMPLATES.map((template) => ({ template, metric: template.metric(signals) })).filter((item) => item.metric > 0);
+    const work = templatesFor(signals)
+        .map((template) => ({ template, metric: template.metric(signals) }))
+        .filter((item) => item.metric > 0);
     if (work.length === 0) {
         return [];
     }
@@ -222,7 +251,10 @@ export function generatePlan(signals) {
         title: template.title,
         description: template.description,
         category: template.category,
-        dependsOn: template.dependsOn.filter((dependency) => includedKeys.has(dependency)),
+        // El comodin se expande a los pasos de major incluidos.
+        dependsOn: template.dependsOn
+            .flatMap((dependency) => (dependency === MAJOR_STEPS ? [...includedKeys].filter((key) => key.startsWith(MAJOR_STEP_PREFIX)) : [dependency]))
+            .filter((dependency) => includedKeys.has(dependency)),
         metric,
     }));
     tasks.push({

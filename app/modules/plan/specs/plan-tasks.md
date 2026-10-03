@@ -79,6 +79,22 @@ los dos).
 
   (las cuatro primeras van antes de `resolve-duplicate-migrations`; las dos ultimas despues de
   `split-large-components`, antes de `validate-risk-reduction`).
+- XRay X6, un major a la vez: `DependencySignals.majorSteps?: string[]` (lo arma
+  `dependencyReportToSignals`) = claves `upgrade-major:<grupo>` de los majors agrupados por `group`
+  del reporte, mas `upgrade-major:otros` con los que no tienen grupo; `counts`/`items` traen cada
+  clave (los items de la tarea). Orden: `eslint`, `jest`, `vite`, `webpack`, `gulp` (herramientas),
+  `react`, `@testing-library`, `react-router`, `laravel` (framework y lo que lo acompaña), el resto de
+  los grupos alfabetico y `otros` al final. `upgrade-major-versions` sigue en `counts`/`items` (total,
+  gate de la fase 8).
+- Con `majorSteps`, `generatePlan` reemplaza `upgrade-major-versions` por una tarea por paso, en ese
+  orden y en el mismo lugar del roadmap: titulo `"Migrar major: <grupo>"` (`otros` → `"Migrar majors
+  sueltos"`), descripcion = hasta 3 saltos de sus items (`"<pkg> <actual> → <recomendada>"`,
+  separados por `", "`, `" (+N)"` si hay mas) + `". Un salto a la vez: tests verdes antes y
+  despues."`, categoria `dependencies`, metrica = cantidad de items del paso, dependsOn = paso anterior (si hay),
+  `apply-safe-updates`, `update-unsupported-runtime` y los dos de tests. Sin `majorSteps` (señales
+  viejas) queda la tarea unica `upgrade-major-versions`.
+- `dependsOn` acepta comodines `"<prefijo>*"`: se expanden a las tareas incluidas con ese prefijo
+  (`apply-post-upgrade-codemods` y `validate-risk-reduction` esperan a todos los pasos de major).
 - `findingsForTask(snapshot, taskKey, dependencies?)`: para estas tareas devuelve
   `dependencies.items[taskKey]` (maximo 100; `total` completo); sin `dependencies`, vacio.
 - `PlanController` pide las señales a un puerto `DependencySignalsProvider.getSignals(target)` en

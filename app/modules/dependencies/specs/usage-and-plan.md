@@ -34,7 +34,9 @@ Plan: `docs/dependencies-plan.md`.
 - npm: `react`, `react-dom`, `react-test-renderer`, `react-is`, `@types/react`, `@types/react-dom` →
   `react`; `eslint` y `eslint-*` y `@typescript-eslint/*` → `eslint`; `jest`, `jest-*`, `babel-jest`,
   `ts-jest`, `@jest/*` → `jest`; `vite`, `vitest`, `@vitejs/*`, `@vitest/*` → `vite`; `webpack`,
-  `webpack-*` → `webpack`; `gulp`, `gulp-*` → `gulp`; cualquier otro con scope (`@x/y`) → `@x`.
+  `webpack-*` → `webpack`; `gulp`, `gulp-*` → `gulp`; `react-router`, `react-router-dom` y `history`
+  → `react-router` (su major rompe `withRouter`: va como un paso propio en el Plan); cualquier otro
+  con scope (`@x/y`) → `@x`.
 - composer: `laravel/*` e `illuminate/*` → `laravel`; `symfony/*` → `symfony`; otro → el vendor
   (`vendor/pkg` → `vendor`).
 - Sin regla → `null`.

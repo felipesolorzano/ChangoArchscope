@@ -23,4 +23,18 @@ describe("planLayout (columnas por fase, XRay X6)", () => {
   it("sin tareas devuelve mapas vacios", () => {
     expect(planLayout([], {})).toEqual({ stages: {}, positions: {} });
   });
+
+  it("una fase con mas de 5 tareas sigue en sub-columnas y corre a las siguientes", () => {
+    const many = Array.from({ length: 7 }, (_, index) => task(`m${index}`));
+    const { stages, positions } = planLayout([task("a"), ...many, task("z")], { a: 0, z: 9, ...Object.fromEntries(many.map((item) => [item.key, 8])) });
+
+    expect(stages).toEqual({ a: 0, m0: 1, m1: 1, m2: 1, m3: 1, m4: 1, m5: 2, m6: 2, z: 3 });
+    expect([positions.m4, positions.m5, positions.m6, positions.z]).toEqual([
+      { x: STAGE_X, y: 4 * ROW_Y },
+      { x: 2 * STAGE_X, y: 0 },
+      { x: 2 * STAGE_X, y: ROW_Y },
+      { x: 3 * STAGE_X, y: 0 },
+    ]);
+  });
 });
+

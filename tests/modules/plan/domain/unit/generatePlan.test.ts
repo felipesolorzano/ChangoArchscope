@@ -131,6 +131,74 @@ describe("generatePlan: ciclos de dependencias (XRay X1)", () => {
   });
 });
 
+describe("generatePlan: un major a la vez (XRay X6)", () => {
+  const majors = (steps: Record<string, string[]>) => ({
+    counts: { "apply-safe-updates": 1, "upgrade-major-versions": 9, ...Object.fromEntries(Object.entries(steps).map(([key, list]) => [key, list.length])) },
+    items: Object.fromEntries(Object.entries(steps).map(([key, list]) => [key, list.map((message) => ({ file: "", line: 0, rule: "dependency-major", severity: "medium", message }))])),
+    majorSteps: Object.keys(steps),
+  });
+
+  it("una tarea por paso, encadenadas, en el lugar de upgrade-major-versions", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "legacy-react-dom-api": 1, "untested-component": 1 }),
+        dependencies: majors({
+          "upgrade-major:react": ["react 16.0.0 → 19.0.0 (grupo react)", "react-dom 16.0.0 → 19.0.0 (grupo react)"],
+          "upgrade-major:otros": ["a 1 → 2", "b 1 → 2", "c 1 → 2", "d 1 → 2", "e 1 → 2"],
+        }),
+      }),
+    );
+
+    expect(plan.map((task) => task.key)).toEqual([
+      "add-component-tests",
+      "apply-safe-updates",
+      "upgrade-major:react",
+      "upgrade-major:otros",
+      "apply-post-upgrade-codemods",
+      "validate-risk-reduction",
+    ]);
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+    expect(byKey["upgrade-major:react"]).toEqual({
+      key: "upgrade-major:react",
+      title: "Migrar major: react",
+      description: "react 16.0.0 → 19.0.0, react-dom 16.0.0 → 19.0.0. Un salto a la vez: tests verdes antes y despues.",
+      category: "dependencies",
+      dependsOn: ["apply-safe-updates", "add-component-tests"],
+      metric: 2,
+    });
+    expect(byKey["upgrade-major:otros"]).toMatchObject({
+      title: "Migrar majors sueltos",
+      description: "a 1 → 2, b 1 → 2, c 1 → 2 (+2). Un salto a la vez: tests verdes antes y despues.",
+      dependsOn: ["upgrade-major:react", "apply-safe-updates", "add-component-tests"],
+      metric: 5,
+    });
+    expect(byKey["apply-post-upgrade-codemods"].dependsOn).toEqual(["upgrade-major:react", "upgrade-major:otros", "add-component-tests"]);
+  });
+
+  it("tres saltos sin (+0); con runtime y tests de caracterizacion tambien dependen de ellos", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "untested-complex-method": 1 }),
+        dependencies: { ...majors({ "upgrade-major:eslint": ["a 1 → 2", "b 1 → 2", "c 1 → 2"] }), counts: { "update-unsupported-runtime": 1, "upgrade-major-versions": 3 } },
+      }),
+    );
+
+    expect(plan.find((task) => task.key === "upgrade-major:eslint")).toMatchObject({
+      description: "a 1 → 2, b 1 → 2, c 1 → 2. Un salto a la vez: tests verdes antes y despues.",
+      dependsOn: ["update-unsupported-runtime", "add-characterization-tests"],
+      metric: 3,
+    });
+  });
+
+  it("sin pasos con datos no hay tareas de major; sin majorSteps queda la tarea unica", () => {
+    const empty = generatePlan(signals({ dependencies: { ...majors({}), counts: { "upgrade-major-versions": 3 } } }));
+    expect(empty.map((task) => task.key)).toEqual([]);
+
+    const legacy = generatePlan(signals({ dependencies: { counts: { "upgrade-major-versions": 3 }, items: {} } }));
+    expect(legacy.map((task) => task.key)).toEqual(["upgrade-major-versions", "validate-risk-reduction"]);
+  });
+});
+
 describe("generatePlan con tareas de dependencias", () => {
   const dependencies = (counts: Record<string, number>) => ({ counts, items: {} });
 

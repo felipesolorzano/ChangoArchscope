@@ -29,7 +29,7 @@ version ACTUAL se migra antes de actualizar; lo que solo existe en la version nu
 |---|---|---|---|
 | `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `find-dom-node`, `string-ref`, `removed-php-function` | `add-characterization-tests`, `add-component-tests` |
 | `migrate-deprecated-apis` | legacy_api | `with-router`, `deprecated-library`, `deprecated-php-function` | `apply-legacy-codemods`, `add-characterization-tests`, `add-component-tests` |
-| `apply-post-upgrade-codemods` | legacy_api | `legacy-react-dom-api` (`render`/`hydrate`/`unmountComponentAtNode` → `createRoot`, requiere React 18) | `upgrade-major-versions`, `add-component-tests` |
+| `apply-post-upgrade-codemods` | legacy_api | `legacy-react-dom-api` (`render`/`hydrate`/`unmountComponentAtNode` → `createRoot`, requiere React 18) | `upgrade-major-versions`, `upgrade-major:*`, `add-component-tests` |
 
 `apply-legacy-codemods` y `migrate-deprecated-apis` van en el roadmap despues de
 `replace-base-class-inheritance`; `apply-post-upgrade-codemods` despues de `upgrade-major-versions`.
@@ -65,7 +65,7 @@ menor a mayor → adoptar lo que exige la version nueva → complejidad y valida
 | 5 | `pre-upgrade-apis` | APIs legacy (antes de actualizar) | Migrar lo que ya tiene reemplazo en la version actual | `removed-apis` "APIs eliminadas con reemplazo actual" reglas de `apply-legacy-codemods` ≤ 0; `deprecated-apis` "APIs y librerias deprecadas" reglas de `migrate-deprecated-apis` ≤ 0 | `apply-legacy-codemods`, `migrate-deprecated-apis` |
 | 6 | `layers` | Desacople y capas | jQuery, herencia, HTTP y datos en su capa | `jquery` "jQuery / DOM directo" reglas de `remove-jquery` ≤ 0 (react); `base-classes` "Herencia de clases base" reglas de `replace-base-class-inheritance` ≤ 0 (react); `http-layer` "HTTP en componentes / duplicado / URL fija" ≤ 0 (react); `n-plus-one` "Consultas N+1" ≤ 0 (laravel); `data-layer` "SQL fuera de infraestructura / duplicado" ≤ 0 (laravel) | `isolate-http-layer`, `remove-jquery`, `replace-base-class-inheritance`, `reduce-n-plus-one`, `extract-data-layer` |
 | 7 | `safe-updates` | Paquetes vulnerables y patch/minor | Actualizaciones que no rompen, con los tests en verde | `vulnerable-packages` "Paquetes vulnerables" ≤ 0; `safe-updates` "Actualizaciones patch/minor pendientes" ≤ 0 | `fix-vulnerable-packages`, `apply-safe-updates` |
-| 8 | `major-upgrades` | Runtime y versiones major | Un salto a la vez, con tests verdes antes y despues | `unsupported-runtime` "Runtime sin soporte" ≤ 0; `major-updates` "Saltos de version mayor pendientes" ≤ 0; `abandoned-packages` "Paquetes abandonados" ≤ 0 | `update-unsupported-runtime`, `upgrade-major-versions`, `replace-abandoned-packages` |
+| 8 | `major-upgrades` | Runtime y versiones major | Un salto a la vez, con tests verdes antes y despues | `unsupported-runtime` "Runtime sin soporte" ≤ 0; `major-updates` "Saltos de version mayor pendientes" ≤ 0; `abandoned-packages` "Paquetes abandonados" ≤ 0 | `update-unsupported-runtime`, `upgrade-major-versions` (o los pasos `upgrade-major:*`), `replace-abandoned-packages` |
 | 9 | `post-upgrade-apis` | APIs de la version nueva | Adoptar lo que exige la version nueva | `post-upgrade-apis` "APIs a migrar despues de actualizar" reglas de `apply-post-upgrade-codemods` ≤ 0 (react) | `apply-post-upgrade-codemods` |
 | 10 | `validation` | Complejidad y validacion | Sin piezas gigantes y la mayoria del codigo sano | `god-classes` "Clases gigantes" reglas de `break-god-classes` ≤ 0; `large-components` "Componentes grandes" reglas de `split-large-components` ≤ 0 (react); `healthy-files` "Archivos sanos" = `healthyPercent` ≥ 80 (percent) | `break-god-classes`, `split-large-components`, `validate-risk-reduction` |
 
@@ -74,7 +74,9 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 `planPhases(signals, stack, taskKeys)` → `PlanPhase[]` (las 11, en orden):
 
 - `{ number, key, title, goal, status, current, gates, tasks }`; `gates` = solo los que aplican al
-  `stack`; `tasks` = las de la tabla que estan en `taskKeys` (las del plan generado), en ese orden.
+  `stack`; `tasks` = las de la tabla que estan en `taskKeys` (las del plan generado), en ese orden; los
+  pasos `upgrade-major:*` van en la fase 8 en el lugar de `upgrade-major-versions`, en el orden de
+  `taskKeys`.
 - `status`: `"not-applicable"` sin gates; `"failed"` si algun gate fallo; `"unknown"` si ninguno fallo
   y alguno no tiene datos; `"passed"` si todos pasaron.
 - `current`: `true` solo en la primera fase `failed` o `unknown`. Si todas pasan (o no aplican),
@@ -82,9 +84,10 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 
 ## Grafo por fases (layout y flechas)
 
-- `planLayout(tasks, phaseOf)`: columna = posicion de la fase de la tarea entre las fases que tienen
-  tareas (sin huecos), `x = columna * 320`; fila en orden de roadmap dentro de la columna,
-  `y = fila * 250`. `stage` = columna. Una tarea sin fase va a una columna final.
+- `planLayout(tasks, phaseOf)`: una columna por fase con tareas (sin huecos), en orden; fila en orden de
+  roadmap, `y = fila * 250`. Una fase con mas de 5 tareas sigue en sub-columnas a su derecha (5 por
+  columna; p. ej. los pasos de major), y las fases siguientes se corren. `stage` = columna,
+  `x = columna * 320`. Una tarea sin fase va a una columna final.
 - `phaseOf` sale de `planPhases(...).tasks`.
 - `PlanGraph.lanes: [{ phase, title, status, current, x }]`: un encabezado por columna (fase con
   tareas), en orden.

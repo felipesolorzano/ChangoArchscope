@@ -112,6 +112,8 @@ describe("dependencyReportToSignals", () => {
       "remove-unused-packages": 1,
       "apply-safe-updates": 2,
       "upgrade-major-versions": 2,
+      "upgrade-major:react": 1,
+      "upgrade-major:otros": 1,
     });
     expect(signals.items["replace-abandoned-packages"]).toEqual([
       { file: "/p/package.json", line: 0, rule: "dependency-abandoned", severity: "high", message: "phpexcel 1.8.2: phpoffice/phpspreadsheet" },
@@ -136,3 +138,55 @@ describe("dependencyReportToSignals", () => {
     expect(signals.items["replace-abandoned-packages"][0].message).toBe("x 1.0.0: abandonado");
   });
 });
+
+describe("dependencyReportToSignals: un major a la vez (XRay X6)", () => {
+  it("un paso por grupo en el orden recomendado; los sueltos al final; cada paso con sus items", () => {
+    const major = (name: string, group: string | null) => entry({ name, current: "1.0.0", recommended: "2.0.0", status: "major", group });
+    const signals = dependencyReportToSignals(
+      report([
+        major("zod", null),
+        major("@stripe/stripe-js", "@stripe"),
+        major("react", "react"),
+        major("@aws/sdk", "@aws"),
+        major("@testing-library/react", "@testing-library"),
+        major("react-router-dom", "react-router"),
+        major("eslint", "eslint"),
+        major("laravel/framework", "laravel"),
+        major("gulp", "gulp"),
+        major("webpack", "webpack"),
+        major("vite", "vite"),
+        major("jest", "jest"),
+        major("react-dom", "react"),
+        major("lodash", null),
+        major("phpoffice/phpspreadsheet", "phpoffice"),
+        entry({ name: "patchy", status: "patch", group: "react" }),
+      ]),
+    );
+
+    expect(signals.majorSteps).toEqual([
+      "upgrade-major:eslint",
+      "upgrade-major:jest",
+      "upgrade-major:vite",
+      "upgrade-major:webpack",
+      "upgrade-major:gulp",
+      "upgrade-major:react",
+      "upgrade-major:@testing-library",
+      "upgrade-major:react-router",
+      "upgrade-major:laravel",
+      "upgrade-major:@aws",
+      "upgrade-major:@stripe",
+      "upgrade-major:phpoffice",
+      "upgrade-major:otros",
+    ]);
+    expect(signals.counts["upgrade-major:react"]).toBe(2);
+    expect(signals.counts["upgrade-major-versions"]).toBe(15);
+    expect(signals.items["upgrade-major:react"].map((item) => [item.rule, item.severity])).toEqual([["dependency-major", "medium"], ["dependency-major", "medium"]]);
+    expect(signals.items["upgrade-major:react"].map((item) => item.message)).toEqual(["react 1.0.0 → 2.0.0 (grupo react)", "react-dom 1.0.0 → 2.0.0 (grupo react)"]);
+    expect(signals.items["upgrade-major:otros"].map((item) => item.message)).toEqual(["zod 1.0.0 → 2.0.0", "lodash 1.0.0 → 2.0.0"]);
+  });
+
+  it("sin majors no hay pasos", () => {
+    expect(dependencyReportToSignals(report([])).majorSteps).toEqual([]);
+  });
+});
+

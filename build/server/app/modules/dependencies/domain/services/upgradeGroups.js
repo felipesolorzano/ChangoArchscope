@@ -7,6 +7,8 @@ const NPM_FAMILIES = [
     ["vite", (name) => name === "vite" || name === "vitest" || name.startsWith("@vitejs/") || name.startsWith("@vitest/")],
     ["webpack", (name) => name === "webpack" || name.startsWith("webpack-")],
     ["gulp", (name) => name === "gulp" || name.startsWith("gulp-")],
+    // Su major rompe withRouter: en el Plan va como un paso propio (XRay X6).
+    ["react-router", (name) => name === "react-router" || name === "react-router-dom" || name === "history"],
 ];
 /** Clave del grupo de paquetes que conviene actualizar juntos, o null si va solo. */
 export function upgradeGroup(ecosystem, name) {

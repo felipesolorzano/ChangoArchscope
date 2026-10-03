@@ -10,7 +10,26 @@ export function dependencyReportToSignals(report) {
         "apply-safe-updates": deps.filter((dep) => dep.status === "patch" || dep.status === "minor").map((dep) => item(dep, `dependency-${dep.status}`, "low", jump(dep))),
         "upgrade-major-versions": deps.filter((dep) => dep.status === "major").map((dep) => item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}`)),
     };
-    return { counts: Object.fromEntries(Object.entries(items).map(([key, list]) => [key, list.length])), items };
+    const majorSteps = majorStepsOf(deps.filter((dep) => dep.status === "major"));
+    for (const [key, list] of majorSteps) {
+        items[key] = list.map((dep) => item(dep, "dependency-major", "medium", `${jump(dep)}${dep.group ? ` (grupo ${dep.group})` : ""}`));
+    }
+    return { counts: Object.fromEntries(Object.entries(items).map(([key, list]) => [key, list.length])), items, majorSteps: majorSteps.map(([key]) => key) };
+}
+// XRay X6: un major a la vez. Primero herramientas, despues el framework y lo que lo acompaña, despues
+// el resto de los grupos (alfabetico) y al final los sueltos.
+const STEP_ORDER = ["eslint", "jest", "vite", "webpack", "gulp", "react", "@testing-library", "react-router", "laravel"];
+const LOOSE = "otros";
+function majorStepsOf(majors) {
+    const byGroup = new Map();
+    for (const dep of majors) {
+        const group = dep.group ?? LOOSE;
+        byGroup.set(group, [...(byGroup.get(group) ?? []), dep]);
+    }
+    const rank = (group) => (group === LOOSE ? STEP_ORDER.length + 1 : STEP_ORDER.includes(group) ? STEP_ORDER.indexOf(group) : STEP_ORDER.length);
+    return [...byGroup]
+        .sort(([left], [right]) => rank(left) - rank(right) || left.localeCompare(right))
+        .map(([group, list]) => [`upgrade-major:${group}`, list]);
 }
 function item(dep, rule, severity, message) {
     return { file: dep.manifest, line: 0, rule, severity, message };

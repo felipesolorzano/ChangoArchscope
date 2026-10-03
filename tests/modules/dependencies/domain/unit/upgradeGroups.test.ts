@@ -10,7 +10,8 @@ describe("upgradeGroup", () => {
     ["vite", "vite"], ["vitest", "vite"], ["@vitejs/plugin-react", "vite"], ["@vitest/coverage-v8", "vite"],
     ["webpack", "webpack"], ["webpack-dev-server", "webpack"], ["gulp", "gulp"], ["gulp-less", "gulp"],
     ["@stripe/stripe-js", "@stripe"], ["@babel/core", "@babel"], ["@types/node", "@types"],
-    ["lodash", null], ["react-router", null], ["eslintrc", null],
+    ["react-router", "react-router"], ["react-router-dom", "react-router"], ["history", "react-router"], ["react-router-config", null],
+    ["lodash", null], ["eslintrc", null],
   ])("npm %s → %s", (name, group) => {
     expect(upgradeGroup("npm", name)).toBe(group);
   });

@@ -53,6 +53,8 @@ export type PlanPhase = {
 export type DependencySignals = {
   counts: Record<string, number>;
   items: Record<string, PlanFinding[]>;
+  /** XRay X6: claves `upgrade-major:<grupo>` en el orden recomendado (un major a la vez). */
+  majorSteps?: string[];
 };
 
 // Tarea derivada (plantilla): estructura sin estado.

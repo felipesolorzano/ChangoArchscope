@@ -1,5 +1,7 @@
 import { TASK_RULES, countSelected } from "./planTaskRules.js";
 const LEVELS = { none: 0, low: 1, medium: 2, high: 3 };
+// Stryker disable next-line StringLiteral: la constante se usa igual en la fase y al expandir, mutante equivalente.
+const MAJOR_STEPS = "upgrade-major:*";
 // Gate "sin pendientes" (<= 0) sobre una cantidad.
 const atMostZero = (key, label, value, stack) => ({ key, label, target: 0, comparator: "max", format: "count", stack, value });
 // Hallazgos de las reglas de unas tareas (misma fuente que la metrica de la tarea).
@@ -114,7 +116,7 @@ const PHASES = [
             atMostZero("major-updates", "Saltos de version mayor pendientes", packagesOf("upgrade-major-versions")),
             atMostZero("abandoned-packages", "Paquetes abandonados", packagesOf("replace-abandoned-packages")),
         ],
-        tasks: ["update-unsupported-runtime", "upgrade-major-versions", "replace-abandoned-packages"],
+        tasks: ["update-unsupported-runtime", "upgrade-major-versions", MAJOR_STEPS, "replace-abandoned-packages"],
     },
     {
         number: 9,
@@ -146,7 +148,9 @@ export function planPhases(signals, stack, taskKeys) {
         const status = phaseStatus(evaluated);
         const current = !currentFound && (status === "failed" || status === "unknown");
         currentFound ||= current;
-        return { ...phase, status, current, gates: evaluated, tasks: tasks.filter((task) => present.has(task)) };
+        // El comodin = los pasos de major del plan, en su orden.
+        const planned = tasks.flatMap((task) => (task === MAJOR_STEPS ? taskKeys.filter((key) => key.startsWith("upgrade-major:")) : present.has(task) ? [task] : []));
+        return { ...phase, status, current, gates: evaluated, tasks: planned };
     });
 }
 function evaluateGate({ stack: _stack, value: valueOf, ...gate }, signals) {
