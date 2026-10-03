@@ -1,31 +1,19 @@
 export const STAGE_X = 320;
 export const ROW_Y = 250;
-export function planLayout(tasks) {
-    const byKey = new Map(tasks.map((task) => [task.key, task]));
+// Una tarea sin fase va despues de todas.
+const NO_PHASE = Number.MAX_SAFE_INTEGER;
+// XRay X6: una columna por fase con tareas (sin huecos), en el orden del flujo; filas en orden de roadmap.
+export function planLayout(tasks, phaseOf) {
+    const phaseOfTask = (key) => phaseOf[key] ?? NO_PHASE;
+    const columns = [...new Set(tasks.map((task) => phaseOfTask(task.key)))].sort((left, right) => left - right);
     const stages = {};
-    const stageOf = (key, seen) => {
-        if (stages[key] !== undefined) {
-            return stages[key];
-        }
-        const task = byKey.get(key);
-        if (task === undefined || task.dependsOn.length === 0 || seen.has(key)) {
-            stages[key] = 0;
-            return 0;
-        }
-        const next = new Set(seen).add(key);
-        const stage = 1 + Math.max(...task.dependsOn.map((dependency) => stageOf(dependency, next)));
-        stages[key] = stage;
-        return stage;
-    };
-    for (const task of tasks) {
-        stageOf(task.key, new Set());
-    }
-    const rowByStage = {};
     const positions = {};
+    const rowByStage = {};
     for (const task of tasks) {
-        const stage = stages[task.key];
+        const stage = columns.indexOf(phaseOfTask(task.key));
         const row = rowByStage[stage] ?? 0;
         rowByStage[stage] = row + 1;
+        stages[task.key] = stage;
         positions[task.key] = { x: stage * STAGE_X, y: row * ROW_Y };
     }
     return { stages, positions };

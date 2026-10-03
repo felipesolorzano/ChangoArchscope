@@ -26,16 +26,11 @@ function reactApiFinding(file, { api, line }) {
     if (api === "string-ref") {
         return legacyFinding({ rule: "string-ref", severity: "medium", class: null, file, line, message: "Las string refs no existen en React 19: usar createRef/useRef.", details: { pattern: "string-refs" } });
     }
-    const findDomNode = api === "findDOMNode";
-    return legacyFinding({
-        rule: "legacy-react-dom-api",
-        severity: "medium",
-        class: null,
-        file,
-        line,
-        message: findDomNode ? "findDOMNode no existe en React 19: usar una ref." : `ReactDOM.${api} no existe en React 19.`,
-        details: { pattern: findDomNode ? "find-dom-node" : "react-dom-render", api },
-    });
+    // findDOMNode tiene reemplazo en la version actual (refs); render/hydrate/unmount necesitan React 18.
+    if (api === "findDOMNode") {
+        return legacyFinding({ rule: "find-dom-node", severity: "medium", class: null, file, line, message: "findDOMNode no existe en React 19: usar una ref.", details: { pattern: "find-dom-node", api } });
+    }
+    return legacyFinding({ rule: "legacy-react-dom-api", severity: "medium", class: null, file, line, message: `ReactDOM.${api} no existe en React 19.`, details: { pattern: "react-dom-render", api } });
 }
 function withRouterFindings(file) {
     const usage = file.imports.find((importRef) => ROUTER_SOURCES.has(importRef.source) && importRef.names.includes("withRouter"));

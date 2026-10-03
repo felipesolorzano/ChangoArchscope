@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { currentPhase, gateTarget, gateValue, phaseStatusColor, phaseStatusLabel } from "../../../../../modules/plan-explorer/presentation/constants/phaseView";
+import { currentPhase, gateTarget, gateValue, minimapNodeColor, phaseStatusColor, phaseStatusLabel } from "../../../../../modules/plan-explorer/presentation/constants/phaseView";
+import { stateColor } from "../../../../../modules/plan-explorer/presentation/constants/planView";
 import type { PlanGate, PlanPhase } from "../../../../../modules/plan-explorer/domain/value-objects/PlanGraph";
 
 const gate = (overrides: Partial<PlanGate> = {}): PlanGate => ({ key: "g", label: "G", value: 3, target: 0, comparator: "max", format: "count", status: "failed", ...overrides });
@@ -30,5 +31,10 @@ describe("phaseView (XRay X6)", () => {
   it("fase actual o null", () => {
     expect(currentPhase([phase(0, false), phase(1, true)])?.number).toBe(1);
     expect(currentPhase([phase(0, false)])).toBeNull();
+  });
+
+  it("minimapa: encabezados por estado de fase, tareas por su estado", () => {
+    expect(minimapNodeColor({ type: "planLane", data: { status: "passed" } })).toBe("#16a34a");
+    expect(minimapNodeColor({ type: "planTask", data: { state: "done" } })).toBe(stateColor("done"));
   });
 });

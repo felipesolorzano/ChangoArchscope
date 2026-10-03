@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PlanGraphEdge, PlanGraphNode } from "../../../../../modules/plan-explorer/domain/value-objects/PlanGraph";
-import { toPlanFlowEdges, toPlanFlowNodes } from "../../../../../modules/plan-explorer/infrastructure/react-flow/planFlowAdapter";
+import { toPlanFlowEdges, toPlanFlowNodes, toPlanLaneNodes } from "../../../../../modules/plan-explorer/infrastructure/react-flow/planFlowAdapter";
 
 function node(over: Partial<PlanGraphNode> = {}): PlanGraphNode {
   return {
@@ -40,11 +40,20 @@ describe("toPlanFlowEdges", () => {
     const [edge] = toPlanFlowEdges(edges);
 
     expect(edge).toMatchObject({ id: "dep:a:b", source: "a", target: "b", type: "smoothstep" });
-    expect(edge.markerEnd).toBeTruthy();
+    expect(edge.markerEnd).toEqual({ type: "arrowclosed" });
     expect(edge.style).toMatchObject({ stroke: "#64748b", strokeWidth: 1.6 });
   });
 
   it("lista vacia -> vacia", () => {
     expect(toPlanFlowEdges([])).toEqual([]);
+  });
+});
+
+describe("toPlanLaneNodes (XRay X6)", () => {
+  it("un encabezado fijo por fase, arriba de su columna", () => {
+    const lane = { phase: 3, title: "Seguridad del codigo", status: "failed" as const, current: true, x: 640 };
+
+    expect(toPlanLaneNodes([lane])).toEqual([{ id: "lane:3", type: "planLane", position: { x: 640, y: -110 }, data: lane, draggable: false, selectable: false }]);
+    expect(toPlanLaneNodes([])).toEqual([]);
   });
 });

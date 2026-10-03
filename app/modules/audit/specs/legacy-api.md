@@ -44,7 +44,7 @@ Los archivos de test (`.test.`, `.spec.`, `/__tests__/`) no generan findings.
 |---|---|---|---|
 | `unsafe-lifecycle` | metodo de clase `componentWillMount`, `componentWillReceiveProps` o `componentWillUpdate` | medium | `unsafe-lifecycles` |
 | `legacy-react-dom-api` | `legacyReactApis` `render`/`hydrate`/`unmountComponentAtNode` | medium | `react-dom-render` |
-| `legacy-react-dom-api` | `legacyReactApis` `findDOMNode` | medium | `find-dom-node` |
+| `find-dom-node` | `legacyReactApis` `findDOMNode` (XRay X6: regla propia, se migra antes de actualizar) | medium | `find-dom-node` |
 | `string-ref` | `legacyReactApis` `string-ref` | medium | `string-refs` |
 | `with-router` | import con `withRouter` en `names` desde `react-router` o `react-router-dom` (uno por archivo) | low | `with-router` |
 | `deprecated-library` | import (incluye `require`/`import()`) de `moment`, `request` o `react-ga` (uno por archivo y libreria, primera linea; subrutas como `moment/locale/es` cuentan como `moment`) | low | `lib-<libreria>` |
@@ -52,7 +52,7 @@ Los archivos de test (`.test.`, `.spec.`, `/__tests__/`) no generan findings.
 - `unsafe-lifecycle`: `class` = la clase, `line` = la del metodo, `details: { pattern, method }`,
   mensaje `"<metodo>" esta deprecado (React 16.3+): migrar o renombrar a UNSAFE_<metodo>.`
 - `legacy-react-dom-api`: `details: { pattern, api }`, mensaje `ReactDOM.<api> no existe en React 19.`
-  (`findDOMNode`: `findDOMNode no existe en React 19: usar una ref.`).
+- `find-dom-node`: `details: { pattern, api: "findDOMNode" }`, mensaje `findDOMNode no existe en React 19: usar una ref.`
 - `string-ref`: `details: { pattern }`, mensaje `Las string refs no existen en React 19: usar createRef/useRef.`
 - `with-router`: `details: { pattern }`, mensaje `withRouter no existe en React Router v6: usar hooks.`
 - `deprecated-library`: `details: { pattern, library }`, mensaje `"<libreria>" esta deprecada: reemplazarla.`

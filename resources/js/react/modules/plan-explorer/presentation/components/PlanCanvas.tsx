@@ -9,17 +9,18 @@ import {
 } from "@xyflow/react";
 import { AlertCircle } from "lucide-react";
 
-import type { PlanCheck, PlanGraphNode } from "../../domain/value-objects/PlanGraph";
+import type { PlanCheck } from "../../domain/value-objects/PlanGraph";
+import { PlanLaneHeader } from "./PlanLaneHeader";
 import { PlanTaskCard } from "./PlanTaskCard";
-import { stateColor } from "../constants/planView";
+import { minimapNodeColor } from "../constants/phaseView";
 
-const nodeTypes = { planTask: PlanTaskCard };
+const nodeTypes = { planTask: PlanTaskCard, planLane: PlanLaneHeader };
 
 interface PlanCanvasProps {
   loading: boolean;
   error: string | null;
   empty: boolean;
-  nodes: Node<PlanGraphNode>[];
+  nodes: Node[];
   edges: Edge[];
   onInit: (instance: ReactFlowInstance) => void;
   checks?: PlanCheck[];
@@ -56,7 +57,7 @@ export function PlanCanvas({ loading, error, empty, nodes, edges, onInit, checks
           proOptions={{ hideAttribution: true }}
         >
           <Background color="#1e293b" gap={26} />
-          <MiniMap nodeColor={(node) => stateColor((node.data as PlanGraphNode).state)} maskColor="rgba(2, 6, 23, 0.78)" />
+          <MiniMap nodeColor={minimapNodeColor} maskColor="rgba(2, 6, 23, 0.78)" />
           <Controls />
         </ReactFlow>
       )}

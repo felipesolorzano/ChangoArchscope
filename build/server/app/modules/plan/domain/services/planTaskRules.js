@@ -17,8 +17,9 @@ export const TASK_RULES = {
     "remove-jquery": [{ rule: "jquery-usage" }, { rule: "direct-dom-access" }],
     "replace-base-class-inheritance": [{ rule: "base-class-inheritance" }],
     "split-large-components": [{ rule: "large-component" }, { rule: "long-render" }, { rule: "large-state" }],
-    "apply-legacy-codemods": [{ rule: "unsafe-lifecycle" }, { rule: "legacy-react-dom-api" }, { rule: "string-ref" }, { rule: "removed-php-function" }],
+    "apply-legacy-codemods": [{ rule: "unsafe-lifecycle" }, { rule: "find-dom-node" }, { rule: "string-ref" }, { rule: "removed-php-function" }],
     "migrate-deprecated-apis": [{ rule: "with-router" }, { rule: "deprecated-library" }, { rule: "deprecated-php-function" }],
+    "apply-post-upgrade-codemods": [{ rule: "legacy-react-dom-api" }],
 };
 // Tareas con fuentes de hallazgos especiales (no basadas en reglas de findings).
 export const SKIPPED_FILES_TASK = "exclude-third-party";

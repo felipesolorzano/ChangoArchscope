@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codemodSummary, codemodToolLabel, codemodWarning } from "../../../../../modules/plan-explorer/presentation/constants/codemodView";
+import { codemodSummary, codemodTimingLabel, codemodToolLabel, codemodWarning } from "../../../../../modules/plan-explorer/presentation/constants/codemodView";
 import type { CodemodCandidate } from "../../../../../modules/plan-explorer/domain/value-objects/Codemod";
 
 const candidate = (overrides: Partial<CodemodCandidate> = {}): CodemodCandidate => ({
@@ -9,6 +9,7 @@ const candidate = (overrides: Partial<CodemodCandidate> = {}): CodemodCandidate 
   tool: "react-codemod",
   command: "npx react-codemod rename-unsafe-lifecycles \"a.js\"",
   note: "",
+  timing: "before-upgrade",
   files: [
     { file: "a.js", occurrences: 3, testedBy: ["a.test.js"] },
     { file: "b.js", occurrences: 2, testedBy: [] },
@@ -33,5 +34,10 @@ describe("codemodView (XRay X5)", () => {
     expect(codemodWarning(candidate())).toBe("Caracterizar antes: 1 archivo sin tests");
     expect(codemodWarning(candidate({ protectedFiles: 0 }))).toBe("Caracterizar antes: 2 archivos sin tests");
     expect(codemodWarning(candidate({ protectedFiles: 2 }))).toBeNull();
+  });
+
+  it("cuando se migra respecto de la actualizacion (XRay X6)", () => {
+    expect(codemodTimingLabel(candidate())).toBe("Antes de actualizar");
+    expect(codemodTimingLabel(candidate({ timing: "after-upgrade" }))).toBe("Despues de actualizar");
   });
 });

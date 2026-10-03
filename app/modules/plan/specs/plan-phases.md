@@ -22,16 +22,22 @@ ni `protection`:
 
 ## Tareas nuevas (APIs legacy de XRay X5)
 
+Regla de base del flujo: nunca se cambian codigo y versiones a la vez. Lo que tiene reemplazo en la
+version ACTUAL se migra antes de actualizar; lo que solo existe en la version nueva, despues.
+
 | key | categoria | reglas | dependsOn |
 |---|---|---|---|
-| `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `legacy-react-dom-api`, `string-ref`, `removed-php-function` | `add-characterization-tests`, `add-component-tests` |
+| `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `find-dom-node`, `string-ref`, `removed-php-function` | `add-characterization-tests`, `add-component-tests` |
 | `migrate-deprecated-apis` | legacy_api | `with-router`, `deprecated-library`, `deprecated-php-function` | `apply-legacy-codemods`, `add-characterization-tests`, `add-component-tests` |
+| `apply-post-upgrade-codemods` | legacy_api | `legacy-react-dom-api` (`render`/`hydrate`/`unmountComponentAtNode` → `createRoot`, requiere React 18) | `upgrade-major-versions`, `add-component-tests` |
 
-En el roadmap van despues de `replace-base-class-inheritance` y antes de `split-large-components`.
-Titulos: "Aplicar codemods de APIs eliminadas" ("Correr los codemods de Codemods (React 19 / PHP 8)
-sobre lo ya protegido: lifecycles, ReactDOM.render, string refs, funciones PHP eliminadas.") y
-"Migrar APIs y librerias deprecadas" ("withRouter, moment/request/react-ga, utf8_encode: migracion
-manual guiada por el panel Codemods.").
+`apply-legacy-codemods` y `migrate-deprecated-apis` van en el roadmap despues de
+`replace-base-class-inheritance`; `apply-post-upgrade-codemods` despues de `upgrade-major-versions`.
+Titulos: "Aplicar codemods compatibles (antes de actualizar)" ("Con los tests en verde: lifecycles,
+string refs, findDOMNode y funciones PHP eliminadas tienen reemplazo en la version actual."), "Migrar
+APIs y librerias deprecadas" ("withRouter, moment/request/react-ga, utf8_encode: migracion manual
+guiada por el panel Codemods, antes de subir versiones.") y "Aplicar codemods de la version nueva"
+("Despues de subir React: ReactDOM.render / hydrate → createRoot.").
 
 ## Gates
 
@@ -46,19 +52,22 @@ manual guiada por el panel Codemods.").
 
 ## Fases (`domain/services/planPhases.ts`, puro)
 
+Orden del flujo: limpiar → proteger → arreglar codigo sin tocar versiones → actualizar paquetes de
+menor a mayor → adoptar lo que exige la version nueva → complejidad y validacion.
+
 | # | key | titulo | meta | gates (`stack` si no aplica a los dos) | tareas |
 |---|---|---|---|---|---|
 | 0 | `baseline` | Linea base | Todo el codigo propio se analiza | `parse-errors` "Archivos que no parsean" = `skippedFiles` ≤ 0 | `exclude-third-party` |
-| 1 | `security` | Seguridad | Sin inyecciones, sinks XSS, paquetes vulnerables ni runtime sin soporte | `injections` "Inyecciones (SQL, eval, Function)" reglas de `close-sql-injections` + `close-code-injection` ≤ 0; `xss-sinks` "Sinks XSS" reglas de `close-xss-sinks` ≤ 0 (react); `vulnerable-packages` "Paquetes vulnerables" ≤ 0; `unsupported-runtime` "Runtime sin soporte" ≤ 0 | `close-sql-injections`, `close-code-injection`, `close-xss-sinks`, `fix-vulnerable-packages`, `update-unsupported-runtime` |
-| 2 | `cleanup` | Limpieza | Sin copias, archivos muertos ni migraciones a medias | `manual-copies` "Copias manuales" ≤ 0; `unused-files` "Archivos sin uso" ≤ 0; `duplicate-migrations` "Migraciones a medias (_new)" = `duplicatePairs` ≤ 0; `unused-exports` "Exports sin uso" ≤ 0 (react); `unused-packages` "Paquetes sin uso" ≤ 0 | `remove-manual-copies`, `remove-unused-files`, `resolve-duplicate-migrations`, `remove-unused-exports`, `remove-unused-packages` |
-| 3 | `safety-net` | Red de seguridad | Lo mas riesgoso tiene tests antes de tocarlo | `protection-level` "Nivel de proteccion" ≥ 1 (level); `top-risk-untested` "Sin tests entre los 10 mas riesgosos" = `topRiskUntested` ≤ 0 | `add-characterization-tests`, `add-component-tests` |
+| 1 | `cleanup` | Limpieza | Sin copias, archivos muertos ni migraciones a medias | `manual-copies` "Copias manuales" ≤ 0; `unused-files` "Archivos sin uso" ≤ 0; `duplicate-migrations` "Migraciones a medias (_new)" = `duplicatePairs` ≤ 0; `unused-exports` "Exports sin uso" ≤ 0 (react); `unused-packages` "Paquetes sin uso" ≤ 0 | `remove-manual-copies`, `remove-unused-files`, `resolve-duplicate-migrations`, `remove-unused-exports`, `remove-unused-packages` |
+| 2 | `safety-net` | Red de seguridad | Lo mas riesgoso tiene tests antes de tocarlo | `protection-level` "Nivel de proteccion" ≥ 1 (level); `top-risk-untested` "Sin tests entre los 10 mas riesgosos" = `topRiskUntested` ≤ 0 | `add-characterization-tests`, `add-component-tests` |
+| 3 | `security` | Seguridad del codigo | Sin inyecciones ni sinks XSS, con los tests como red | `injections` "Inyecciones (SQL, eval, Function)" reglas de `close-sql-injections` + `close-code-injection` ≤ 0; `xss-sinks` "Sinks XSS" reglas de `close-xss-sinks` ≤ 0 (react) | `close-sql-injections`, `close-code-injection`, `close-xss-sinks` |
 | 4 | `architecture` | Arquitectura | Sin ciclos de imports | `import-cycles` "Ciclos de imports" ≤ 0 | `break-import-cycles` |
-| 5 | `removed-apis` | APIs eliminadas | Nada que rompa al subir de version | `removed-apis` "Usos de APIs eliminadas" reglas de `apply-legacy-codemods` ≤ 0 | `apply-legacy-codemods` |
-| 6 | `deprecated-apis` | APIs y librerias deprecadas | Sin APIs deprecadas ni paquetes abandonados | `deprecated-apis` "Usos de APIs deprecadas" reglas de `migrate-deprecated-apis` ≤ 0; `abandoned-packages` "Paquetes abandonados" ≤ 0 | `migrate-deprecated-apis`, `replace-abandoned-packages` |
-| 7 | `decoupling` | Desacople | Sin jQuery ni herencia de clases base propias | `jquery` "jQuery / DOM directo" reglas de `remove-jquery` ≤ 0 (react); `base-classes` "Herencia de clases base" reglas de `replace-base-class-inheritance` ≤ 0 (react) | `remove-jquery`, `replace-base-class-inheritance` |
-| 8 | `data-http` | Datos y HTTP | Acceso a datos y HTTP en su capa | `n-plus-one` "Consultas N+1" ≤ 0 (laravel); `data-layer` "SQL fuera de infraestructura / duplicado" ≤ 0 (laravel); `http-layer` "HTTP en componentes / duplicado / URL fija" ≤ 0 (react) | `reduce-n-plus-one`, `extract-data-layer`, `isolate-http-layer` |
-| 9 | `complexity` | Complejidad | Sin clases ni componentes gigantes | `god-classes` "Clases gigantes" reglas de `break-god-classes` ≤ 0; `large-components` "Componentes grandes" reglas de `split-large-components` ≤ 0 (react) | `break-god-classes`, `split-large-components` |
-| 10 | `upgrade` | Actualizacion y validacion | Versiones al dia y la mayoria del codigo sano | `major-updates` "Saltos de version mayor pendientes" ≤ 0; `healthy-files` "Archivos sanos" = `healthyPercent` ≥ 80 (percent) | `apply-safe-updates`, `upgrade-major-versions`, `validate-risk-reduction` |
+| 5 | `pre-upgrade-apis` | APIs legacy (antes de actualizar) | Migrar lo que ya tiene reemplazo en la version actual | `removed-apis` "APIs eliminadas con reemplazo actual" reglas de `apply-legacy-codemods` ≤ 0; `deprecated-apis` "APIs y librerias deprecadas" reglas de `migrate-deprecated-apis` ≤ 0 | `apply-legacy-codemods`, `migrate-deprecated-apis` |
+| 6 | `layers` | Desacople y capas | jQuery, herencia, HTTP y datos en su capa | `jquery` "jQuery / DOM directo" reglas de `remove-jquery` ≤ 0 (react); `base-classes` "Herencia de clases base" reglas de `replace-base-class-inheritance` ≤ 0 (react); `http-layer` "HTTP en componentes / duplicado / URL fija" ≤ 0 (react); `n-plus-one` "Consultas N+1" ≤ 0 (laravel); `data-layer` "SQL fuera de infraestructura / duplicado" ≤ 0 (laravel) | `isolate-http-layer`, `remove-jquery`, `replace-base-class-inheritance`, `reduce-n-plus-one`, `extract-data-layer` |
+| 7 | `safe-updates` | Paquetes vulnerables y patch/minor | Actualizaciones que no rompen, con los tests en verde | `vulnerable-packages` "Paquetes vulnerables" ≤ 0; `safe-updates` "Actualizaciones patch/minor pendientes" ≤ 0 | `fix-vulnerable-packages`, `apply-safe-updates` |
+| 8 | `major-upgrades` | Runtime y versiones major | Un salto a la vez, con tests verdes antes y despues | `unsupported-runtime` "Runtime sin soporte" ≤ 0; `major-updates` "Saltos de version mayor pendientes" ≤ 0; `abandoned-packages` "Paquetes abandonados" ≤ 0 | `update-unsupported-runtime`, `upgrade-major-versions`, `replace-abandoned-packages` |
+| 9 | `post-upgrade-apis` | APIs de la version nueva | Adoptar lo que exige la version nueva | `post-upgrade-apis` "APIs a migrar despues de actualizar" reglas de `apply-post-upgrade-codemods` ≤ 0 (react) | `apply-post-upgrade-codemods` |
+| 10 | `validation` | Complejidad y validacion | Sin piezas gigantes y la mayoria del codigo sano | `god-classes` "Clases gigantes" reglas de `break-god-classes` ≤ 0; `large-components` "Componentes grandes" reglas de `split-large-components` ≤ 0 (react); `healthy-files` "Archivos sanos" = `healthyPercent` ≥ 80 (percent) | `break-god-classes`, `split-large-components`, `validate-risk-reduction` |
 
 Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias tambien.
 
@@ -70,6 +79,17 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
   y alguno no tiene datos; `"passed"` si todos pasaron.
 - `current`: `true` solo en la primera fase `failed` o `unknown`. Si todas pasan (o no aplican),
   ninguna es actual.
+
+## Grafo por fases (layout y flechas)
+
+- `planLayout(tasks, phaseOf)`: columna = posicion de la fase de la tarea entre las fases que tienen
+  tareas (sin huecos), `x = columna * 320`; fila en orden de roadmap dentro de la columna,
+  `y = fila * 250`. `stage` = columna. Una tarea sin fase va a una columna final.
+- `phaseOf` sale de `planPhases(...).tasks`.
+- `PlanGraph.lanes: [{ phase, title, status, current, x }]`: un encabezado por columna (fase con
+  tareas), en orden.
+- Flechas: reduccion transitiva de `dependsOn` entre las tareas incluidas (si A→B y B→C, no se dibuja
+  A→C). `dependsOn` de cada tarea no cambia.
 
 ## Integracion
 

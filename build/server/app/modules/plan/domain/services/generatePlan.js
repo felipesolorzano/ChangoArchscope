@@ -1,10 +1,11 @@
 import { DUPLICATE_FILES_TASK, SKIPPED_FILES_TASK, TASK_RULES, countSelected } from "./planTaskRules.js";
 const VALIDATE_KEY = "validate-risk-reduction";
-// Plantillas de remediacion en orden de roadmap. Cada una se incluye solo si su metrica es > 0.
+// Plantillas de remediacion en orden de roadmap = orden de las fases (XRay X6, plan-phases.md). Cada una se incluye solo si su metrica es > 0.
 // Las basadas en reglas miden con sus selectores de TASK_RULES (misma fuente que el panel).
 // Stryker disable ArrayDeclaration: equivalente en los `dependsOn: []`. generatePlan poda las
 // dependencias a claves de tareas incluidas, asi que agregar una clave inexistente no cambia nada.
 const TEMPLATES = [
+    // Fase 0 — linea base
     {
         key: SKIPPED_FILES_TASK,
         title: "Excluir librerias de terceros",
@@ -13,59 +14,7 @@ const TEMPLATES = [
         dependsOn: [],
         metric: (s) => s.skippedFiles,
     },
-    ruleTemplate({
-        key: "close-sql-injections",
-        title: "Cerrar inyecciones SQL",
-        description: "Migrar las concatenaciones de SQL con datos dinamicos a sentencias parametrizadas.",
-        category: "security",
-        dependsOn: [],
-    }),
-    ruleTemplate({
-        key: "close-code-injection",
-        title: "Eliminar ejecucion dinamica de codigo",
-        description: "Reemplazar eval / Function() por logica explicita: compilan codigo desde strings.",
-        category: "security",
-        dependsOn: [],
-    }),
-    ruleTemplate({
-        key: "close-xss-sinks",
-        title: "Cerrar vectores de XSS",
-        description: "Reemplazar dangerouslySetInnerHTML / innerHTML por render de React o HTML sanitizado.",
-        category: "security",
-        dependsOn: [],
-    }),
-    dependencyTemplate({
-        key: "fix-vulnerable-packages",
-        title: "Corregir paquetes vulnerables",
-        description: "Subir cada paquete con vulnerabilidades conocidas (OSV) a la version que las corrige.",
-        dependsOn: [],
-    }),
-    dependencyTemplate({
-        key: "update-unsupported-runtime",
-        title: "Actualizar runtime sin soporte",
-        description: "Llevar PHP / Node a un ciclo con soporte de seguridad antes de los saltos grandes.",
-        dependsOn: [],
-    }),
-    dependencyTemplate({
-        key: "remove-unused-packages",
-        title: "Quitar dependencias sin uso",
-        description: "Eliminar paquetes declarados que el codigo no referencia: menos que actualizar.",
-        dependsOn: [],
-    }),
-    dependencyTemplate({
-        key: "replace-abandoned-packages",
-        title: "Reemplazar paquetes abandonados o deprecated",
-        description: "Migrar a su reemplazo (o a una alternativa mantenida) con tests que cubran el uso actual.",
-        dependsOn: ["add-characterization-tests", "add-component-tests"],
-    }),
-    {
-        key: DUPLICATE_FILES_TASK,
-        title: "Resolver migraciones a medias (_new)",
-        description: "Elegir el archivo canonico entre X y X_new y eliminar el duplicado.",
-        category: "debt",
-        dependsOn: [],
-        metric: (s) => s.duplicatePairs,
-    },
+    // Fase 1 — limpieza: menos codigo que proteger y migrar
     ruleTemplate({
         key: "remove-manual-copies",
         title: "Eliminar copias manuales",
@@ -80,6 +29,14 @@ const TEMPLATES = [
         category: "debt",
         dependsOn: ["remove-manual-copies"],
     }),
+    {
+        key: DUPLICATE_FILES_TASK,
+        title: "Resolver migraciones a medias (_new)",
+        description: "Elegir el archivo canonico entre X y X_new y eliminar el duplicado.",
+        category: "debt",
+        dependsOn: [],
+        metric: (s) => s.duplicatePairs,
+    },
     ruleTemplate({
         key: "remove-unused-exports",
         title: "Eliminar exports sin uso",
@@ -87,13 +44,13 @@ const TEMPLATES = [
         category: "debt",
         dependsOn: ["remove-unused-files"],
     }),
-    ruleTemplate({
-        key: "break-import-cycles",
-        title: "Romper ciclos de dependencias",
-        description: "Cortar cada ciclo de imports extrayendo lo compartido o invirtiendo la dependencia con un contrato.",
-        category: "architecture",
-        dependsOn: ["add-characterization-tests", "add-component-tests"],
+    dependencyTemplate({
+        key: "remove-unused-packages",
+        title: "Quitar dependencias sin uso",
+        description: "Eliminar paquetes declarados que el codigo no referencia: menos que actualizar.",
+        dependsOn: [],
     }),
+    // Fase 2 — red de seguridad: todo lo que cambia codigo o versiones espera a esto
     ruleTemplate({
         key: "add-characterization-tests",
         title: "Tests de caracterizacion en lo complejo",
@@ -108,27 +65,52 @@ const TEMPLATES = [
         category: "testing",
         dependsOn: [],
     }),
+    // Fase 3 — seguridad del codigo
     ruleTemplate({
-        key: "reduce-n-plus-one",
-        title: "Reducir consultas N+1",
-        description: "Sacar las queries de los loops para mejorar el rendimiento.",
-        category: "database",
+        key: "close-sql-injections",
+        title: "Cerrar inyecciones SQL",
+        description: "Migrar las concatenaciones de SQL con datos dinamicos a sentencias parametrizadas.",
+        category: "security",
         dependsOn: ["add-characterization-tests"],
     }),
     ruleTemplate({
-        key: "extract-data-layer",
-        title: "Extraer capa de acceso a datos",
-        description: "Centralizar el SQL crudo y duplicado en una capa de datos reutilizable.",
-        category: "database",
-        dependsOn: ["add-characterization-tests", "close-sql-injections"],
-    }),
-    ruleTemplate({
-        key: "break-god-classes",
-        title: "Romper clases gigantes",
-        description: "Dividir incrementalmente las clases enormes en unidades mas pequenas y testeables.",
-        category: "complexity",
+        key: "close-code-injection",
+        title: "Eliminar ejecucion dinamica de codigo",
+        description: "Reemplazar eval / Function() por logica explicita: compilan codigo desde strings.",
+        category: "security",
         dependsOn: ["add-characterization-tests", "add-component-tests"],
     }),
+    ruleTemplate({
+        key: "close-xss-sinks",
+        title: "Cerrar vectores de XSS",
+        description: "Reemplazar dangerouslySetInnerHTML / innerHTML por render de React o HTML sanitizado.",
+        category: "security",
+        dependsOn: ["add-component-tests"],
+    }),
+    // Fase 4 — arquitectura
+    ruleTemplate({
+        key: "break-import-cycles",
+        title: "Romper ciclos de dependencias",
+        description: "Cortar cada ciclo de imports extrayendo lo compartido o invirtiendo la dependencia con un contrato.",
+        category: "architecture",
+        dependsOn: ["add-characterization-tests", "add-component-tests"],
+    }),
+    // Fase 5 — APIs legacy con reemplazo en la version actual (antes de subir versiones)
+    ruleTemplate({
+        key: "apply-legacy-codemods",
+        title: "Aplicar codemods compatibles (antes de actualizar)",
+        description: "Con los tests en verde: lifecycles, string refs, findDOMNode y funciones PHP eliminadas tienen reemplazo en la version actual.",
+        category: "legacy_api",
+        dependsOn: ["add-characterization-tests", "add-component-tests"],
+    }),
+    ruleTemplate({
+        key: "migrate-deprecated-apis",
+        title: "Migrar APIs y librerias deprecadas",
+        description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods, antes de subir versiones.",
+        category: "legacy_api",
+        dependsOn: ["apply-legacy-codemods", "add-characterization-tests", "add-component-tests"],
+    }),
+    // Fase 6 — desacople y capas
     ruleTemplate({
         key: "isolate-http-layer",
         title: "Aislar las llamadas HTTP en una capa de servicios",
@@ -151,18 +133,66 @@ const TEMPLATES = [
         dependsOn: ["add-component-tests", "isolate-http-layer"],
     }),
     ruleTemplate({
-        key: "apply-legacy-codemods",
-        title: "Aplicar codemods de APIs eliminadas",
-        description: "Correr los codemods de Codemods (React 19 / PHP 8) sobre lo ya protegido: lifecycles, ReactDOM.render, string refs, funciones PHP eliminadas.",
-        category: "legacy_api",
-        dependsOn: ["add-characterization-tests", "add-component-tests"],
+        key: "reduce-n-plus-one",
+        title: "Reducir consultas N+1",
+        description: "Sacar las queries de los loops para mejorar el rendimiento.",
+        category: "database",
+        dependsOn: ["add-characterization-tests"],
     }),
     ruleTemplate({
-        key: "migrate-deprecated-apis",
-        title: "Migrar APIs y librerias deprecadas",
-        description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods.",
+        key: "extract-data-layer",
+        title: "Extraer capa de acceso a datos",
+        description: "Centralizar el SQL crudo y duplicado en una capa de datos reutilizable.",
+        category: "database",
+        dependsOn: ["add-characterization-tests", "close-sql-injections"],
+    }),
+    // Fase 7 — paquetes que no rompen: siempre con tests y con las APIs ya migradas
+    dependencyTemplate({
+        key: "fix-vulnerable-packages",
+        title: "Corregir paquetes vulnerables",
+        description: "Subir cada paquete con vulnerabilidades conocidas (OSV) a la version que las corrige.",
+        dependsOn: ["add-characterization-tests", "add-component-tests", "apply-legacy-codemods", "migrate-deprecated-apis"],
+    }),
+    dependencyTemplate({
+        key: "apply-safe-updates",
+        title: "Aplicar actualizaciones patch y minor",
+        description: "Subir en bloque lo que no rompe compatibilidad, con los tests como red.",
+        dependsOn: ["fix-vulnerable-packages", "remove-unused-packages", "add-characterization-tests", "add-component-tests", "apply-legacy-codemods", "migrate-deprecated-apis"],
+    }),
+    // Fase 8 — runtime y majors, un salto a la vez
+    dependencyTemplate({
+        key: "update-unsupported-runtime",
+        title: "Actualizar runtime sin soporte",
+        description: "Llevar PHP / Node a un ciclo con soporte de seguridad antes de los saltos grandes.",
+        dependsOn: ["apply-safe-updates", "add-characterization-tests", "add-component-tests", "apply-legacy-codemods", "migrate-deprecated-apis"],
+    }),
+    dependencyTemplate({
+        key: "upgrade-major-versions",
+        title: "Migrar versiones major",
+        description: "Un grupo a la vez (react, eslint, jest...), siguiendo su guia de migracion.",
+        dependsOn: ["apply-safe-updates", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests"],
+    }),
+    dependencyTemplate({
+        key: "replace-abandoned-packages",
+        title: "Reemplazar paquetes abandonados o deprecated",
+        description: "Migrar a su reemplazo (o a una alternativa mantenida) con tests que cubran el uso actual.",
+        dependsOn: ["apply-safe-updates", "add-characterization-tests", "add-component-tests"],
+    }),
+    // Fase 9 — lo que solo existe en la version nueva
+    ruleTemplate({
+        key: "apply-post-upgrade-codemods",
+        title: "Aplicar codemods de la version nueva",
+        description: "Despues de subir React: ReactDOM.render / hydrate → createRoot.",
         category: "legacy_api",
-        dependsOn: ["apply-legacy-codemods", "add-characterization-tests", "add-component-tests"],
+        dependsOn: ["upgrade-major-versions", "add-component-tests"],
+    }),
+    // Fase 10 — complejidad (validate se agrega al final)
+    ruleTemplate({
+        key: "break-god-classes",
+        title: "Romper clases gigantes",
+        description: "Dividir incrementalmente las clases enormes en unidades mas pequenas y testeables.",
+        category: "complexity",
+        dependsOn: ["add-characterization-tests", "add-component-tests"],
     }),
     ruleTemplate({
         key: "split-large-components",
@@ -170,18 +200,6 @@ const TEMPLATES = [
         description: "Dividir los componentes con render y estado enormes en componentes chicos y testeables.",
         category: "complexity",
         dependsOn: ["add-component-tests"],
-    }),
-    dependencyTemplate({
-        key: "apply-safe-updates",
-        title: "Aplicar actualizaciones patch y minor",
-        description: "Subir en bloque lo que no rompe compatibilidad, con los tests como red.",
-        dependsOn: ["fix-vulnerable-packages", "remove-unused-packages"],
-    }),
-    dependencyTemplate({
-        key: "upgrade-major-versions",
-        title: "Migrar versiones major",
-        description: "Un grupo a la vez (react, eslint, jest...), siguiendo su guia de migracion.",
-        dependsOn: ["apply-safe-updates", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests"],
     }),
 ];
 // Stryker restore ArrayDeclaration

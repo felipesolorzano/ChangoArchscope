@@ -6,6 +6,8 @@ export type CodemodCandidate = {
   tool: string | null;
   command: string | null;
   note: string;
+  /** XRay X6: antes o despues de subir versiones. */
+  timing: "before-upgrade" | "after-upgrade";
   files: CodemodFile[];
   occurrences: number;
   protectedFiles: number;

@@ -16,3 +16,8 @@ export function codemodWarning(candidate: CodemodCandidate): string | null {
   const unprotected = candidate.files.length - candidate.protectedFiles;
   return unprotected > 0 ? `Caracterizar antes: ${plural(unprotected, "archivo", "archivos")} sin tests` : null;
 }
+
+/** XRay X6: lo que tiene reemplazo en la version actual se migra antes de subir versiones. */
+export function codemodTimingLabel(candidate: CodemodCandidate): string {
+  return candidate.timing === "before-upgrade" ? "Antes de actualizar" : "Despues de actualizar";
+}

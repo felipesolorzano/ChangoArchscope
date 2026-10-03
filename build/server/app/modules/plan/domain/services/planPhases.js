@@ -6,7 +6,8 @@ const atMostZero = (key, label, value, stack) => ({ key, label, target: 0, compa
 const rulesOf = (...taskKeys) => (signals) => countSelected(signals, taskKeys.flatMap((taskKey) => TASK_RULES[taskKey]));
 // Trabajo de paquetes: sin reporte de dependencias, no hay datos.
 const packagesOf = (taskKey) => (signals) => (signals.dependencies === undefined ? null : (signals.dependencies.counts[taskKey] ?? 0));
-// Fases 0–10 en orden. Spec: plan-phases.md.
+// Fases 0–10 en el orden del flujo: limpiar, proteger, arreglar codigo sin tocar versiones, actualizar
+// de menor a mayor y recien despues adoptar lo de la version nueva. Spec: plan-phases.md.
 const PHASES = [
     {
         number: 0,
@@ -18,19 +19,6 @@ const PHASES = [
     },
     {
         number: 1,
-        key: "security",
-        title: "Seguridad",
-        goal: "Sin inyecciones, sinks XSS, paquetes vulnerables ni runtime sin soporte",
-        gates: [
-            atMostZero("injections", "Inyecciones (SQL, eval, Function)", rulesOf("close-sql-injections", "close-code-injection")),
-            atMostZero("xss-sinks", "Sinks XSS", rulesOf("close-xss-sinks"), "react"),
-            atMostZero("vulnerable-packages", "Paquetes vulnerables", packagesOf("fix-vulnerable-packages")),
-            atMostZero("unsupported-runtime", "Runtime sin soporte", packagesOf("update-unsupported-runtime")),
-        ],
-        tasks: ["close-sql-injections", "close-code-injection", "close-xss-sinks", "fix-vulnerable-packages", "update-unsupported-runtime"],
-    },
-    {
-        number: 2,
         key: "cleanup",
         title: "Limpieza",
         goal: "Sin copias, archivos muertos ni migraciones a medias",
@@ -44,7 +32,7 @@ const PHASES = [
         tasks: ["remove-manual-copies", "remove-unused-files", "resolve-duplicate-migrations", "remove-unused-exports", "remove-unused-packages"],
     },
     {
-        number: 3,
+        number: 2,
         key: "safety-net",
         title: "Red de seguridad",
         goal: "Lo mas riesgoso tiene tests antes de tocarlo",
@@ -62,6 +50,17 @@ const PHASES = [
         tasks: ["add-characterization-tests", "add-component-tests"],
     },
     {
+        number: 3,
+        key: "security",
+        title: "Seguridad del codigo",
+        goal: "Sin inyecciones ni sinks XSS, con los tests como red",
+        gates: [
+            atMostZero("injections", "Inyecciones (SQL, eval, Function)", rulesOf("close-sql-injections", "close-code-injection")),
+            atMostZero("xss-sinks", "Sinks XSS", rulesOf("close-xss-sinks"), "react"),
+        ],
+        tasks: ["close-sql-injections", "close-code-injection", "close-xss-sinks"],
+    },
+    {
         number: 4,
         key: "architecture",
         title: "Arquitectura",
@@ -71,67 +70,71 @@ const PHASES = [
     },
     {
         number: 5,
-        key: "removed-apis",
-        title: "APIs eliminadas",
-        goal: "Nada que rompa al subir de version",
-        gates: [atMostZero("removed-apis", "Usos de APIs eliminadas", rulesOf("apply-legacy-codemods"))],
-        tasks: ["apply-legacy-codemods"],
+        key: "pre-upgrade-apis",
+        title: "APIs legacy (antes de actualizar)",
+        goal: "Migrar lo que ya tiene reemplazo en la version actual",
+        gates: [
+            atMostZero("removed-apis", "APIs eliminadas con reemplazo actual", rulesOf("apply-legacy-codemods")),
+            atMostZero("deprecated-apis", "APIs y librerias deprecadas", rulesOf("migrate-deprecated-apis")),
+        ],
+        tasks: ["apply-legacy-codemods", "migrate-deprecated-apis"],
     },
     {
         number: 6,
-        key: "deprecated-apis",
-        title: "APIs y librerias deprecadas",
-        goal: "Sin APIs deprecadas ni paquetes abandonados",
-        gates: [
-            atMostZero("deprecated-apis", "Usos de APIs deprecadas", rulesOf("migrate-deprecated-apis")),
-            atMostZero("abandoned-packages", "Paquetes abandonados", packagesOf("replace-abandoned-packages")),
-        ],
-        tasks: ["migrate-deprecated-apis", "replace-abandoned-packages"],
-    },
-    {
-        number: 7,
-        key: "decoupling",
-        title: "Desacople",
-        goal: "Sin jQuery ni herencia de clases base propias",
+        key: "layers",
+        title: "Desacople y capas",
+        goal: "jQuery, herencia, HTTP y datos en su capa",
         gates: [
             atMostZero("jquery", "jQuery / DOM directo", rulesOf("remove-jquery"), "react"),
             atMostZero("base-classes", "Herencia de clases base", rulesOf("replace-base-class-inheritance"), "react"),
+            atMostZero("http-layer", "HTTP en componentes / duplicado / URL fija", rulesOf("isolate-http-layer"), "react"),
+            atMostZero("n-plus-one", "Consultas N+1", rulesOf("reduce-n-plus-one"), "laravel"),
+            atMostZero("data-layer", "SQL fuera de infraestructura / duplicado", rulesOf("extract-data-layer"), "laravel"),
         ],
-        tasks: ["remove-jquery", "replace-base-class-inheritance"],
+        tasks: ["isolate-http-layer", "remove-jquery", "replace-base-class-inheritance", "reduce-n-plus-one", "extract-data-layer"],
+    },
+    {
+        number: 7,
+        key: "safe-updates",
+        title: "Paquetes vulnerables y patch/minor",
+        goal: "Actualizaciones que no rompen, con los tests en verde",
+        gates: [
+            atMostZero("vulnerable-packages", "Paquetes vulnerables", packagesOf("fix-vulnerable-packages")),
+            atMostZero("safe-updates", "Actualizaciones patch/minor pendientes", packagesOf("apply-safe-updates")),
+        ],
+        tasks: ["fix-vulnerable-packages", "apply-safe-updates"],
     },
     {
         number: 8,
-        key: "data-http",
-        title: "Datos y HTTP",
-        goal: "Acceso a datos y HTTP en su capa",
+        key: "major-upgrades",
+        title: "Runtime y versiones major",
+        goal: "Un salto a la vez, con tests verdes antes y despues",
         gates: [
-            atMostZero("n-plus-one", "Consultas N+1", rulesOf("reduce-n-plus-one"), "laravel"),
-            atMostZero("data-layer", "SQL fuera de infraestructura / duplicado", rulesOf("extract-data-layer"), "laravel"),
-            atMostZero("http-layer", "HTTP en componentes / duplicado / URL fija", rulesOf("isolate-http-layer"), "react"),
+            atMostZero("unsupported-runtime", "Runtime sin soporte", packagesOf("update-unsupported-runtime")),
+            atMostZero("major-updates", "Saltos de version mayor pendientes", packagesOf("upgrade-major-versions")),
+            atMostZero("abandoned-packages", "Paquetes abandonados", packagesOf("replace-abandoned-packages")),
         ],
-        tasks: ["reduce-n-plus-one", "extract-data-layer", "isolate-http-layer"],
+        tasks: ["update-unsupported-runtime", "upgrade-major-versions", "replace-abandoned-packages"],
     },
     {
         number: 9,
-        key: "complexity",
-        title: "Complejidad",
-        goal: "Sin clases ni componentes gigantes",
-        gates: [
-            atMostZero("god-classes", "Clases gigantes", rulesOf("break-god-classes")),
-            atMostZero("large-components", "Componentes grandes", rulesOf("split-large-components"), "react"),
-        ],
-        tasks: ["break-god-classes", "split-large-components"],
+        key: "post-upgrade-apis",
+        title: "APIs de la version nueva",
+        goal: "Adoptar lo que exige la version nueva",
+        gates: [atMostZero("post-upgrade-apis", "APIs a migrar despues de actualizar", rulesOf("apply-post-upgrade-codemods"), "react")],
+        tasks: ["apply-post-upgrade-codemods"],
     },
     {
         number: 10,
-        key: "upgrade",
-        title: "Actualizacion y validacion",
-        goal: "Versiones al dia y la mayoria del codigo sano",
+        key: "validation",
+        title: "Complejidad y validacion",
+        goal: "Sin piezas gigantes y la mayoria del codigo sano",
         gates: [
-            atMostZero("major-updates", "Saltos de version mayor pendientes", packagesOf("upgrade-major-versions")),
+            atMostZero("god-classes", "Clases gigantes", rulesOf("break-god-classes")),
+            atMostZero("large-components", "Componentes grandes", rulesOf("split-large-components"), "react"),
             { key: "healthy-files", label: "Archivos sanos", target: 80, comparator: "min", format: "percent", value: (signals) => signals.healthyPercent ?? null },
         ],
-        tasks: ["apply-safe-updates", "upgrade-major-versions", "validate-risk-reduction"],
+        tasks: ["break-god-classes", "split-large-components", "validate-risk-reduction"],
     },
 ];
 /** Fases del stack con sus gates evaluados; la actual es la primera no cumplida. */

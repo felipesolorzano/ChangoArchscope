@@ -1,6 +1,9 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
-import type { PlanGraphEdge, PlanGraphNode } from "../../domain/value-objects/PlanGraph";
+import type { PlanGraphEdge, PlanGraphNode, PlanLane } from "../../domain/value-objects/PlanGraph";
+
+// Altura del encabezado de fase sobre las tarjetas de su columna.
+const LANE_Y = -110;
 
 export function toPlanFlowNodes(nodes: PlanGraphNode[]): Node<PlanGraphNode>[] {
   return nodes.map((node) => ({
@@ -21,4 +24,9 @@ export function toPlanFlowEdges(edges: PlanGraphEdge[]): Edge[] {
     markerEnd: { type: MarkerType.ArrowClosed },
     style: { stroke: "#64748b", strokeWidth: 1.6 },
   }));
+}
+
+// XRay X6: encabezado fijo de cada columna (fase), arriba de sus tareas.
+export function toPlanLaneNodes(lanes: PlanLane[]): Node<PlanLane>[] {
+  return lanes.map((lane) => ({ id: `lane:${lane.phase}`, type: "planLane", position: { x: lane.x, y: LANE_Y }, data: lane, draggable: false, selectable: false }));
 }

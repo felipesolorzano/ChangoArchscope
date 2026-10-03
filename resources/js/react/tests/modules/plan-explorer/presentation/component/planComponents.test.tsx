@@ -14,6 +14,7 @@ import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/present
 import { PhaseDrawer } from "../../../../../modules/plan-explorer/presentation/components/PhaseDrawer";
 import { PhaseIndicator } from "../../../../../modules/plan-explorer/presentation/components/PhaseIndicator";
 import { PhaseList } from "../../../../../modules/plan-explorer/presentation/components/PhaseList";
+import { PlanLaneHeader } from "../../../../../modules/plan-explorer/presentation/components/PlanLaneHeader";
 import { ProtectionStrip } from "../../../../../modules/plan-explorer/presentation/components/ProtectionStrip";
 import type { PlanExplorerDependencies } from "../../../../../modules/plan-explorer/infrastructure/factory/createPlanExplorerDependencies";
 import { PlanCanvas } from "../../../../../modules/plan-explorer/presentation/components/PlanCanvas";
@@ -250,6 +251,7 @@ describe("CodemodList (XRay X5)", () => {
     tool: "react-codemod",
     command: 'npx react-codemod rename-unsafe-lifecycles "a.js" "b.js"',
     note: "Solo renombra a UNSAFE_*",
+    timing: "before-upgrade" as const,
     files: [
       { file: "a.js", occurrences: 3, testedBy: ["a.test.js", "a.spec.js"] },
       { file: "b.js", occurrences: 1, testedBy: [] },
@@ -257,13 +259,15 @@ describe("CodemodList (XRay X5)", () => {
     occurrences: 4,
     protectedFiles: 1,
   };
-  const manual = { ...automatic, pattern: "money-format", title: "money_format", tool: null, command: null, note: "", files: [{ file: "c.php", occurrences: 2, testedBy: ["CTest.php"] }], occurrences: 2, protectedFiles: 1 };
+  const manual = { ...automatic, pattern: "money-format", title: "money_format", tool: null, command: null, note: "", timing: "after-upgrade" as const, files: [{ file: "c.php", occurrences: 2, testedBy: ["CTest.php"] }], occurrences: 2, protectedFiles: 1 };
 
   it("titulo, herramienta, resumen, aviso, nota, comando con Copiar y archivos", () => {
     const markup = renderToStaticMarkup(<CodemodList plan={{ candidates: [automatic, manual] }} />);
 
     expect(markup).toContain("Lifecycles deprecados");
     expect(markup).toContain("Automatico · react-codemod");
+    expect(markup).toContain('<span class="plan-codemods__timing plan-codemods__timing--before-upgrade">Antes de actualizar</span>');
+    expect(markup).toContain('<span class="plan-codemods__timing plan-codemods__timing--after-upgrade">Despues de actualizar</span>');
     expect(markup).toContain("2 archivos · 4 ocurrencias · 1/2 con tests");
     expect(markup).toContain("Caracterizar antes: 1 archivo sin tests");
     expect(markup).toContain("Solo renombra a UNSAFE_*");
@@ -383,5 +387,19 @@ describe("Fases (XRay X6)", () => {
     expect(renderToStaticMarkup(<PhaseDrawer graph={null} />)).toContain("Calculando fases…");
     expect(renderToStaticMarkup(<PhaseDrawer graph={{ ...graph, phases: undefined }} />)).toContain("Calculando fases…");
     usePlanDrawerStore.setState({ drawer: null });
+  });
+});
+
+describe("PlanLaneHeader (XRay X6)", () => {
+  const props = (data: object) => ({ data }) as never;
+
+  it("fase, titulo y estado; la actual marcada", () => {
+    const markup = renderToStaticMarkup(<PlanLaneHeader {...props({ phase: 3, title: "Seguridad del codigo", status: "failed", current: true, x: 0 })} />);
+
+    expect(markup).toContain('class="plan-lane plan-lane--current"');
+    expect(markup).toContain("Fase 3");
+    expect(markup).toContain("Seguridad del codigo");
+    expect(markup).toMatch(/style="color:#dc2626">Pendiente</);
+    expect(renderToStaticMarkup(<PlanLaneHeader {...props({ phase: 0, title: "Linea base", status: "passed", current: false, x: 0 })} />)).toContain('class="plan-lane"');
   });
 });

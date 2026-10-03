@@ -168,12 +168,17 @@ describe("buildPlan", () => {
     const graph = buildPlan(healthy, repository, "/php", undefined, "medium");
 
     expect(graph.phases).toHaveLength(11);
-    expect(graph.phases[3].gates[0]).toMatchObject({ key: "protection-level", value: 2, status: "passed" });
+    expect(graph.phases[2].gates[0]).toMatchObject({ key: "protection-level", value: 2, status: "passed" });
     expect(graph.phases[10].gates.find((gate) => gate.key === "healthy-files")?.value).toBe(75);
-    expect(graph.phases[1].tasks).toEqual(["close-sql-injections"]);
-    expect(graph.phases[2].gates.map((gate) => gate.key)).not.toContain("unused-exports");
-    expect(buildPlan({ ...healthy, target: "react" }, repository, "/src").phases[2].gates.map((gate) => gate.key)).toContain("unused-exports");
-    expect(buildPlan(healthy, repository, "/php").phases[3].gates[0]).toMatchObject({ value: null, status: "unknown" });
+    expect(graph.phases[3].tasks).toEqual(["close-sql-injections"]);
+    expect(graph.phases[1].gates.map((gate) => gate.key)).not.toContain("unused-exports");
+    expect(buildPlan({ ...healthy, target: "react" }, repository, "/src").phases[1].gates.map((gate) => gate.key)).toContain("unused-exports");
+    expect(buildPlan(healthy, repository, "/php").phases[2].gates[0]).toMatchObject({ value: null, status: "unknown" });
+    // Columnas por fase: la fase 3 (seguridad) a la derecha de la 0 (linea base) y un encabezado por fase.
+    const sql = graph.nodes.find((node) => node.id === "close-sql-injections")!;
+    const third = graph.nodes.find((node) => node.id === "exclude-third-party")!;
+    expect(sql.position.x).toBeGreaterThan(third.position.x);
+    expect(graph.lanes.map((lane) => lane.phase)).toEqual([0, 3, 6, 10]);
   });
 
   it("con señales de dependencias agrega sus tareas al grafo", () => {

@@ -120,3 +120,20 @@ estado), Migracion/Diseño (bounded contexts).
 - Mutation: 100% en fases, señales, tareas nuevas, `buildPlan`, `PlanController`,
   `protectionStackOf` y helpers/lista del front (los `onClick` con hooks no se pueden ejercitar sin DOM).
 
+### X6 — flujo del plan (orden de ejecucion)
+
+- Regla: nunca cambiar codigo y versiones a la vez; entre paso y paso, los tests de caracterizacion.
+- Fases reordenadas: Linea base → Limpieza → Red de seguridad → Seguridad del codigo → Arquitectura →
+  APIs legacy (antes de actualizar) → Desacople y capas → Paquetes vulnerables y patch/minor → Runtime
+  y majors → APIs de la version nueva → Complejidad y validacion.
+- El grafo del Plan usa una columna por fase (encabezado con estado, la actual resaltada) y flechas
+  reducidas (si A→B→C no se dibuja A→C).
+- Paquetes y runtime dependen de los tests y de las APIs que se migran antes de actualizar; la
+  seguridad del codigo depende de los tests.
+- Codemods con `timing`: `ReactDOM.render → createRoot` (necesita React 18) va despues de los majors
+  (tarea `apply-post-upgrade-codemods`); `findDOMNode` pasa a regla propia (`find-dom-node`) y se
+  migra antes. El panel Codemods muestra "Antes/Despues de actualizar" y ordena primero lo de antes.
+- Runtime antes de los majors (las versiones nuevas de librerias suelen exigir el runtime nuevo; en
+  PHP las funciones eliminadas ya se migraron en la fase 5).
+- brandsites: fase actual 1 Limpieza; mc: fase 0 Linea base.
+

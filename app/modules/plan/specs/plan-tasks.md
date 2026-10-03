@@ -31,9 +31,9 @@ Cada tarea se incluye solo si su metrica es > 0. `dependsOn` se poda a las tarea
 | key | categoria | metrica | dependsOn |
 |---|---|---|---|
 | `exclude-third-party` | scope | `skippedFiles` | — |
-| `close-sql-injections` | security | `sql-concatenation` | — |
-| `close-code-injection` | security | `eval-usage`, `new-function` | — |
-| `close-xss-sinks` | security | `dangerously-set-inner-html`, `inner-html-assignment` | — |
+| `close-sql-injections` | security | `sql-concatenation` | `add-characterization-tests` (XRay X6: con tests) |
+| `close-code-injection` | security | `eval-usage`, `new-function` | `add-characterization-tests`, `add-component-tests` |
+| `close-xss-sinks` | security | `dangerously-set-inner-html`, `inner-html-assignment` | `add-component-tests` |
 | `resolve-duplicate-migrations` | debt | `duplicatePairs` | — |
 | `remove-manual-copies` | debt | `manual-copy-file` | — |
 | `remove-unused-files` | debt | `possibly-unused-file` | `remove-manual-copies` |
@@ -47,8 +47,9 @@ Cada tarea se incluye solo si su metrica es > 0. `dependsOn` se poda a las tarea
 | `isolate-http-layer` | api_access | `http-in-component`, `duplicate-endpoint`, `hardcoded-api-url` | `add-component-tests` |
 | `remove-jquery` | coupling | `jquery-usage`, `direct-dom-access` | `add-component-tests` |
 | `replace-base-class-inheritance` | coupling | `base-class-inheritance` | `add-component-tests`, `isolate-http-layer` |
-| `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `legacy-react-dom-api`, `string-ref`, `removed-php-function` (XRay X6) | `add-characterization-tests`, `add-component-tests` |
+| `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `find-dom-node`, `string-ref`, `removed-php-function` (XRay X6) | `add-characterization-tests`, `add-component-tests` |
 | `migrate-deprecated-apis` | legacy_api | `with-router`, `deprecated-library`, `deprecated-php-function` (XRay X6) | `apply-legacy-codemods`, `add-characterization-tests`, `add-component-tests` |
+| `apply-post-upgrade-codemods` | legacy_api | `legacy-react-dom-api` (XRay X6, despues de `upgrade-major-versions`) | `upgrade-major-versions`, `add-component-tests` |
 | `split-large-components` | complexity | `large-component`, `long-render`, `large-state` | `add-component-tests` |
 | `validate-risk-reduction` | validation | 0 (siempre, si hay alguna otra) | todas las demas |
 
@@ -66,12 +67,15 @@ los dos).
 
 | key | categoria | dependsOn |
 |---|---|---|
-| `fix-vulnerable-packages` | dependencies | — (despues de `close-xss-sinks`) |
-| `update-unsupported-runtime` | dependencies | — |
+| `fix-vulnerable-packages` | dependencies | `add-characterization-tests`, `add-component-tests`, `apply-legacy-codemods`, `migrate-deprecated-apis` (despues de `close-xss-sinks`) |
+| `update-unsupported-runtime` | dependencies | `apply-safe-updates`, `add-characterization-tests`, `add-component-tests`, `apply-legacy-codemods`, `migrate-deprecated-apis` |
 | `remove-unused-packages` | dependencies | — |
-| `replace-abandoned-packages` | dependencies | `add-characterization-tests`, `add-component-tests` |
-| `apply-safe-updates` | dependencies | `fix-vulnerable-packages`, `remove-unused-packages` |
+| `replace-abandoned-packages` | dependencies | `apply-safe-updates`, `add-characterization-tests`, `add-component-tests` |
+| `apply-safe-updates` | dependencies | `fix-vulnerable-packages`, `remove-unused-packages`, `add-characterization-tests`, `add-component-tests`, `apply-legacy-codemods`, `migrate-deprecated-apis` |
 | `upgrade-major-versions` | dependencies | `apply-safe-updates`, `update-unsupported-runtime`, `add-characterization-tests`, `add-component-tests` |
+
+  XRay X6: los paquetes y el runtime esperan a los tests y a las APIs que se migran antes de
+  actualizar (cambiar versiones sin red rompe lo demas).
 
   (las cuatro primeras van antes de `resolve-duplicate-migrations`; las dos ultimas despues de
   `split-large-components`, antes de `validate-risk-reduction`).
@@ -120,7 +124,8 @@ proyecto no aparece en otro al cambiar `modulesPath` (proyecto = raiz del stack,
 
 ## Layout del grafo (`planLayout`)
 
-- Columna = etapa (profundidad en el DAG de dependencias), `x = etapa * 320`.
+- XRay X6: columna = fase (ver `plan-phases.md`, "Grafo por fases"); antes era la profundidad en el
+  DAG. `x = columna * 320`.
 - Fila dentro de la etapa en orden de roadmap, `y = fila * 250`: la tarjeta (titulo de 2 lineas,
   descripcion de 3 y dos filas de estados) mide ~225px; con menos espacio las tarjetas de una misma
   etapa se pisan (visible en React, que tiene 5 tareas en la etapa 1).

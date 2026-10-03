@@ -27,6 +27,7 @@ describe("codemodCandidates (react)", () => {
         tool: "react-codemod",
         command: 'npx react-codemod rename-unsafe-lifecycles "b.js" "pages/page checkout.js" "a.js"',
         note: "Solo renombra a UNSAFE_*: pasarlos a componentDidMount / getDerivedStateFromProps / componentDidUpdate sigue siendo manual.",
+        timing: "before-upgrade",
         files: [
           { file: "b.js", occurrences: 2, testedBy: [] },
           { file: "pages/page checkout.js", occurrences: 2, testedBy: [] },
@@ -41,6 +42,7 @@ describe("codemodCandidates (react)", () => {
         tool: null,
         command: null,
         note: "Reemplazar selectores y efectos por refs/estado; $.ajax por fetch.",
+        timing: "before-upgrade",
         files: [
           { file: "c.js", occurrences: 9, testedBy: [] },
           { file: "a.js", occurrences: 4, testedBy: ["a.test.js", "../tests/a.spec.js"] },
@@ -74,7 +76,7 @@ describe("codemodCandidates (react)", () => {
     expect(codemodCandidates({ stack: "laravel", sourceRoot: ROOT, findings: [finding("jquery-usage", `${ROOT}/a.php`, { details: { count: 2 } })], testedBy: {} })).toEqual([]);
   });
 
-  it("orden: automaticos, despues mas archivos, empate por patron; comando sin {paths}", () => {
+  it("orden: antes de actualizar, despues automaticos, mas archivos y patron; comando sin {paths}", () => {
     const findings = [
       legacy("lib-request", `${ROOT}/a.js`),
       legacy("lib-moment", `${ROOT}/a.js`),
@@ -86,8 +88,25 @@ describe("codemodCandidates (react)", () => {
     ];
     const candidates = codemodCandidates({ stack: "react", sourceRoot: ROOT, findings, testedBy: {} });
 
-    expect(candidates.map((candidate) => candidate.pattern)).toEqual(["react-dom-render", "string-refs", "with-router", "lib-moment", "lib-request"]);
-    expect(candidates[0].command).toBe("npx codemod@latest react/19/replace-reactdom-render");
+    expect(candidates.map((candidate) => [candidate.pattern, candidate.timing])).toEqual([
+      ["string-refs", "before-upgrade"],
+      ["with-router", "before-upgrade"],
+      ["lib-moment", "before-upgrade"],
+      ["lib-request", "before-upgrade"],
+      ["react-dom-render", "after-upgrade"],
+    ]);
+    expect(candidates[4].command).toBe("npx codemod@latest react/19/replace-reactdom-render");
+  });
+});
+
+describe("codemodCandidates: antes de actualizar va primero (XRay X6)", () => {
+  it("aunque el de despues tenga herramienta y mas archivos, en cualquier orden de entrada", () => {
+    const after = ["a", "b", "c"].map((name) => legacy("react-dom-render", `${ROOT}/${name}.js`));
+    const before = [legacy("find-dom-node", `${ROOT}/z.js`)];
+    const patterns = (findings: ReturnType<typeof legacy>[]) => codemodCandidates({ stack: "react", sourceRoot: ROOT, findings, testedBy: {} }).map((candidate) => candidate.pattern);
+
+    expect(patterns([...after, ...before])).toEqual(["find-dom-node", "react-dom-render"]);
+    expect(patterns([...before, ...after])).toEqual(["find-dom-node", "react-dom-render"]);
   });
 });
 
@@ -102,6 +121,7 @@ describe("codemodCandidates (laravel)", () => {
         tool: "rector",
         command: 'vendor/bin/rector process "b.php" "lib/a.php" --dry-run',
         note: "Reglas WhileEachToForeachRector y ListEachRector (PHP 7.2); otros usos de each() son manuales.",
+        timing: "before-upgrade",
         files: [
           { file: "b.php", occurrences: 7, testedBy: ["tests/BTest.php"] },
           { file: "lib/a.php", occurrences: 5, testedBy: [] },

@@ -138,3 +138,15 @@ goal, status, current, gates: [{ key, label, value, target, comparator, format, 
 - `PhaseDrawer({ graph })`: solo con `drawer === "phases"`; titulo "Fases y quality gates", boton
   "Cerrar"; sin `graph`/`phases`, "Calculando fases…"; si no, `PhaseList` con los titulos de las
   tareas del grafo. No pide nada: las fases vienen en `/plan.json`.
+
+## Flujo por fases en el grafo (XRay X6)
+
+- `PlanGraph.lanes?: [{ phase, title, status, current, x }]`: un encabezado por columna.
+- `toPlanLaneNodes(lanes)` (adaptador React Flow): nodo `lane:<phase>` de tipo `planLane` en
+  `{ x, y: -110 }`, no arrastrable ni seleccionable, con la lane como `data`.
+- `PlanLaneHeader` (presentacional): `"Fase <n>"`, el titulo y la etiqueta de estado
+  (`phaseStatusLabel`, color `phaseStatusColor`); la fase actual lleva la clase
+  `plan-lane--current`.
+- El minimapa colorea los encabezados con el color de su estado y las tareas con el de su estado.
+- Codemods: cada candidato muestra `codemodTimingLabel` ("Antes de actualizar" /
+  "Despues de actualizar") junto a la herramienta.

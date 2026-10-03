@@ -1,6 +1,6 @@
 import type { CodemodCandidate, CodemodFile, CodemodPlan } from "../../domain/value-objects/Codemod";
 import { copyText } from "../../infrastructure/browser/copyText";
-import { codemodSummary, codemodToolLabel, codemodWarning } from "../constants/codemodView";
+import { codemodSummary, codemodTimingLabel, codemodToolLabel, codemodWarning } from "../constants/codemodView";
 
 // XRay X5: patrones legacy con su herramienta; primero los automaticos.
 export function CodemodList({ plan }: { plan: CodemodPlan }) {
@@ -25,6 +25,7 @@ function CodemodItem({ candidate }: { candidate: CodemodCandidate }) {
       <div className="plan-characterization__head">
         <span className="plan-codemods__title">{candidate.title}</span>
         <span className="plan-characterization__kind">{codemodToolLabel(candidate)}</span>
+        <span className={`plan-codemods__timing plan-codemods__timing--${candidate.timing}`}>{codemodTimingLabel(candidate)}</span>
       </div>
       <span className="plan-drawer__msg">{codemodSummary(candidate)}</span>
       {warning !== null && <span className="plan-codemods__warning">{warning}</span>}

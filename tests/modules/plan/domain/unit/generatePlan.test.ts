@@ -13,47 +13,89 @@ function counts(byRule: Record<string, number>, severity = "high"): PlanSignals[
 }
 
 describe("generatePlan: APIs legacy (XRay X6)", () => {
-  it("apply-legacy-codemods y migrate-deprecated-apis con sus reglas, orden y dependencias", () => {
+  it("codemods compatibles y deprecadas antes de actualizar; createRoot despues de los majors", () => {
     const plan = generatePlan(
       signals({
         findingCounts: counts({
-          "unsafe-lifecycle": 1, "legacy-react-dom-api": 2, "string-ref": 4, "removed-php-function": 8,
-          "with-router": 16, "deprecated-library": 32, "deprecated-php-function": 64,
-          "base-class-inheritance": 1, "large-component": 1, "untested-complex-method": 1,
+          "unsafe-lifecycle": 1, "find-dom-node": 2, "string-ref": 4, "removed-php-function": 8,
+          "with-router": 16, "deprecated-library": 32, "deprecated-php-function": 64, "legacy-react-dom-api": 128,
+          "base-class-inheritance": 1, "untested-complex-method": 1,
         }),
+        dependencies: { counts: { "upgrade-major-versions": 1 }, items: {} },
       }),
     );
     const keys = plan.map((task) => task.key);
 
-    expect(keys.slice(keys.indexOf("replace-base-class-inheritance"), keys.indexOf("split-large-components") + 1)).toEqual([
-      "replace-base-class-inheritance",
+    expect(keys).toEqual([
+      "add-characterization-tests",
       "apply-legacy-codemods",
       "migrate-deprecated-apis",
-      "split-large-components",
+      "replace-base-class-inheritance",
+      "upgrade-major-versions",
+      "apply-post-upgrade-codemods",
+      "validate-risk-reduction",
     ]);
-    expect(plan.find((task) => task.key === "apply-legacy-codemods")).toEqual({
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+    expect(byKey["apply-legacy-codemods"]).toEqual({
       key: "apply-legacy-codemods",
-      title: "Aplicar codemods de APIs eliminadas",
-      description: "Correr los codemods de Codemods (React 19 / PHP 8) sobre lo ya protegido: lifecycles, ReactDOM.render, string refs, funciones PHP eliminadas.",
+      title: "Aplicar codemods compatibles (antes de actualizar)",
+      description: "Con los tests en verde: lifecycles, string refs, findDOMNode y funciones PHP eliminadas tienen reemplazo en la version actual.",
       category: "legacy_api",
       dependsOn: ["add-characterization-tests"],
       metric: 15,
     });
-    expect(plan.find((task) => task.key === "migrate-deprecated-apis")).toEqual({
+    expect(byKey["migrate-deprecated-apis"]).toEqual({
       key: "migrate-deprecated-apis",
       title: "Migrar APIs y librerias deprecadas",
-      description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods.",
+      description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods, antes de subir versiones.",
       category: "legacy_api",
       dependsOn: ["apply-legacy-codemods", "add-characterization-tests"],
       metric: 112,
     });
+    expect(byKey["apply-post-upgrade-codemods"]).toEqual({
+      key: "apply-post-upgrade-codemods",
+      title: "Aplicar codemods de la version nueva",
+      description: "Despues de subir React: ReactDOM.render / hydrate → createRoot.",
+      category: "legacy_api",
+      dependsOn: ["upgrade-major-versions"],
+      metric: 128,
+    });
   });
 
   it("con tests de componentes tambien dependen de add-component-tests", () => {
-    const plan = generatePlan(signals({ findingCounts: counts({ "with-router": 1, "unsafe-lifecycle": 1, "untested-component": 1 }) }));
+    const plan = generatePlan(signals({ findingCounts: counts({ "with-router": 1, "unsafe-lifecycle": 1, "legacy-react-dom-api": 1, "untested-component": 1 }) }));
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
 
-    expect(plan.find((task) => task.key === "apply-legacy-codemods")?.dependsOn).toEqual(["add-component-tests"]);
-    expect(plan.find((task) => task.key === "migrate-deprecated-apis")?.dependsOn).toEqual(["apply-legacy-codemods", "add-component-tests"]);
+    expect(byKey["apply-legacy-codemods"].dependsOn).toEqual(["add-component-tests"]);
+    expect(byKey["migrate-deprecated-apis"].dependsOn).toEqual(["apply-legacy-codemods", "add-component-tests"]);
+    expect(byKey["apply-post-upgrade-codemods"].dependsOn).toEqual(["add-component-tests"]);
+  });
+});
+
+describe("generatePlan: el flujo (XRay X6)", () => {
+  it("seguridad del codigo espera a los tests", () => {
+    const plan = generatePlan(
+      signals({ findingCounts: counts({ "sql-concatenation": 1, "eval-usage": 1, "dangerously-set-inner-html": 1, "untested-complex-method": 1, "untested-component": 1 }) }),
+    );
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+
+    expect(byKey["close-sql-injections"].dependsOn).toEqual(["add-characterization-tests"]);
+    expect(byKey["close-code-injection"].dependsOn).toEqual(["add-characterization-tests", "add-component-tests"]);
+    expect(byKey["close-xss-sinks"].dependsOn).toEqual(["add-component-tests"]);
+  });
+
+  it("paquetes y runtime esperan a las APIs que se migran antes de actualizar", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({ "unsafe-lifecycle": 1, "with-router": 1, "untested-complex-method": 1 }),
+        dependencies: { counts: { "fix-vulnerable-packages": 1, "apply-safe-updates": 1, "update-unsupported-runtime": 1 }, items: {} },
+      }),
+    );
+    const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
+
+    expect(byKey["fix-vulnerable-packages"].dependsOn).toEqual(["add-characterization-tests", "apply-legacy-codemods", "migrate-deprecated-apis"]);
+    expect(byKey["apply-safe-updates"].dependsOn).toEqual(["fix-vulnerable-packages", "add-characterization-tests", "apply-legacy-codemods", "migrate-deprecated-apis"]);
+    expect(byKey["update-unsupported-runtime"].dependsOn).toEqual(["apply-safe-updates", "add-characterization-tests", "apply-legacy-codemods", "migrate-deprecated-apis"]);
   });
 });
 
@@ -74,11 +116,11 @@ describe("generatePlan: exports sin uso (XRay X2)", () => {
 });
 
 describe("generatePlan: ciclos de dependencias (XRay X1)", () => {
-  it("break-import-cycles cuenta import-cycle, va despues de remove-unused-files y espera a los tests", () => {
+  it("break-import-cycles cuenta import-cycle, va despues de los tests y espera a ellos", () => {
     const plan = generatePlan(signals({ findingCounts: counts({ "import-cycle": 3, "possibly-unused-file": 1, "untested-component": 2, "untested-complex-method": 1 }) }));
     const keys = plan.map((task) => task.key);
 
-    expect(keys.indexOf("break-import-cycles")).toBe(keys.indexOf("remove-unused-files") + 1);
+    expect(keys.indexOf("break-import-cycles")).toBe(keys.indexOf("add-component-tests") + 1);
     expect(plan.find((task) => task.key === "break-import-cycles")).toMatchObject({
       title: "Romper ciclos de dependencias",
       category: "architecture",
@@ -113,25 +155,25 @@ describe("generatePlan con tareas de dependencias", () => {
     );
 
     expect(plan.map((task) => task.key)).toEqual([
+      "resolve-duplicate-migrations",
+      "remove-unused-packages",
+      "add-component-tests",
       "close-sql-injections",
       "fix-vulnerable-packages",
-      "update-unsupported-runtime",
-      "remove-unused-packages",
-      "replace-abandoned-packages",
-      "resolve-duplicate-migrations",
-      "add-component-tests",
-      "split-large-components",
       "apply-safe-updates",
+      "update-unsupported-runtime",
       "upgrade-major-versions",
+      "replace-abandoned-packages",
+      "split-large-components",
       "validate-risk-reduction",
     ]);
 
     const byKey = Object.fromEntries(plan.map((task) => [task.key, task]));
-    expect(byKey["fix-vulnerable-packages"]).toMatchObject({ category: "dependencies", metric: 3, dependsOn: [], title: "Corregir paquetes vulnerables" });
-    expect(byKey["update-unsupported-runtime"]).toMatchObject({ metric: 1, dependsOn: [], title: "Actualizar runtime sin soporte" });
+    expect(byKey["fix-vulnerable-packages"]).toMatchObject({ category: "dependencies", metric: 3, dependsOn: ["add-component-tests"], title: "Corregir paquetes vulnerables" });
+    expect(byKey["update-unsupported-runtime"]).toMatchObject({ metric: 1, dependsOn: ["apply-safe-updates", "add-component-tests"], title: "Actualizar runtime sin soporte" });
     expect(byKey["remove-unused-packages"]).toMatchObject({ metric: 7, dependsOn: [], title: "Quitar dependencias sin uso" });
-    expect(byKey["replace-abandoned-packages"]).toMatchObject({ metric: 2, dependsOn: ["add-component-tests"], title: "Reemplazar paquetes abandonados o deprecated" });
-    expect(byKey["apply-safe-updates"]).toMatchObject({ metric: 9, dependsOn: ["fix-vulnerable-packages", "remove-unused-packages"], title: "Aplicar actualizaciones patch y minor" });
+    expect(byKey["replace-abandoned-packages"]).toMatchObject({ metric: 2, dependsOn: ["apply-safe-updates", "add-component-tests"], title: "Reemplazar paquetes abandonados o deprecated" });
+    expect(byKey["apply-safe-updates"]).toMatchObject({ metric: 9, dependsOn: ["fix-vulnerable-packages", "remove-unused-packages", "add-component-tests"], title: "Aplicar actualizaciones patch y minor" });
     expect(byKey["upgrade-major-versions"]).toMatchObject({
       metric: 4,
       dependsOn: ["apply-safe-updates", "update-unsupported-runtime", "add-component-tests"],
@@ -232,9 +274,9 @@ describe("generatePlan", () => {
 
     expect(plan.map((task) => ({ key: task.key, title: task.title, category: task.category, metric: task.metric, dependsOn: task.dependsOn }))).toEqual([
       { key: "exclude-third-party", title: "Excluir librerias de terceros", category: "scope", metric: 4, dependsOn: [] },
-      { key: "close-sql-injections", title: "Cerrar inyecciones SQL", category: "security", metric: 10, dependsOn: [] },
       { key: "resolve-duplicate-migrations", title: "Resolver migraciones a medias (_new)", category: "debt", metric: 3, dependsOn: [] },
       { key: "add-characterization-tests", title: "Tests de caracterizacion en lo complejo", category: "testing", metric: 20, dependsOn: [] },
+      { key: "close-sql-injections", title: "Cerrar inyecciones SQL", category: "security", metric: 10, dependsOn: ["add-characterization-tests"] },
       { key: "reduce-n-plus-one", title: "Reducir consultas N+1", category: "database", metric: 30, dependsOn: ["add-characterization-tests"] },
       { key: "extract-data-layer", title: "Extraer capa de acceso a datos", category: "database", metric: 45, dependsOn: ["add-characterization-tests", "close-sql-injections"] },
       { key: "break-god-classes", title: "Romper clases gigantes", category: "complexity", metric: 7, dependsOn: ["add-characterization-tests"] },
@@ -245,9 +287,9 @@ describe("generatePlan", () => {
         metric: 0,
         dependsOn: [
           "exclude-third-party",
-          "close-sql-injections",
           "resolve-duplicate-migrations",
           "add-characterization-tests",
+          "close-sql-injections",
           "reduce-n-plus-one",
           "extract-data-layer",
           "break-god-classes",
@@ -280,11 +322,10 @@ describe("generatePlan", () => {
     );
 
     expect(plan.map((task) => ({ key: task.key, title: task.title, category: task.category, metric: task.metric, dependsOn: task.dependsOn }))).toEqual([
-      { key: "close-xss-sinks", title: "Cerrar vectores de XSS", category: "security", metric: 113, dependsOn: [] },
       { key: "remove-manual-copies", title: "Eliminar copias manuales", category: "debt", metric: 18, dependsOn: [] },
       { key: "remove-unused-files", title: "Eliminar archivos sin uso", category: "debt", metric: 39, dependsOn: ["remove-manual-copies"] },
       { key: "add-component-tests", title: "Tests de caracterizacion en componentes complejos", category: "testing", metric: 75, dependsOn: [] },
-      { key: "break-god-classes", title: "Romper clases gigantes", category: "complexity", metric: 2, dependsOn: ["add-component-tests"] },
+      { key: "close-xss-sinks", title: "Cerrar vectores de XSS", category: "security", metric: 113, dependsOn: ["add-component-tests"] },
       { key: "isolate-http-layer", title: "Aislar las llamadas HTTP en una capa de servicios", category: "api_access", metric: 137, dependsOn: ["add-component-tests"] },
       { key: "remove-jquery", title: "Sacar jQuery y el acceso directo al DOM", category: "coupling", metric: 120, dependsOn: ["add-component-tests"] },
       {
@@ -294,6 +335,7 @@ describe("generatePlan", () => {
         metric: 155,
         dependsOn: ["add-component-tests", "isolate-http-layer"],
       },
+      { key: "break-god-classes", title: "Romper clases gigantes", category: "complexity", metric: 2, dependsOn: ["add-component-tests"] },
       { key: "split-large-components", title: "Partir componentes gigantes", category: "complexity", metric: 102, dependsOn: ["add-component-tests"] },
       {
         key: "validate-risk-reduction",
@@ -301,14 +343,14 @@ describe("generatePlan", () => {
         category: "validation",
         metric: 0,
         dependsOn: [
-          "close-xss-sinks",
           "remove-manual-copies",
           "remove-unused-files",
           "add-component-tests",
-          "break-god-classes",
+          "close-xss-sinks",
           "isolate-http-layer",
           "remove-jquery",
           "replace-base-class-inheritance",
+          "break-god-classes",
           "split-large-components",
         ],
       },

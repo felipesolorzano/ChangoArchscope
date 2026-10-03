@@ -52,6 +52,8 @@ export interface PlanGraph {
   summary: { tasks: number; by_state: Record<string, number> };
   checks?: PlanCheck[];
   phases?: PlanPhase[];
+  /** Encabezado de cada columna del grafo (una por fase con tareas, XRay X6). */
+  lanes?: PlanLane[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 }
@@ -68,4 +70,12 @@ export interface PlanTaskFindings {
   taskKey: string;
   total: number;
   items: PlanFinding[];
+}
+
+export interface PlanLane {
+  phase: number;
+  title: string;
+  status: PlanPhaseStatus;
+  current: boolean;
+  x: number;
 }

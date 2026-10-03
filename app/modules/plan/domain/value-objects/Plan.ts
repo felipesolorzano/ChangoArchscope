@@ -90,6 +90,8 @@ export type PlanGraph = {
   checks: PlanCheck[];
   /** Fases 0–10 con quality gates (XRay X6). */
   phases: PlanPhase[];
+  /** Encabezados de columna del grafo: una por fase con tareas (XRay X6). */
+  lanes: PlanLane[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 };
@@ -110,3 +112,5 @@ export type PlanTaskFindings = {
 };
 
 export type PlanCheck = { category: string; label: string; findings: number };
+
+export type PlanLane = Pick<PlanPhase, "title" | "status" | "current"> & { phase: number; x: number };

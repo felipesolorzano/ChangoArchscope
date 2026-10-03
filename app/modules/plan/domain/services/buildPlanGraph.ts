@@ -1,13 +1,15 @@
-import type { PlanGraph, PlanGraphEdge, PlanGraphNode, PlanTask, PlanTaskState } from "../value-objects/Plan.js";
-import { planLayout } from "./planLayout.js";
+import type { PlanGraph, PlanGraphEdge, PlanGraphNode, PlanLane, PlanPhase, PlanTask, PlanTaskState } from "../value-objects/Plan.js";
+import { STAGE_X, planLayout } from "./planLayout.js";
 
-// Grafo de tareas; los checks y las fases los agrega buildPlan.
+// Grafo de tareas en columnas por fase (XRay X6); los checks y las fases los agrega buildPlan.
 export function buildPlanGraph(
   tasks: PlanTask[],
   states: Record<string, PlanTaskState>,
   generatedAt: string,
+  phases: PlanPhase[] = [],
 ): Omit<PlanGraph, "checks" | "phases"> {
-  const { stages, positions } = planLayout(tasks);
+  const phaseOf = Object.fromEntries(phases.flatMap((phase) => phase.tasks.map((task) => [task, phase.number])));
+  const { stages, positions } = planLayout(tasks, phaseOf);
 
   const nodes: PlanGraphNode[] = tasks.map((task) => ({
     id: task.key,
@@ -20,10 +22,6 @@ export function buildPlanGraph(
     position: positions[task.key],
   }));
 
-  const edges: PlanGraphEdge[] = tasks.flatMap((task) =>
-    task.dependsOn.map((dependency) => ({ id: `dep:${dependency}:${task.key}`, source: dependency, target: task.key })),
-  );
-
   const byState: Record<string, number> = {};
   for (const node of nodes) {
     byState[node.state] = (byState[node.state] ?? 0) + 1;
@@ -32,7 +30,32 @@ export function buildPlanGraph(
   return {
     generated_at: generatedAt,
     summary: { tasks: nodes.length, by_state: byState },
+    lanes: lanesOf(phases, tasks, stages),
     nodes,
-    edges,
+    edges: reducedEdges(tasks),
   };
+}
+
+// Un encabezado por fase que tiene tareas en el grafo, sobre su columna.
+function lanesOf(phases: PlanPhase[], tasks: PlanTask[], stages: Record<string, number>): PlanLane[] {
+  const present = new Set(tasks.map((task) => task.key));
+
+  return phases.flatMap((phase) => {
+    const first = phase.tasks.find((task) => present.has(task));
+    return first === undefined ? [] : [{ phase: phase.number, title: phase.title, status: phase.status, current: phase.current, x: stages[first] * STAGE_X }];
+  });
+}
+
+// Reduccion transitiva: una flecha A→C sobra si C ya llega a A por otra dependencia (A→B→C).
+// El plan es un DAG (cada tarea depende de tareas anteriores del roadmap): la busqueda termina.
+function reducedEdges(tasks: PlanTask[]): PlanGraphEdge[] {
+  const dependsOn = new Map(tasks.map((task) => [task.key, task.dependsOn]));
+  const reaches = (from: string, target: string): boolean => (dependsOn.get(from) ?? []).some((next) => next === target || reaches(next, target));
+
+  return tasks.flatMap((task) => {
+    const direct = task.dependsOn.filter((dependency) => dependsOn.has(dependency));
+    return direct
+      .filter((dependency) => !direct.some((other) => reaches(other, dependency)))
+      .map((dependency) => ({ id: `dep:${dependency}:${task.key}`, source: dependency, target: task.key }));
+  });
 }

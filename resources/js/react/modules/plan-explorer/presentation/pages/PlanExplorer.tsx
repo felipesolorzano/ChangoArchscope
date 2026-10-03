@@ -4,7 +4,7 @@ import "@xyflow/react/dist/style.css";
 import type { PlanGraph } from "../../domain/value-objects/PlanGraph";
 import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
-import { toPlanFlowEdges, toPlanFlowNodes } from "../../infrastructure/react-flow/planFlowAdapter";
+import { toPlanFlowEdges, toPlanFlowNodes, toPlanLaneNodes } from "../../infrastructure/react-flow/planFlowAdapter";
 import { CharacterizationDrawer } from "../components/CharacterizationDrawer";
 import { CodemodDrawer } from "../components/CodemodDrawer";
 import { PlanCanvas } from "../components/PlanCanvas";
@@ -31,7 +31,7 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
     registerPlanInteractions({ setTaskState, openTask });
   }, [setTaskState, openTask]);
 
-  const flowNodes = useMemo(() => toPlanFlowNodes(graph?.nodes ?? []), [graph]);
+  const flowNodes = useMemo(() => [...toPlanLaneNodes(graph?.lanes ?? []), ...toPlanFlowNodes(graph?.nodes ?? [])], [graph]);
   const flowEdges = useMemo(() => toPlanFlowEdges(graph?.edges ?? []), [graph]);
 
   const total = graph?.summary.tasks ?? 0;

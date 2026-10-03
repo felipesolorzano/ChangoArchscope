@@ -32,7 +32,7 @@ describe("jsLegacyApiAnalyzer (XRay X5)", () => {
     ]);
   });
 
-  it("legacy-react-dom-api (render/hydrate/unmount → react-dom-render; findDOMNode) y string-ref", () => {
+  it("legacy-react-dom-api (render/hydrate/unmount → react-dom-render), find-dom-node y string-ref", () => {
     const legacyReactApis = [
       { api: "render", line: 1 },
       { api: "hydrate", line: 2 },
@@ -45,7 +45,7 @@ describe("jsLegacyApiAnalyzer (XRay X5)", () => {
       expect.objectContaining({ rule: "legacy-react-dom-api", severity: "medium", class: null, line: 1, message: "ReactDOM.render no existe en React 19.", details: { pattern: "react-dom-render", api: "render" } }),
       expect.objectContaining({ rule: "legacy-react-dom-api", line: 2, message: "ReactDOM.hydrate no existe en React 19.", details: { pattern: "react-dom-render", api: "hydrate" } }),
       expect.objectContaining({ rule: "legacy-react-dom-api", line: 3, details: { pattern: "react-dom-render", api: "unmountComponentAtNode" } }),
-      expect.objectContaining({ rule: "legacy-react-dom-api", line: 4, message: "findDOMNode no existe en React 19: usar una ref.", details: { pattern: "find-dom-node", api: "findDOMNode" } }),
+      expect.objectContaining({ rule: "find-dom-node", severity: "medium", class: null, line: 4, message: "findDOMNode no existe en React 19: usar una ref.", details: { pattern: "find-dom-node", api: "findDOMNode" } }),
       {
         category: "legacy_api",
         rule: "string-ref",

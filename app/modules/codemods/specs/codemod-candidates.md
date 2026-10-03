@@ -15,13 +15,15 @@ manual) y dice que archivos afectados tienen tests que los cubran: sin tests, pr
 
 ## Catalogo (`domain/services/codemodCatalog.ts`, datos)
 
-Por `pattern`: `{ stack, title, tool, command, note }`. `tool`/`command` nulos = migracion manual.
-`command` puede traer `{paths}`.
+Por `pattern`: `{ stack, title, tool, command, note, timing }`. `tool`/`command` nulos = migracion
+manual. `command` puede traer `{paths}`. `timing` (XRay X6): `"after-upgrade"` solo para
+`react-dom-render` (`createRoot` requiere React 18); el resto `"before-upgrade"` (su reemplazo ya existe
+en la version actual y hay que migrarlo ANTES de subir versiones).
 
 | pattern | stack | title | tool | command | note |
 |---|---|---|---|---|---|
 | `unsafe-lifecycles` | react | Lifecycles deprecados (componentWillMount/ReceiveProps/Update) | react-codemod | `npx react-codemod rename-unsafe-lifecycles {paths}` | Solo renombra a UNSAFE_*: pasarlos a componentDidMount / getDerivedStateFromProps / componentDidUpdate sigue siendo manual. |
-| `react-dom-render` | react | ReactDOM.render / hydrate → createRoot | codemod | `npx codemod@latest react/19/replace-reactdom-render` | Correr en la raiz del proyecto (React 18+). |
+| `react-dom-render` | react | ReactDOM.render / hydrate → createRoot | codemod | `npx codemod@latest react/19/replace-reactdom-render` | Correr en la raiz del proyecto (React 18+): despues de subir React. |
 | `string-refs` | react | String refs → createRef | codemod | `npx codemod@latest react/19/replace-string-ref` | Correr en la raiz del proyecto. |
 | `find-dom-node` | react | findDOMNode → ref | – | – | Pasar una ref al elemento y usar ref.current. |
 | `with-router` | react | withRouter → hooks de React Router v6 | – | – | useNavigate / useLocation / useParams; los componentes de clase necesitan un wrapper funcion o pasar a funcion. |
@@ -49,10 +51,11 @@ Por `pattern`: `{ stack, title, tool, command, note }`. `tool`/`command` nulos =
   `occurrences` = suma de `details.count` (1 si no viene) de sus hallazgos del patron; `testedBy` =
   `testedBy[archivo absoluto]` relativo a `sourceRoot` (`[]` si no hay). Orden: mas ocurrencias
   primero, empate por `file`.
-- Candidato: `{ pattern, title, tool, command, note, files, occurrences, protectedFiles }`;
+- Candidato: `{ pattern, title, tool, command, note, timing, files, occurrences, protectedFiles }`;
   `occurrences` = suma de los archivos; `protectedFiles` = archivos con `testedBy` no vacio;
   `command` con `{paths}` reemplazado por las rutas de `files` entre comillas dobles, separadas por espacio.
-- Orden: primero los que tienen `tool` (automaticos), despues mas archivos, empate por `pattern`.
+- Orden: primero los `before-upgrade` (XRay X6), despues los que tienen `tool` (automaticos), despues
+  mas archivos, empate por `pattern`.
 
 ## Armado y endpoint
 

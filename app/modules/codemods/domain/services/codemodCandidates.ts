@@ -33,19 +33,27 @@ export function codemodCandidates({ stack, sourceRoot, findings, testedBy }: Cod
       const files: CodemodFile[] = [...byFile]
         .map(([file, count]) => ({ file: relative(file), occurrences: count, testedBy: (testedBy[file] ?? []).map(relative) }))
         .sort((left, right) => right.occurrences - left.occurrences || left.file.localeCompare(right.file));
-      const { title, tool, command, note } = CODEMOD_CATALOG[pattern];
+      const { title, tool, command, note, timing } = CODEMOD_CATALOG[pattern];
       return {
         pattern,
         title,
         tool,
         command: command?.replace("{paths}", files.map((file) => `"${file.file}"`).join(" ")) ?? null,
         note,
+        timing,
         files,
         occurrences: files.reduce((sum, file) => sum + file.occurrences, 0),
         protectedFiles: files.filter((file) => file.testedBy.length > 0).length,
       };
     })
-    .sort((left, right) => Number(right.tool !== null) - Number(left.tool !== null) || right.files.length - left.files.length || left.pattern.localeCompare(right.pattern));
+    // Primero lo que se migra antes de actualizar (XRay X6), despues los automaticos.
+    .sort(
+      (left, right) =>
+        Number(right.timing === "before-upgrade") - Number(left.timing === "before-upgrade") ||
+        Number(right.tool !== null) - Number(left.tool !== null) ||
+        right.files.length - left.files.length ||
+        left.pattern.localeCompare(right.pattern),
+    );
 }
 
 function patternOf(finding: AuditFinding, stack: CodemodStack): string | null {

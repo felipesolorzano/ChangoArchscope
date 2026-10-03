@@ -13,12 +13,9 @@ export function buildPlan(snapshot, repository, project, dependencies, protectio
         healthyPercent: buildAuditHealth(snapshot, project, stack).summary.healthyPercent,
     };
     const tasks = generatePlan(signals);
-    const graph = buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString());
-    return {
-        ...graph,
-        checks: auditedChecks(snapshot, stack),
-        phases: planPhases(signals, stack, tasks.map((task) => task.key)),
-    };
+    const phases = planPhases(signals, stack, tasks.map((task) => task.key));
+    const graph = buildPlanGraph(tasks, repository.getStates(snapshot.target, project), new Date().toISOString(), phases);
+    return { ...graph, checks: auditedChecks(snapshot, stack), phases };
 }
 // Lo que audito el stack, con su conteo: con cero tareas el plan puede mostrarlo en verde.
 function auditedChecks(snapshot, stack) {
