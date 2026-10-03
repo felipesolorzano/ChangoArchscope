@@ -72,6 +72,26 @@ describe("dependencyReportToSignals", () => {
     ]);
   });
 
+  it("criticas al hotfix con la version que corrige; el resto a fix-vulnerable-packages (XRay X6)", () => {
+    const critical = (id: string, cve: string | null, fixedIn: string | null) => ({ id, cve, summary: "s", severity: "critical" as const, fixedIn });
+    const signals = dependencyReportToSignals(
+      report([
+        entry({ name: "fatfree", current: "3.5.1", recommended: "3.9.3", security: { vulnerabilities: [vuln("GHSA-0", "CVE-0"), critical("GHSA-1", "CVE-1", "3.6.0"), critical("GHSA-2", null, "3.7.0")], maxSeverity: "critical", recommendedAffected: false } }),
+        entry({ name: "swiper", current: "3.3.1", recommended: "14.3.0", security: { vulnerabilities: [critical("GHSA-3", null, null)], maxSeverity: "critical", recommendedAffected: false } }),
+        entry({ name: "ghost", current: "1.0.0", recommended: null, security: { vulnerabilities: [critical("GHSA-4", "CVE-4", null)], maxSeverity: "critical", recommendedAffected: true } }),
+        entry({ name: "vite", current: "5.4.21", recommended: "6.4.3", security: { vulnerabilities: [vuln("GHSA-5", "CVE-5")], maxSeverity: "high", recommendedAffected: false } }),
+      ]),
+    );
+
+    expect(signals.items["hotfix-critical-packages"]).toEqual([
+      { file: "/p/package.json", line: 0, rule: "dependency-critical", severity: "critical", message: "fatfree 3.5.1 → 3.6.0: 2 vulns criticas (CVE-1)" },
+      { file: "/p/package.json", line: 0, rule: "dependency-critical", severity: "critical", message: "swiper 3.3.1 → 14.3.0: 1 vulns criticas (GHSA-3)" },
+      { file: "/p/package.json", line: 0, rule: "dependency-critical", severity: "critical", message: "ghost 1.0.0 → -: 1 vulns criticas (CVE-4)" },
+    ]);
+    expect(signals.counts["hotfix-critical-packages"]).toBe(3);
+    expect(signals.items["fix-vulnerable-packages"].map((item) => item.message)).toEqual(["vite 5.4.21 → 6.4.3: 1 vulns (CVE-5)"]);
+  });
+
   it("runtimes sin soporte", () => {
     const signals = dependencyReportToSignals(
       report([], [
@@ -106,6 +126,7 @@ describe("dependencyReportToSignals", () => {
     );
 
     expect(signals.counts).toEqual({
+      "hotfix-critical-packages": 0,
       "fix-vulnerable-packages": 0,
       "update-unsupported-runtime": 0,
       "replace-abandoned-packages": 2,

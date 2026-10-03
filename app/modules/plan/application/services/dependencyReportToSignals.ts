@@ -7,8 +7,11 @@ const KIND_LABELS: Record<SelectedRuntime["kind"], string> = { php: "PHP", node:
 
 export function dependencyReportToSignals(report: DependencyReportResult): DependencySignals {
   const deps = report.dependencies;
+  // XRay X6: las criticas van al carril de hotfix; el resto sigue el flujo.
+  const isCritical = (dep: DependencyReportEntry) => dep.security.maxSeverity === "critical";
   const items: Record<string, PlanFinding[]> = {
-    "fix-vulnerable-packages": deps.filter((dep) => dep.security.vulnerabilities.length > 0).map(vulnerableItem),
+    "hotfix-critical-packages": deps.filter(isCritical).map(criticalItem),
+    "fix-vulnerable-packages": deps.filter((dep) => dep.security.vulnerabilities.length > 0 && !isCritical(dep)).map(vulnerableItem),
     "update-unsupported-runtime": report.runtimes.filter((runtime) => runtime.support?.isEol === true).map(runtimeItem),
     "replace-abandoned-packages": deps.filter((dep) => dep.status === "abandoned" || dep.status === "deprecated").map(abandonedItem),
     "remove-unused-packages": deps.filter((dep) => dep.usage?.unused === true).map((dep) => item(dep, "dependency-unused", "low", `${dep.name}: sin referencias en el codigo`)),
@@ -56,6 +59,15 @@ function vulnerableItem(dep: DependencyReportEntry): PlanFinding {
   const severity = maxSeverity === "moderate" ? "medium" : (maxSeverity as string);
 
   return item(dep, "dependency-vulnerable", severity, `${dep.name} ${dep.current} → ${dep.recommended ?? "-"}: ${vulnerabilities.length} vulns (${first.cve ?? first.id})`);
+}
+
+// Parche minimo: la version que corrige la primera vulnerabilidad critica.
+function criticalItem(dep: DependencyReportEntry): PlanFinding {
+  const critical = dep.security.vulnerabilities.filter((vulnerability) => vulnerability.severity === "critical");
+  const [first] = critical;
+  const version = first.fixedIn ?? dep.recommended ?? "-";
+
+  return item(dep, "dependency-critical", "critical", `${dep.name} ${dep.current} → ${version}: ${critical.length} vulns criticas (${first.cve ?? first.id})`);
 }
 
 function abandonedItem(dep: DependencyReportEntry): PlanFinding {

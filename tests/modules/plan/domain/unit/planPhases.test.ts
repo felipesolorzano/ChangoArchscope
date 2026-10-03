@@ -33,6 +33,7 @@ describe("planPhases (XRay X6)", () => {
     const phase = (number: number, key: string, title: string, goal: string, gates: unknown[]) => ({ number, key, title, goal, status: "passed", current: false, tasks: [], gates });
 
     expect(planPhases(clean(), "react", [])).toEqual([
+      phase(-1, "hotfix", "Hotfix critico", "Sin vulnerabilidades criticas en paquetes", [gate("critical-packages", "Paquetes con vulnerabilidades criticas", 0)]),
       phase(0, "baseline", "Linea base", "Todo el codigo propio se analiza", [gate("parse-errors", "Archivos que no parsean", 0)]),
       phase(1, "cleanup", "Limpieza", "Sin copias, archivos muertos ni migraciones a medias", [
         gate("manual-copies", "Copias manuales", 0),
@@ -81,6 +82,7 @@ describe("planPhases (XRay X6)", () => {
     const phases = planPhases(clean(), "laravel", []);
 
     expect(phases.map((phase) => [phase.key, phase.status, phase.gates.map((item) => item.key)])).toEqual([
+      ["hotfix", "passed", ["critical-packages"]],
       ["baseline", "passed", ["parse-errors"]],
       ["cleanup", "passed", ["manual-copies", "unused-files", "duplicate-migrations", "unused-packages"]],
       ["safety-net", "passed", ["protection-level", "top-risk-untested"]],
@@ -107,7 +109,7 @@ describe("planPhases (XRay X6)", () => {
     // Cada regla con un valor distinto: la posicion + 1.
     const findingCounts = Object.fromEntries(rules.map((rule, index) => [rule, { medium: index + 1 }]));
     const dependencies = {
-      counts: { "fix-vulnerable-packages": 101, "update-unsupported-runtime": 102, "remove-unused-packages": 103, "replace-abandoned-packages": 104, "upgrade-major-versions": 105, "apply-safe-updates": 106 },
+      counts: { "hotfix-critical-packages": 107, "fix-vulnerable-packages": 101, "update-unsupported-runtime": 102, "remove-unused-packages": 103, "replace-abandoned-packages": 104, "upgrade-major-versions": 105, "apply-safe-updates": 106 },
       items: {},
     };
     const values = (stack: "laravel" | "react") =>
@@ -118,6 +120,7 @@ describe("planPhases (XRay X6)", () => {
       );
 
     expect(values("react")).toEqual({
+      "critical-packages": [107, "failed"],
       "parse-errors": [7, "failed"],
       "manual-copies": [6, "failed"],
       "unused-files": [7, "failed"],
@@ -148,7 +151,7 @@ describe("planPhases (XRay X6)", () => {
   });
 
   it("niveles de proteccion: none 0, low 1, medium 2, high 3", () => {
-    const level = (protectionLevel: PlanSignals["protectionLevel"]) => planPhases(clean({ protectionLevel }), "react", [])[2].gates[0].value;
+    const level = (protectionLevel: PlanSignals["protectionLevel"]) => planPhases(clean({ protectionLevel }), "react", [])[3].gates[0].value;
 
     expect(["none", "low", "medium", "high"].map((value) => level(value as "low"))).toEqual([0, 1, 2, 3]);
   });
@@ -156,8 +159,10 @@ describe("planPhases (XRay X6)", () => {
   it("sin datos: gates unknown; la fase queda unknown si nada fallo y es la actual", () => {
     const phases = planPhases(clean({ dependencies: undefined, protectionLevel: null, topRiskUntested: undefined, healthyPercent: undefined }), "react", []);
 
-    expect(phases[7].gates.find((item) => item.key === "vulnerable-packages")).toMatchObject({ value: null, status: "unknown" });
+    expect(phases[8].gates.find((item) => item.key === "vulnerable-packages")).toMatchObject({ value: null, status: "unknown" });
     expect(phases.map((phase) => [phase.key, phase.status, phase.current])).toEqual([
+      // El hotfix es un carril paralelo: sin datos queda unknown pero nunca es la fase actual.
+      ["hotfix", "unknown", false],
       ["baseline", "passed", false],
       ["cleanup", "unknown", true],
       ["safety-net", "unknown", false],
@@ -172,31 +177,39 @@ describe("planPhases (XRay X6)", () => {
     ]);
   });
 
+  it("el hotfix con criticas falla pero la fase actual sigue siendo la del flujo (XRay X6)", () => {
+    const phases = planPhases(clean({ dependencies: { counts: { "hotfix-critical-packages": 2 }, items: {} }, skippedFiles: 1 }), "react", ["hotfix-critical-packages"]);
+
+    expect(phases[0]).toMatchObject({ key: "hotfix", status: "failed", current: false, tasks: ["hotfix-critical-packages"] });
+    expect(phases.filter((phase) => phase.current).map((phase) => phase.key)).toEqual(["baseline"]);
+  });
+
   it("failed gana a unknown en la fase; la actual es la primera no cumplida", () => {
     const phases = planPhases(clean({ dependencies: undefined, findingCounts: { "manual-copy-file": { low: 1 } }, skippedFiles: 1 }), "react", []);
 
-    expect(phases[1].status).toBe("failed");
+    expect(phases[2].status).toBe("failed");
     expect(phases.filter((phase) => phase.current).map((phase) => phase.key)).toEqual(["baseline"]);
   });
 
   it("bordes: max pasa con value = target y min falla por debajo", () => {
-    expect(planPhases(clean({ healthyPercent: 81 }), "react", [])[10].status).toBe("passed");
-    expect(planPhases(clean({ healthyPercent: 79 }), "react", [])[10].status).toBe("failed");
-    expect(planPhases(clean({ skippedFiles: 1 }), "react", [])[0].status).toBe("failed");
+    expect(planPhases(clean({ healthyPercent: 81 }), "react", [])[11].status).toBe("passed");
+    expect(planPhases(clean({ healthyPercent: 79 }), "react", [])[11].status).toBe("failed");
+    expect(planPhases(clean({ skippedFiles: 1 }), "react", [])[1].status).toBe("failed");
   });
 
   it("tasks: los pasos de major van en la fase 8, en el orden del plan (XRay X6)", () => {
     const phases = planPhases(clean(), "react", ["upgrade-major:react", "update-unsupported-runtime", "upgrade-major:otros", "replace-abandoned-packages"]);
 
-    expect(phases[8].tasks).toEqual(["update-unsupported-runtime", "upgrade-major:react", "upgrade-major:otros", "replace-abandoned-packages"]);
+    expect(phases[9].tasks).toEqual(["update-unsupported-runtime", "upgrade-major:react", "upgrade-major:otros", "replace-abandoned-packages"]);
   });
 
   it("tasks: las de la fase que estan en el plan, en el orden de la fase", () => {
     const phases = planPhases(clean(), "react", ["validate-risk-reduction", "close-xss-sinks", "close-sql-injections", "unknown"]);
 
-    expect(phases[3].tasks).toEqual(["close-sql-injections", "close-xss-sinks"]);
-    expect(phases[10].tasks).toEqual(["validate-risk-reduction"]);
+    expect(phases[4].tasks).toEqual(["close-sql-injections", "close-xss-sinks"]);
+    expect(phases[11].tasks).toEqual(["validate-risk-reduction"]);
     expect(planPhases(clean(), "react", ["exclude-third-party", "remove-manual-copies", "remove-unused-files", "resolve-duplicate-migrations", "remove-unused-exports", "remove-unused-packages", "close-code-injection", "update-unsupported-runtime", "add-characterization-tests", "add-component-tests", "break-import-cycles", "apply-legacy-codemods", "migrate-deprecated-apis", "replace-abandoned-packages", "remove-jquery", "replace-base-class-inheritance", "reduce-n-plus-one", "extract-data-layer", "isolate-http-layer", "break-god-classes", "split-large-components", "apply-safe-updates", "upgrade-major-versions", "fix-vulnerable-packages", "apply-post-upgrade-codemods"]).map((phase) => phase.tasks)).toEqual([
+      [],
       ["exclude-third-party"],
       ["remove-manual-copies", "remove-unused-files", "resolve-duplicate-migrations", "remove-unused-exports", "remove-unused-packages"],
       ["add-characterization-tests", "add-component-tests"],

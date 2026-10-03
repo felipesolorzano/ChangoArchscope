@@ -37,6 +37,13 @@ describe("planLocks (XRay X6)", () => {
     expect(planLocks({ tasks, phases: [], states: { e: "done" } })).toMatchObject({ v: "Espera a: A, B, C (+1)", w: "Espera a: A, B, C" });
   });
 
+  it("el hotfix (fase -1) no bloquea a nadie ni se bloquea por fase (XRay X6)", () => {
+    const tasks = [task("h"), task("a"), task("b")];
+    const phases = [phase(-1, ["h"]), phase(0, ["a"]), phase(1, ["b"])];
+
+    expect(planLocks({ tasks, phases, states: {} })).toEqual({ h: null, a: null, b: "Hasta cerrar la fase 0 · Fase0" });
+  });
+
   it("con todas las fases cerradas no hay fase abierta", () => {
     expect(planLocks({ tasks: [task("a"), task("b")], phases: [phase(1, ["a"], "passed"), phase(2, ["b"], "failed")], states: { b: "done" } })).toEqual({ a: null, b: null });
   });
@@ -58,6 +65,17 @@ describe("planNextTask (XRay X6)", () => {
     expect(planNextTask(tasks, locks, { a: "done", b: "blocked" })).toBe("d");
     expect(planNextTask(tasks, locks, {})).toBe("a");
     expect(planNextTask(tasks, { ...locks, d: "x", e: "x" }, { a: "done", b: "blocked", c: "in_progress" })).toBeNull();
+  });
+
+  it("un hotfix pendiente va antes que lo empezado; hecho, bloqueado a mano o bloqueado no cuenta", () => {
+    const withHotfix = [task("a"), task("hotfix-critical-packages")];
+    const free = { a: null, "hotfix-critical-packages": null };
+
+    expect(planNextTask(withHotfix, free, { a: "in_progress" })).toBe("hotfix-critical-packages");
+    expect(planNextTask(withHotfix, free, { a: "in_progress", "hotfix-critical-packages": "in_progress" })).toBe("hotfix-critical-packages");
+    expect(planNextTask(withHotfix, free, { a: "in_progress", "hotfix-critical-packages": "done" })).toBe("a");
+    expect(planNextTask(withHotfix, free, { a: "in_progress", "hotfix-critical-packages": "blocked" })).toBe("a");
+    expect(planNextTask(withHotfix, { ...free, "hotfix-critical-packages": "x" }, { a: "in_progress" })).toBe("a");
   });
 });
 

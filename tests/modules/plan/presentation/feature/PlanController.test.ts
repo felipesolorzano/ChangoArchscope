@@ -241,7 +241,7 @@ describe("PlanController", async () => {
     await new PlanController({ snapshots, repository: repository(), projectOf, protection: { getLevel } }).show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
 
     expect(getLevel).toHaveBeenCalledWith("react");
-    expect(json.mock.calls[0][0].phases[2].gates[0]).toMatchObject({ value: 3, status: "passed" });
+    expect(json.mock.calls[0][0].phases[3].gates[0]).toMatchObject({ value: 3, status: "passed" });
 
     const failing = fakeResponse();
     const broken = { getLevel: vi.fn(async () => Promise.reject(new Error("boom"))) };
@@ -250,7 +250,7 @@ describe("PlanController", async () => {
       failing.response,
       vi.fn() as unknown as NextFunction,
     );
-    expect(failing.json.mock.calls[0][0].phases[2].gates[0]).toMatchObject({ value: null, status: "unknown" });
+    expect(failing.json.mock.calls[0][0].phases[3].gates[0]).toMatchObject({ value: null, status: "unknown" });
   });
 
   it("update rechaza empezar una tarea bloqueada sin guardar (XRay X6)", async () => {

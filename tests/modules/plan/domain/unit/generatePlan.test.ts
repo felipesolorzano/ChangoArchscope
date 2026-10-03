@@ -72,6 +72,21 @@ describe("generatePlan: APIs legacy (XRay X6)", () => {
   });
 });
 
+describe("generatePlan: hotfix (XRay X6)", () => {
+  it("primera del roadmap y sin dependencias", () => {
+    const plan = generatePlan(signals({ findingCounts: counts({ "untested-complex-method": 1 }), skippedFiles: 1, dependencies: { counts: { "hotfix-critical-packages": 2 }, items: {} } }));
+
+    expect(plan[0]).toEqual({
+      key: "hotfix-critical-packages",
+      title: "Hotfix: vulnerabilidades criticas",
+      description: "Lo unico que se adelanta al flujo: subir cada paquete solo hasta la version que corrige (parche minimo), sin esperar a los tests.",
+      category: "dependencies",
+      dependsOn: [],
+      metric: 2,
+    });
+  });
+});
+
 describe("generatePlan: el flujo (XRay X6)", () => {
   it("seguridad del codigo espera a los tests", () => {
     const plan = generatePlan(

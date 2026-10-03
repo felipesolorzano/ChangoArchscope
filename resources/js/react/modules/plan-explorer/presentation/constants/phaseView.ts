@@ -34,3 +34,12 @@ export function currentPhase(phases: PlanPhase[]): PlanPhase | null {
 export function minimapNodeColor(node: { type?: string; data: unknown }): string {
   return node.type === "planLane" ? phaseStatusColor((node.data as { status: PlanPhaseStatus }).status) : stateColor((node.data as { state: PlanTaskState }).state);
 }
+
+/** XRay X6: el hotfix (fase -1) es un carril aparte: se muestra sin numero. */
+export function phaseHeading(phase: Pick<PlanPhase, "number" | "title">): string {
+  return phase.number < 0 ? phase.title : `${phase.number}. ${phase.title}`;
+}
+
+export function laneLabel(phase: number): string {
+  return phase < 0 ? "Hotfix" : `Fase ${phase}`;
+}

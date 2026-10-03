@@ -5,6 +5,7 @@ type GateTemplate = Omit<PlanGate, "value" | "status"> & { stack?: PlanStack; va
 type PhaseTemplate = Omit<PlanPhase, "status" | "current" | "gates" | "tasks"> & { gates: GateTemplate[]; tasks: string[] };
 
 const LEVELS: Record<PlanProtectionLevel, number> = { none: 0, low: 1, medium: 2, high: 3 };
+const HOTFIX_PHASE = -1;
 // Stryker disable next-line StringLiteral: la constante se usa igual en la fase y al expandir, mutante equivalente.
 const MAJOR_STEPS = "upgrade-major:*";
 
@@ -18,6 +19,15 @@ const packagesOf = (taskKey: string) => (signals: PlanSignals) => (signals.depen
 // Fases 0–10 en el orden del flujo: limpiar, proteger, arreglar codigo sin tocar versiones, actualizar
 // de menor a mayor y recien despues adoptar lo de la version nueva. Spec: plan-phases.md.
 const PHASES: PhaseTemplate[] = [
+  // Carril paralelo (fase -1): nunca es la fase actual ni bloquea a las demas.
+  {
+    number: HOTFIX_PHASE,
+    key: "hotfix",
+    title: "Hotfix critico",
+    goal: "Sin vulnerabilidades criticas en paquetes",
+    gates: [atMostZero("critical-packages", "Paquetes con vulnerabilidades criticas", packagesOf("hotfix-critical-packages"))],
+    tasks: ["hotfix-critical-packages"],
+  },
   {
     number: 0,
     key: "baseline",
@@ -155,7 +165,7 @@ export function planPhases(signals: PlanSignals, stack: PlanStack, taskKeys: str
   return PHASES.map(({ gates, tasks, ...phase }) => {
     const evaluated = gates.filter((gate) => (gate.stack ?? stack) === stack).map((gate) => evaluateGate(gate, signals));
     const status = phaseStatus(evaluated);
-    const current = !currentFound && (status === "failed" || status === "unknown");
+    const current = !currentFound && phase.number !== HOTFIX_PHASE && (status === "failed" || status === "unknown");
     currentFound ||= current;
 
     // El comodin = los pasos de major del plan, en su orden.

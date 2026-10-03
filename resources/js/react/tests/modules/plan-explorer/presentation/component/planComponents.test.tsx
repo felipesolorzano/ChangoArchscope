@@ -388,6 +388,7 @@ describe("Fases (XRay X6)", () => {
     const markup = renderToStaticMarkup(<PhaseList phases={[passed, current, skipped]} taskTitles={{ "close-xss-sinks": "Cerrar vectores de XSS" }} />);
 
     expect(markup).toContain("0. Linea base");
+    expect(renderToStaticMarkup(<PhaseList phases={[{ ...passed, number: -1, title: "Hotfix critico" }]} taskTitles={{}} />)).toContain('<span class="plan-codemods__title">Hotfix critico</span>');
     expect(markup).toMatch(/style="color:#16a34a">Cumplida</);
     expect(markup).toMatch(/style="color:#dc2626">Pendiente</);
     expect(markup).toMatch(/style="color:#475569">No aplica</);
@@ -431,5 +432,6 @@ describe("PlanLaneHeader (XRay X6)", () => {
     expect(markup).toContain("Seguridad del codigo");
     expect(markup).toMatch(/style="color:#dc2626">Pendiente</);
     expect(renderToStaticMarkup(<PlanLaneHeader {...props({ phase: 0, title: "Linea base", status: "passed", current: false, x: 0 })} />)).toContain('class="plan-lane"');
+    expect(renderToStaticMarkup(<PlanLaneHeader {...props({ phase: -1, title: "Hotfix critico", status: "failed", current: false, x: 0 })} />)).toContain('<span class="plan-lane__phase">Hotfix</span>');
   });
 });

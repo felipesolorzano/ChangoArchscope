@@ -12,7 +12,8 @@ export function planLocks({ tasks, phases, states }: PlanLocksInput): Record<str
   const phaseOf = new Map(phases.flatMap((phase) => phase.tasks.map((key) => [key, phase])));
   // Fase abierta: la primera que no se cerro por gates, por no tener tareas (every de [] es true) o
   // por tener todas sus tareas hechas.
-  const open = phases.find((phase) => !CLEARED_STATUSES.has(phase.status) && !phase.tasks.filter((key) => titles.has(key)).every(isDone));
+  // El hotfix (fase -1) es un carril paralelo: nunca es la fase abierta.
+  const open = phases.find((phase) => phase.number >= 0 && !CLEARED_STATUSES.has(phase.status) && !phase.tasks.filter((key) => titles.has(key)).every(isDone));
 
   return Object.fromEntries(
     tasks.map((task) => {
@@ -30,7 +31,9 @@ export function planLocks({ tasks, phases, states }: PlanLocksInput): Record<str
 /** XRay X6: la tarea recomendada: terminar lo empezado, si no la primera pendiente que se puede empezar. */
 export function planNextTask(tasks: PlanTask[], locks: Record<string, string | null>, states: Record<string, PlanTaskState>): string | null {
   const available = tasks.filter((task) => locks[task.key] === null);
-  const inState = (state: PlanTaskState) => available.find((task) => (states[task.key] ?? "pending") === state);
+  const inState = (state: PlanTaskState, candidates = available) => candidates.find((task) => (states[task.key] ?? "pending") === state);
+  // Un hotfix sin hacer va antes que todo (XRay X6).
+  const hotfix = available.filter((task) => task.key.startsWith("hotfix-"));
 
-  return (inState("in_progress") ?? inState("pending"))?.key ?? null;
+  return (inState("in_progress", hotfix) ?? inState("pending", hotfix) ?? inState("in_progress") ?? inState("pending"))?.key ?? null;
 }

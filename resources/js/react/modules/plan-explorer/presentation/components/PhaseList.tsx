@@ -1,5 +1,5 @@
 import type { PlanGate, PlanPhase } from "../../domain/value-objects/PlanGraph";
-import { gateTarget, gateValue, phaseStatusColor, phaseStatusLabel } from "../constants/phaseView";
+import { gateTarget, gateValue, phaseHeading, phaseStatusColor, phaseStatusLabel } from "../constants/phaseView";
 
 const GATE_MARKS: Record<PlanGate["status"], string> = { passed: "✓", failed: "✗", unknown: "?" };
 
@@ -10,7 +10,7 @@ export function PhaseList({ phases, taskTitles }: { phases: PlanPhase[]; taskTit
       {phases.map((phase) => (
         <li key={phase.key} className={phase.current ? "plan-phases__item plan-phases__item--current" : "plan-phases__item"}>
           <div className="plan-characterization__head">
-            <span className="plan-codemods__title">{`${phase.number}. ${phase.title}`}</span>
+            <span className="plan-codemods__title">{phaseHeading(phase)}</span>
             <span className="plan-characterization__kind" style={{ color: phaseStatusColor(phase.status) }}>
               {phaseStatusLabel(phase.status)}
             </span>

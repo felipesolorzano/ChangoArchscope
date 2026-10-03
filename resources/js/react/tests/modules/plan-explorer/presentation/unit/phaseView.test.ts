@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currentPhase, gateTarget, gateValue, minimapNodeColor, phaseStatusColor, phaseStatusLabel } from "../../../../../modules/plan-explorer/presentation/constants/phaseView";
+import { currentPhase, gateTarget, gateValue, laneLabel, minimapNodeColor, phaseHeading, phaseStatusColor, phaseStatusLabel } from "../../../../../modules/plan-explorer/presentation/constants/phaseView";
 import { stateColor } from "../../../../../modules/plan-explorer/presentation/constants/planView";
 import type { PlanGate, PlanPhase } from "../../../../../modules/plan-explorer/domain/value-objects/PlanGraph";
 
@@ -37,4 +37,11 @@ describe("phaseView (XRay X6)", () => {
     expect(minimapNodeColor({ type: "planLane", data: { status: "passed" } })).toBe("#16a34a");
     expect(minimapNodeColor({ type: "planTask", data: { state: "done" } })).toBe(stateColor("done"));
   });
+
+  it("el hotfix (fase -1) se muestra sin numero", () => {
+    expect(phaseHeading(phase(3, false))).toBe("3. P3");
+    expect(phaseHeading({ ...phase(-1, false), title: "Hotfix critico" })).toBe("Hotfix critico");
+    expect([laneLabel(0), laneLabel(-1)]).toEqual(["Fase 0", "Hotfix"]);
+  });
 });
+

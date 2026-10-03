@@ -152,4 +152,8 @@ estado), Migracion/Diseño (bounded contexts).
   todos. `react-router-dom` + `history` pasan a un grupo propio. brandsites: 9 pasos (React 16.14 →
   19, react-router-dom 5.3 → 7, 37 sueltos); mc: vite → react → phpmailer → 11 sueltos. Una fase con
   mas de 5 tareas sigue en sub-columnas para que el grafo entre en pantalla.
+- Carril de hotfix (fase -1, columna "Hotfix" a la izquierda): los paquetes con vulnerabilidades
+  criticas se parchean ya, solo hasta la version que corrige; es lo unico que se adelanta al flujo, no
+  bloquea a nadie, nunca es la fase actual y va primero en "Siguiente paso". mc: fatfree 3.5.1 → 3.7.2 y
+  swiper 3.3.1 → 6.5.1 (parches minimos; lo recomendado era 3.9.3 y 14.3.0). brandsites: sin criticas.
 

@@ -166,3 +166,9 @@ goal, status, current, gates: [{ key, label, value, target, comparator, format, 
 - `PhaseIndicator({ phases, next })` (`next` = el nodo con `next`, o `null`): si hay, boton
   `"Siguiente: <titulo>"` (clase `plan-phases__next`) que abre sus hallazgos (`openTask` del store de
   interacciones del plan). Sin fases no renderiza nada (como antes).
+
+## Carril de hotfix (XRay X6)
+
+- La fase `-1` (hotfix) se muestra sin numero: `phaseHeading(phase)` = `"<n>. <titulo>"`, o solo el
+  titulo si `n < 0`; `laneLabel(phase)` = `"Fase <n>"`, o `"Hotfix"` si `n < 0` (encabezado del grafo).
+- `PhaseList` usa `phaseHeading`; `PlanLaneHeader` usa `laneLabel`.

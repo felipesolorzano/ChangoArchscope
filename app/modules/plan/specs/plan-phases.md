@@ -82,6 +82,27 @@ Los gates de reglas y de duplicados usan `format: "count"`; los de dependencias 
 - `current`: `true` solo en la primera fase `failed` o `unknown`. Si todas pasan (o no aplican),
   ninguna es actual.
 
+## Carril de hotfix (fase -1)
+
+Lo unico que se adelanta al flujo: una vulnerabilidad critica de un paquete se parchea ya, con el salto
+minimo, sin esperar a los tests.
+
+- `dependencyReportToSignals`: `hotfix-critical-packages` = paquetes vulnerables con `maxSeverity`
+  `critical` (rule `dependency-critical`, severity `critical`, message `"<pkg> <actual> → <version>:
+  <n> vulns criticas (<cve o id de la primera critica>)"`, `<version>` = `fixedIn` de la primera
+  vulnerabilidad critica, si no `recommended`, si no `-`). `fix-vulnerable-packages` queda con los
+  demas vulnerables.
+- Tarea `hotfix-critical-packages` (primera del roadmap, categoria `dependencies`, sin dependencias):
+  "Hotfix: vulnerabilidades criticas" ("Lo unico que se adelanta al flujo: subir cada paquete solo hasta
+  la version que corrige (parche minimo), sin esperar a los tests.").
+- Fase `-1` `hotfix` "Hotfix critico" ("Sin vulnerabilidades criticas en paquetes"), gate
+  `critical-packages` "Paquetes con vulnerabilidades criticas" ≤ 0, tarea `hotfix-critical-packages`;
+  va primera en `phases` y en el grafo (columna a la izquierda de la fase 0).
+- Es un carril paralelo: nunca es la fase `current` ni la fase abierta del bloqueo (no bloquea a nadie)
+  y sus tareas no se bloquean por fase.
+- `planNextTask`: una tarea de hotfix sin bloqueo ni hecha (ni bloqueada a mano) va antes que todo,
+  incluso antes que lo que esta en progreso.
+
 ## Grafo por fases (layout y flechas)
 
 - `planLayout(tasks, phaseOf)`: una columna por fase con tareas (sin huecos), en orden; fila en orden de

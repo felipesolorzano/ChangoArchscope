@@ -23,6 +23,13 @@ const SHOWN_JUMPS = 3;
 // Stryker disable ArrayDeclaration: equivalente en los `dependsOn: []`. generatePlan poda las
 // dependencias a claves de tareas incluidas, asi que agregar una clave inexistente no cambia nada.
 const TEMPLATES: PlanTemplate[] = [
+  // Carril de hotfix: lo unico que se adelanta al flujo
+  dependencyTemplate({
+    key: "hotfix-critical-packages",
+    title: "Hotfix: vulnerabilidades criticas",
+    description: "Lo unico que se adelanta al flujo: subir cada paquete solo hasta la version que corrige (parche minimo), sin esperar a los tests.",
+    dependsOn: [],
+  }),
   // Fase 0 — linea base
   {
     key: SKIPPED_FILES_TASK,
