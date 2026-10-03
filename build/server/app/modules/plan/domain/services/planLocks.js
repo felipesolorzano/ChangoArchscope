@@ -18,3 +18,9 @@ export function planLocks({ tasks, phases, states }) {
         return [task.key, open !== undefined && phase !== undefined && phase.number > open.number ? `Hasta cerrar la fase ${open.number} · ${open.title}` : null];
     }));
 }
+/** XRay X6: la tarea recomendada: terminar lo empezado, si no la primera pendiente que se puede empezar. */
+export function planNextTask(tasks, locks, states) {
+    const available = tasks.filter((task) => locks[task.key] === null);
+    const inState = (state) => available.find((task) => (states[task.key] ?? "pending") === state);
+    return (inState("in_progress") ?? inState("pending"))?.key ?? null;
+}

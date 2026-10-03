@@ -158,3 +158,11 @@ goal, status, current, gates: [{ key, label, value, target, comparator, format, 
   `"🔒 <motivo>"` y los botones "En progreso" y "Hecho" quedan deshabilitados (con el motivo como
   `title`); "Pendiente" y "Bloqueado" siguen activos.
 - Si el servidor rechaza el cambio, el error se muestra como hoy (`setError`).
+
+## Siguiente paso (XRay X6)
+
+- `PlanGraphNode.next?: boolean` (ver `plan-phases.md`, "Siguiente paso").
+- `PlanTaskCard`: con `next`, clase `plan-task--next` y la marca "▶ Siguiente paso".
+- `PhaseIndicator({ phases, next })` (`next` = el nodo con `next`, o `null`): si hay, boton
+  `"Siguiente: <titulo>"` (clase `plan-phases__next`) que abre sus hallazgos (`openTask` del store de
+  interacciones del plan). Sin fases no renderiza nada (como antes).

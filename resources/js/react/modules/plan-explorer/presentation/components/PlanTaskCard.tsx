@@ -15,10 +15,11 @@ export function PlanTaskCard({ data }: NodeProps) {
   const openTask = usePlanInteractionsStore((state) => state.openTask);
 
   return (
-    <div className={task.lockReason ? "plan-task plan-task--locked" : "plan-task"} style={{ borderColor: color }}>
+    <div className={taskCardClass(task)} style={{ borderColor: color }}>
       <Handle type="target" position={Position.Left} className="plan-task__handle" />
 
       <button type="button" className="plan-task__body" onClick={() => openTask(task.id)}>
+        {task.next && <span className="plan-task__next">▶ Siguiente paso</span>}
         <div className="plan-task__head">
           <span className="plan-task__category">{task.category}</span>
           {task.metric > 0 && <span className="plan-task__metric">{formatNumber(task.metric)}</span>}
@@ -62,4 +63,10 @@ function TaskStateButtons({ task, onSelect }: { task: PlanGraphNode; onSelect: (
       })}
     </div>
   );
+}
+
+// La recomendada se resalta; una bloqueada se atenua (XRay X6).
+function taskCardClass(task: PlanGraphNode): string {
+  if (task.next) return "plan-task plan-task--next";
+  return task.lockReason ? "plan-task plan-task--locked" : "plan-task";
 }

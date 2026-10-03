@@ -26,3 +26,11 @@ export function planLocks({ tasks, phases, states }: PlanLocksInput): Record<str
     }),
   );
 }
+
+/** XRay X6: la tarea recomendada: terminar lo empezado, si no la primera pendiente que se puede empezar. */
+export function planNextTask(tasks: PlanTask[], locks: Record<string, string | null>, states: Record<string, PlanTaskState>): string | null {
+  const available = tasks.filter((task) => locks[task.key] === null);
+  const inState = (state: PlanTaskState) => available.find((task) => (states[task.key] ?? "pending") === state);
+
+  return (inState("in_progress") ?? inState("pending"))?.key ?? null;
+}

@@ -86,5 +86,7 @@ describe("buildPlanGraph", () => {
       ["b", "Espera a: A"],
     ]);
     expect(buildPlanGraph(tasks, { a: "done" }, "2026-01-01T00:00:00.000Z").nodes[1].lockReason).toBeNull();
+    expect(graph.nodes.map((node) => node.next)).toEqual([true, false]);
+    expect(buildPlanGraph(tasks, { a: "done" }, "2026-01-01T00:00:00.000Z").nodes.map((node) => node.next)).toEqual([false, true]);
   });
 });

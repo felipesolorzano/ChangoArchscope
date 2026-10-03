@@ -1,10 +1,11 @@
 import { STAGE_X, planLayout } from "./planLayout.js";
-import { planLocks } from "./planLocks.js";
+import { planLocks, planNextTask } from "./planLocks.js";
 // Grafo de tareas en columnas por fase (XRay X6); los checks y las fases los agrega buildPlan.
 export function buildPlanGraph(tasks, states, generatedAt, phases = []) {
     const phaseOf = Object.fromEntries(phases.flatMap((phase) => phase.tasks.map((task) => [task, phase.number])));
     const { stages, positions } = planLayout(tasks, phaseOf);
     const locks = planLocks({ tasks, phases, states });
+    const next = planNextTask(tasks, locks, states);
     const nodes = tasks.map((task) => ({
         id: task.key,
         title: task.title,
@@ -15,6 +16,7 @@ export function buildPlanGraph(tasks, states, generatedAt, phases = []) {
         stage: stages[task.key],
         position: positions[task.key],
         lockReason: locks[task.key],
+        next: task.key === next,
     }));
     const byState = {};
     for (const node of nodes) {

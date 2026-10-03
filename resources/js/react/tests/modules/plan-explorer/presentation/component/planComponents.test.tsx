@@ -140,6 +140,14 @@ describe("PlanTaskCard", () => {
     expect(markup).not.toContain("Ver hallazgos");
   });
 
+  it("siguiente paso: resaltada con su marca (XRay X6)", () => {
+    const markup = card(task({ next: true }));
+
+    expect(markup).toContain('class="plan-task plan-task--next"');
+    expect(markup).toContain('<span class="plan-task__next">▶ Siguiente paso</span>');
+    expect(card(task())).not.toContain("Siguiente paso");
+  });
+
   it("bloqueada: motivo y sin en progreso ni hecho (XRay X6)", () => {
     const markup = card(task({ lockReason: "Espera a: Tests" }));
 
@@ -370,6 +378,10 @@ describe("Fases (XRay X6)", () => {
     expect(markup).toContain("Fase 1 · Seguridad");
     expect(markup).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Fases<\/button>/);
     expect(renderToStaticMarkup(<PhaseIndicator phases={[passed]} />)).toContain("Todas las fases cumplidas");
+    expect(markup).not.toContain("Siguiente:");
+    const withNext = renderToStaticMarkup(<PhaseIndicator phases={[passed, current]} next={{ ...task(), title: "Eliminar copias manuales" }} />);
+    expect(withNext).toContain('<button type="button" class="plan-phases__next">Siguiente: Eliminar copias manuales</button>');
+    expect(renderToStaticMarkup(<PhaseIndicator phases={[]} next={task()} />)).toBe("");
   });
 
   it("PhaseList: estado, meta, gates con valor y objetivo, tareas por titulo; la actual marcada", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { planLocks } from "../../../../../app/modules/plan/domain/services/planLocks.js";
+import { planLocks, planNextTask } from "../../../../../app/modules/plan/domain/services/planLocks.js";
 import type { PlanPhase, PlanTask } from "../../../../../app/modules/plan/domain/value-objects/Plan.js";
 
 const task = (key: string, dependsOn: string[] = []): PlanTask => ({ key, title: key.toUpperCase(), description: "", category: "x", dependsOn, metric: 1 });
@@ -47,3 +47,17 @@ describe("planLocks (XRay X6)", () => {
     expect(planLocks({ tasks, phases: [phase(1, ["a"])], states: {} })).toEqual({ a: null, free: null, dep: "Espera a: A" });
   });
 });
+
+describe("planNextTask (XRay X6)", () => {
+  const tasks = ["a", "b", "c", "d", "e"].map((key) => task(key));
+
+  it("primero lo empezado (en orden de roadmap), si no la primera pendiente; nunca bloqueadas, hechas ni bloqueadas a mano", () => {
+    const locks = { a: null, b: null, c: "Espera a: A", d: null, e: null };
+
+    expect(planNextTask(tasks, locks, { a: "done", b: "blocked", d: "in_progress", e: "in_progress" })).toBe("d");
+    expect(planNextTask(tasks, locks, { a: "done", b: "blocked" })).toBe("d");
+    expect(planNextTask(tasks, locks, {})).toBe("a");
+    expect(planNextTask(tasks, { ...locks, d: "x", e: "x" }, { a: "done", b: "blocked", c: "in_progress" })).toBeNull();
+  });
+});
+

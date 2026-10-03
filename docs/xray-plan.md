@@ -141,4 +141,8 @@ estado), Migracion/Diseño (bounded contexts).
   es la primera no cerrada: se cierra por gates, por no tener tareas, o marcando hechas todas sus
   tareas (salida manual ante falsos positivos). brandsites: solo se pueden empezar "Eliminar copias
   manuales" y "Quitar dependencias sin uso"; los tests esperan a cerrar la Limpieza.
+- Siguiente paso: la primera tarea "En progreso" que se puede trabajar (terminar lo empezado), si no la
+  primera pendiente sin bloqueo, en orden de roadmap. Tarjeta resaltada con "▶ Siguiente paso" y boton
+  "Siguiente: <tarea>" en la cabecera, que abre sus hallazgos. brandsites: "Eliminar copias manuales";
+  mc: "Excluir librerias de terceros".
 

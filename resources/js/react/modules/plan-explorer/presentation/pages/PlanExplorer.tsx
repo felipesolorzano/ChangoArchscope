@@ -74,7 +74,7 @@ function PlanHeader({ graph, protection }: { graph: PlanGraph | null; protection
           {graph?.summary.tasks ?? 0} tareas derivadas de la auditoria · click en un estado para marcar avance (se guarda)
         </p>
         <ProtectionStrip protection={protection} />
-        <PhaseIndicator phases={graph?.phases} />
+        <PhaseIndicator phases={graph?.phases} next={graph?.nodes.find((node) => node.next) ?? null} />
       </div>
       <PlanProgress byState={graph?.summary.by_state ?? {}} />
     </header>

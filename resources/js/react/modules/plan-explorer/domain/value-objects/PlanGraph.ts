@@ -11,6 +11,8 @@ export interface PlanGraphNode {
   position: { x: number; y: number };
   /** XRay X6: por que todavia no se puede empezar (null = se puede). */
   lockReason?: string | null;
+  /** XRay X6: la tarea recomendada para seguir. */
+  next?: boolean;
 }
 
 export interface PlanGraphEdge {

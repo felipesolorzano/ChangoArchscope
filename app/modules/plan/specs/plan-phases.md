@@ -111,6 +111,16 @@ El flujo se hace cumplir: no se puede empezar lo que todavia no toca.
   (HTTP 400 como los demas errores). `pending` y `blocked` siempre se permiten; una tarea que no esta
   en el plan no se valida (la valida `updateTaskState` como antes).
 
+## Siguiente paso (`planNextTask`, en `domain/services/planLocks.ts`)
+
+`planNextTask(tasks, locks, states)` → la key de la tarea recomendada, o `null`:
+
+- Candidatas: tareas sin bloqueo (`locks[key] === null`) en estado `in_progress` o `pending` (ausente =
+  `pending`); `done` y `blocked` no.
+- Primero la primera `in_progress` en orden de roadmap (terminar lo empezado); si no hay, la primera
+  `pending`.
+- `PlanGraphNode.next: boolean` (`true` solo en esa tarea).
+
 ## Integracion
 
 - `PlanGraph.phases: PlanPhase[]` en `/plan.json` (y en la respuesta de actualizar una tarea).
@@ -127,6 +137,7 @@ El flujo se hace cumplir: no se puede empezar lo que todavia no toca.
 - Estados de fase y fase actual (incluye todo pasado y fases que no aplican).
 - `tasks` filtradas a las del plan; tareas nuevas con sus reglas y dependencias.
 - Señales `topRiskUntested` (top 10, exclusiones, solo escaneados) y `healthyPercent`.
+- Siguiente paso: prioridad de `in_progress`, orden de roadmap, sin bloqueadas/hechas/bloqueadas a mano.
 - Bloqueo: por dependencias, por fase abierta (cerrada por gates, por no tener tareas o por tareas
   hechas), prioridad del motivo y rechazo de `in_progress`/`done` en el update.
 - Validacion real: brandsites y mc con su fase actual y gates.
