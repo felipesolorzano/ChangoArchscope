@@ -151,6 +151,20 @@ const TEMPLATES = [
         dependsOn: ["add-component-tests", "isolate-http-layer"],
     }),
     ruleTemplate({
+        key: "apply-legacy-codemods",
+        title: "Aplicar codemods de APIs eliminadas",
+        description: "Correr los codemods de Codemods (React 19 / PHP 8) sobre lo ya protegido: lifecycles, ReactDOM.render, string refs, funciones PHP eliminadas.",
+        category: "legacy_api",
+        dependsOn: ["add-characterization-tests", "add-component-tests"],
+    }),
+    ruleTemplate({
+        key: "migrate-deprecated-apis",
+        title: "Migrar APIs y librerias deprecadas",
+        description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods.",
+        category: "legacy_api",
+        dependsOn: ["apply-legacy-codemods", "add-characterization-tests", "add-component-tests"],
+    }),
+    ruleTemplate({
         key: "split-large-components",
         title: "Partir componentes gigantes",
         description: "Dividir los componentes con render y estado enormes en componentes chicos y testeables.",

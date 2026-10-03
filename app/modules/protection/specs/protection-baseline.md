@@ -65,6 +65,9 @@ carpeta); si no hay ninguna, la raiz del stack (`modulesPath`).
 ## Endpoint
 
 `GET /protection.json?target=laravel|react` (raiz y extensiones del stack de la config).
+`protectionStackOf(config, target)` (presentation, XRay X6) arma esa entrada del stack (`stackRoot`,
+`testPaths`, `extensions`, `ignoredPaths`; react con `react.testPaths`, laravel sin testPaths): la usan
+el controller y el Plan (nivel de proteccion para el gate de la fase 3).
 
 ## UI (Plan)
 

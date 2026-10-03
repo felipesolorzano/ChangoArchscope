@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ArchitectureConfig } from "../../../../../app/modules/architecture/domain/value-objects/ArchitectureConfig.js";
 import type { SourceTreeReader } from "../../../../../app/modules/shared/domain/repositories/SourceTreeReader.js";
-import { ProtectionController } from "../../../../../app/modules/protection/presentation/http/ProtectionController.js";
+import { ProtectionController, protectionStackOf } from "../../../../../app/modules/protection/presentation/http/ProtectionController.js";
 
 const coupling = { enabled: false, message: "x", suggestion: "x", defaultAssessment: "x", defaultRecommendation: "x", defaultAction: "x" };
 const config = {
@@ -47,5 +47,11 @@ describe("ProtectionController", () => {
     });
 
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: "boom" }));
+  });
+
+  it("protectionStackOf: entrada del stack para el Plan (XRay X6)", () => {
+    expect(protectionStackOf(config, "react")).toEqual({ stackRoot: "/js", testPaths: ["/js-tests"], extensions: [".js", ".jsx", ".ts", ".tsx"], ignoredPaths: [] });
+    expect(protectionStackOf(config, "laravel")).toEqual({ stackRoot: "/php", testPaths: [], extensions: [".php"], ignoredPaths: [] });
+    expect(protectionStackOf({ ...config, react: { ...config.react, testPaths: undefined } } as ArchitectureConfig, "react").testPaths).toEqual([]);
   });
 });

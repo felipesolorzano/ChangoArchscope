@@ -1,11 +1,15 @@
 import { useEffect, useMemo } from "react";
 import "@xyflow/react/dist/style.css";
 
+import type { PlanGraph } from "../../domain/value-objects/PlanGraph";
+import type { ProtectionBaseline } from "../../domain/value-objects/Protection";
 import type { PlanExplorerDependencies } from "../../infrastructure/factory/createPlanExplorerDependencies";
 import { toPlanFlowEdges, toPlanFlowNodes } from "../../infrastructure/react-flow/planFlowAdapter";
 import { CharacterizationDrawer } from "../components/CharacterizationDrawer";
 import { CodemodDrawer } from "../components/CodemodDrawer";
 import { PlanCanvas } from "../components/PlanCanvas";
+import { PhaseDrawer } from "../components/PhaseDrawer";
+import { PhaseIndicator } from "../components/PhaseIndicator";
 import { PlanFindingsDrawer } from "../components/PlanFindingsDrawer";
 import { ProtectionStrip } from "../components/ProtectionStrip";
 import { PLAN_STATE_OPTIONS, stateColor, stateLabel } from "../constants/planView";
@@ -34,16 +38,7 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
 
   return (
     <main className="plan-explorer">
-      <header className="plan-explorer__bar">
-        <div>
-          <h1 className="plan-explorer__title">Plan de remediacion</h1>
-          <p className="plan-explorer__sub">
-            {total} tareas derivadas de la auditoria · click en un estado para marcar avance (se guarda)
-          </p>
-          <ProtectionStrip protection={protection} />
-        </div>
-        <PlanProgress byState={graph?.summary.by_state ?? {}} />
-      </header>
+      <PlanHeader graph={graph} protection={protection} />
 
       <PlanCanvas
         loading={loading}
@@ -65,7 +60,24 @@ export default function PlanExplorer({ dependencies, target }: PlanExplorerProps
 
       <CharacterizationDrawer provider={dependencies.planProvider} target={target} />
       <CodemodDrawer provider={dependencies.planProvider} target={target} />
+      <PhaseDrawer graph={graph} />
     </main>
+  );
+}
+
+function PlanHeader({ graph, protection }: { graph: PlanGraph | null; protection: ProtectionBaseline | null }) {
+  return (
+    <header className="plan-explorer__bar">
+      <div>
+        <h1 className="plan-explorer__title">Plan de remediacion</h1>
+        <p className="plan-explorer__sub">
+          {graph?.summary.tasks ?? 0} tareas derivadas de la auditoria · click en un estado para marcar avance (se guarda)
+        </p>
+        <ProtectionStrip protection={protection} />
+        <PhaseIndicator phases={graph?.phases} />
+      </div>
+      <PlanProgress byState={graph?.summary.by_state ?? {}} />
+    </header>
   );
 }
 

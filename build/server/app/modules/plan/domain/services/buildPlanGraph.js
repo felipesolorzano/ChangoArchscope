@@ -1,4 +1,5 @@
 import { planLayout } from "./planLayout.js";
+// Grafo de tareas; los checks y las fases los agrega buildPlan.
 export function buildPlanGraph(tasks, states, generatedAt) {
     const { stages, positions } = planLayout(tasks);
     const nodes = tasks.map((task) => ({
@@ -19,7 +20,6 @@ export function buildPlanGraph(tasks, states, generatedAt) {
     return {
         generated_at: generatedAt,
         summary: { tasks: nodes.length, by_state: byState },
-        checks: [],
         nodes,
         edges,
     };

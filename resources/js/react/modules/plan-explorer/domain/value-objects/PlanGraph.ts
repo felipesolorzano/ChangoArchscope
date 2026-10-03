@@ -23,10 +23,35 @@ export interface PlanCheck {
   findings: number;
 }
 
+export interface PlanGate {
+  key: string;
+  label: string;
+  value: number | null;
+  target: number;
+  comparator: "max" | "min";
+  format: "count" | "percent" | "level";
+  status: "passed" | "failed" | "unknown";
+}
+
+export type PlanPhaseStatus = "passed" | "failed" | "unknown" | "not-applicable";
+
+// Fase 0–10 con quality gates (XRay X6): se valida sola contra las metricas.
+export interface PlanPhase {
+  number: number;
+  key: string;
+  title: string;
+  goal: string;
+  status: PlanPhaseStatus;
+  current: boolean;
+  gates: PlanGate[];
+  tasks: string[];
+}
+
 export interface PlanGraph {
   generated_at: string;
   summary: { tasks: number; by_state: Record<string, number> };
   checks?: PlanCheck[];
+  phases?: PlanPhase[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 }

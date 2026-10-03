@@ -20,7 +20,7 @@ estado), Migracion/Diseño (bounded contexts).
 | **X3 Linea base de proteccion** | Bounded context `protection`: evidencia de tests + reportes existentes (Istanbul/lcov/clover, Stryker JSON/HTML, Infection, Playwright) → nivel none/low/medium/high; `/protection.json`; franja "Red de seguridad" en Plan. Spec: `app/modules/protection/specs/protection-baseline.md` | Completa |
 | **X4 Objetivos de caracterizacion** | Bounded context `characterization`: ranking (riesgo × uso, sin tests, sin copias ni muertos) + esqueletos RTL/MSW/Playwright/PHPUnit golden master; `/characterization.json`; panel "Que proteger primero" en Plan. Spec: `app/modules/characterization/specs/characterization-targets.md` | Completa |
 | **X5 Candidatos a codemod** | Categoria `legacy_api` en Auditoria (React: lifecycles deprecados, `ReactDOM.render`/`findDOMNode`, string refs, `withRouter`, moment/request/react-ga; PHP: `mysql_*`, `ereg`/`split`, `each`, `create_function`, `utf8_encode`…) + `testedBy` por archivo en el snapshot; bounded context `codemods` (patron → herramienta y comando, archivos, tests que los cubren); `/codemods.json`; panel "Codemods" en Plan. Specs: `app/modules/audit/specs/legacy-api.md`, `app/modules/codemods/specs/codemod-candidates.md` | Completa |
-| **X6 Plan por fases con quality gates** | Fases 0–10 con metas medibles que se validan solas contra las metricas | Pendiente |
+| **X6 Plan por fases con quality gates** | Fases 0–10 en `/plan.json` (`phases`) con gates medibles (hallazgos, dependencias, nivel de proteccion X3, archivos riesgosos sin tests, % de archivos sanos) que se validan solos; la fase actual es la primera que no pasa. Tareas nuevas `apply-legacy-codemods` / `migrate-deprecated-apis` (X5). Indicador "Fase N" y panel "Fases" en Plan. Spec: `app/modules/plan/specs/plan-phases.md` | Completa |
 
 ## 2. Hallazgos que guian X1
 
@@ -102,4 +102,21 @@ estado), Migracion/Diseño (bounded contexts).
 - Mutation: 100% en parser, analizadores, `testedBy`, modulo `codemods` (salvo rutas, composition
   root) y helpers/store/provider/lista del front; los drawers con efectos no se pueden ejercitar sin DOM
   (igual que X4).
+
+### X6 — validacion
+
+- brandsites: fase actual **1 Seguridad** (0 inyecciones, pero 113 sinks XSS, 8 paquetes vulnerables y
+  runtime sin soporte). Despues: limpieza (18 copias, 39 archivos sin uso, 2 exports, 7 paquetes),
+  red de seguridad en "Ninguna" con los 10 archivos mas riesgosos sin tests, 1 ciclo, 55 usos de APIs
+  eliminadas, 183 deprecadas, jQuery 118, 28% de archivos sanos.
+- mc: fase actual **0 Linea base** (6 archivos que no parsean). Seguridad: 769 inyecciones y 23
+  paquetes vulnerables; limpieza solo con 2 migraciones `_new`; proteccion "Baja" (pasa) pero los 10
+  mas riesgosos sin tests; Desacople no aplica (solo React); 46% de archivos sanos.
+- Gates sin datos (sin reporte de dependencias en cache o sin nivel de proteccion) quedan "Sin datos"
+  y no pasan la fase.
+- UI: "Fase N · titulo" con boton "Fases" debajo de la franja; panel con cada fase, su estado, la
+  meta, los gates (✓ ✗ ?) con valor y objetivo, y las tareas del plan que los mueven. Sin errores de
+  consola.
+- Mutation: 100% en fases, señales, tareas nuevas, `buildPlan`, `PlanController`,
+  `protectionStackOf` y helpers/lista del front (los `onClick` con hooks no se pueden ejercitar sin DOM).
 

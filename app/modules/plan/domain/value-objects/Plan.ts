@@ -12,6 +12,42 @@ export type PlanSignals = {
   skippedFiles: number;
   /** Trabajo de actualizacion de paquetes (modulo dependencies): metrica e items por tarea. */
   dependencies?: DependencySignals;
+  /** XRay X6: de los 10 archivos mas riesgosos, cuantos no tienen tests. Ausente = sin datos. */
+  topRiskUntested?: number;
+  /** XRay X6: porcentaje de archivos sin hallazgos (salud de Auditoria). Ausente = sin datos. */
+  healthyPercent?: number;
+  /** XRay X6: nivel de proteccion (X3); null o ausente = sin datos. */
+  protectionLevel?: PlanProtectionLevel | null;
+};
+
+export type PlanProtectionLevel = "none" | "low" | "medium" | "high";
+
+export type PlanStack = "laravel" | "react";
+
+// Quality gate de una fase (XRay X6): se valida solo contra las metricas actuales.
+export type PlanGate = {
+  key: string;
+  label: string;
+  /** null = sin datos. */
+  value: number | null;
+  target: number;
+  /** max: pasa si value <= target; min: pasa si value >= target. */
+  comparator: "max" | "min";
+  format: "count" | "percent" | "level";
+  status: "passed" | "failed" | "unknown";
+};
+
+export type PlanPhase = {
+  number: number;
+  key: string;
+  title: string;
+  goal: string;
+  status: "passed" | "failed" | "unknown" | "not-applicable";
+  /** La primera fase no cumplida. */
+  current: boolean;
+  gates: PlanGate[];
+  /** Tareas del plan que mueven sus gates. */
+  tasks: string[];
 };
 
 export type DependencySignals = {
@@ -52,6 +88,8 @@ export type PlanGraph = {
   summary: { tasks: number; by_state: Record<string, number> };
   /** Categorias auditadas del stack con su cantidad de hallazgos (para mostrar lo que esta en verde). */
   checks: PlanCheck[];
+  /** Fases 0–10 con quality gates (XRay X6). */
+  phases: PlanPhase[];
   nodes: PlanGraphNode[];
   edges: PlanGraphEdge[];
 };

@@ -11,6 +11,9 @@ import { CharacterizationList } from "../../../../../modules/plan-explorer/prese
 import { CodemodDrawer } from "../../../../../modules/plan-explorer/presentation/components/CodemodDrawer";
 import { CodemodList } from "../../../../../modules/plan-explorer/presentation/components/CodemodList";
 import { usePlanDrawerStore } from "../../../../../modules/plan-explorer/presentation/store/planDrawerStore";
+import { PhaseDrawer } from "../../../../../modules/plan-explorer/presentation/components/PhaseDrawer";
+import { PhaseIndicator } from "../../../../../modules/plan-explorer/presentation/components/PhaseIndicator";
+import { PhaseList } from "../../../../../modules/plan-explorer/presentation/components/PhaseList";
 import { ProtectionStrip } from "../../../../../modules/plan-explorer/presentation/components/ProtectionStrip";
 import type { PlanExplorerDependencies } from "../../../../../modules/plan-explorer/infrastructure/factory/createPlanExplorerDependencies";
 import { PlanCanvas } from "../../../../../modules/plan-explorer/presentation/components/PlanCanvas";
@@ -319,3 +322,66 @@ describe("CodemodDrawer (XRay X5)", () => {
   });
 });
 
+
+describe("Fases (XRay X6)", () => {
+  const passed = { number: 0, key: "baseline", title: "Linea base", goal: "Todo se analiza", status: "passed" as const, current: false, tasks: [], gates: [{ key: "parse-errors", label: "Archivos que no parsean", value: 0, target: 0, comparator: "max" as const, format: "count" as const, status: "passed" as const }] };
+  const current = {
+    number: 1,
+    key: "security",
+    title: "Seguridad",
+    goal: "Sin inyecciones",
+    status: "failed" as const,
+    current: true,
+    tasks: ["close-xss-sinks", "fix-vulnerable-packages"],
+    gates: [
+      { key: "xss-sinks", label: "Sinks XSS", value: 113, target: 0, comparator: "max" as const, format: "count" as const, status: "failed" as const },
+      { key: "vulnerable-packages", label: "Paquetes vulnerables", value: null, target: 0, comparator: "max" as const, format: "count" as const, status: "unknown" as const },
+    ],
+  };
+  const skipped = { ...passed, number: 7, key: "decoupling", title: "Desacople", status: "not-applicable" as const, gates: [] };
+
+  it("PhaseIndicator: fase actual, todo cumplido o nada; boton Fases", () => {
+    expect(renderToStaticMarkup(<PhaseIndicator phases={undefined} />)).toBe("");
+    expect(renderToStaticMarkup(<PhaseIndicator phases={[]} />)).toBe("");
+
+    const markup = renderToStaticMarkup(<PhaseIndicator phases={[passed, current]} />);
+    expect(markup).toContain("Fase 1 · Seguridad");
+    expect(markup).toMatch(/<button[^>]*class="plan-protection__action"[^>]*>Fases<\/button>/);
+    expect(renderToStaticMarkup(<PhaseIndicator phases={[passed]} />)).toContain("Todas las fases cumplidas");
+  });
+
+  it("PhaseList: estado, meta, gates con valor y objetivo, tareas por titulo; la actual marcada", () => {
+    const markup = renderToStaticMarkup(<PhaseList phases={[passed, current, skipped]} taskTitles={{ "close-xss-sinks": "Cerrar vectores de XSS" }} />);
+
+    expect(markup).toContain("0. Linea base");
+    expect(markup).toMatch(/style="color:#16a34a">Cumplida</);
+    expect(markup).toMatch(/style="color:#dc2626">Pendiente</);
+    expect(markup).toMatch(/style="color:#475569">No aplica</);
+    expect(markup).toContain("Sin inyecciones");
+    expect(markup).toContain("✓ Archivos que no parsean: 0 (meta ≤ 0)");
+    expect(markup).toContain("✗ Sinks XSS: 113 (meta ≤ 0)");
+    expect(markup).toContain("? Paquetes vulnerables: sin datos (meta ≤ 0)");
+    expect(markup).toContain("Tareas: Cerrar vectores de XSS · fix-vulnerable-packages");
+    expect(markup.match(/plan-phases__item--current/g)).toHaveLength(1);
+    expect(markup).toMatch(/plan-phases__item plan-phases__item--current[^>]*>[\s\S]*1\. Seguridad/);
+    expect(markup.match(/Tareas:/g)).toHaveLength(1);
+    expect(markup.match(/class="plan-phases__item"/g)).toHaveLength(2);
+    expect(markup).toContain('<span class="plan-phases__gate plan-phases__gate--failed">✗ Sinks XSS');
+  });
+
+  it("PhaseDrawer: solo con el panel phases; sin fases, cargando", () => {
+    const graph = { generated_at: "", summary: { tasks: 1, by_state: {} }, nodes: [{ ...task(), id: "close-xss-sinks", title: "Cerrar vectores de XSS" }], edges: [], phases: [current] };
+
+    usePlanDrawerStore.setState({ drawer: "codemods" });
+    expect(renderToStaticMarkup(<PhaseDrawer graph={graph} />)).toBe("");
+
+    usePlanDrawerStore.setState({ drawer: "phases" });
+    const markup = renderToStaticMarkup(<PhaseDrawer graph={graph} />);
+    expect(markup).toContain("Fases y quality gates");
+    expect(markup).toContain(">Cerrar<");
+    expect(markup).toContain("Tareas: Cerrar vectores de XSS · fix-vulnerable-packages");
+    expect(renderToStaticMarkup(<PhaseDrawer graph={null} />)).toContain("Calculando fases…");
+    expect(renderToStaticMarkup(<PhaseDrawer graph={{ ...graph, phases: undefined }} />)).toContain("Calculando fases…");
+    usePlanDrawerStore.setState({ drawer: null });
+  });
+});

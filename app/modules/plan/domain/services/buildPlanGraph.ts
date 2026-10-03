@@ -1,11 +1,12 @@
 import type { PlanGraph, PlanGraphEdge, PlanGraphNode, PlanTask, PlanTaskState } from "../value-objects/Plan.js";
 import { planLayout } from "./planLayout.js";
 
+// Grafo de tareas; los checks y las fases los agrega buildPlan.
 export function buildPlanGraph(
   tasks: PlanTask[],
   states: Record<string, PlanTaskState>,
   generatedAt: string,
-): PlanGraph {
+): Omit<PlanGraph, "checks" | "phases"> {
   const { stages, positions } = planLayout(tasks);
 
   const nodes: PlanGraphNode[] = tasks.map((task) => ({
@@ -31,7 +32,6 @@ export function buildPlanGraph(
   return {
     generated_at: generatedAt,
     summary: { tasks: nodes.length, by_state: byState },
-    checks: [],
     nodes,
     edges,
   };

@@ -12,6 +12,51 @@ function counts(byRule: Record<string, number>, severity = "high"): PlanSignals[
   return Object.fromEntries(Object.entries(byRule).map(([rule, count]) => [rule, { [severity]: count }]));
 }
 
+describe("generatePlan: APIs legacy (XRay X6)", () => {
+  it("apply-legacy-codemods y migrate-deprecated-apis con sus reglas, orden y dependencias", () => {
+    const plan = generatePlan(
+      signals({
+        findingCounts: counts({
+          "unsafe-lifecycle": 1, "legacy-react-dom-api": 2, "string-ref": 4, "removed-php-function": 8,
+          "with-router": 16, "deprecated-library": 32, "deprecated-php-function": 64,
+          "base-class-inheritance": 1, "large-component": 1, "untested-complex-method": 1,
+        }),
+      }),
+    );
+    const keys = plan.map((task) => task.key);
+
+    expect(keys.slice(keys.indexOf("replace-base-class-inheritance"), keys.indexOf("split-large-components") + 1)).toEqual([
+      "replace-base-class-inheritance",
+      "apply-legacy-codemods",
+      "migrate-deprecated-apis",
+      "split-large-components",
+    ]);
+    expect(plan.find((task) => task.key === "apply-legacy-codemods")).toEqual({
+      key: "apply-legacy-codemods",
+      title: "Aplicar codemods de APIs eliminadas",
+      description: "Correr los codemods de Codemods (React 19 / PHP 8) sobre lo ya protegido: lifecycles, ReactDOM.render, string refs, funciones PHP eliminadas.",
+      category: "legacy_api",
+      dependsOn: ["add-characterization-tests"],
+      metric: 15,
+    });
+    expect(plan.find((task) => task.key === "migrate-deprecated-apis")).toEqual({
+      key: "migrate-deprecated-apis",
+      title: "Migrar APIs y librerias deprecadas",
+      description: "withRouter, moment/request/react-ga, utf8_encode: migracion manual guiada por el panel Codemods.",
+      category: "legacy_api",
+      dependsOn: ["apply-legacy-codemods", "add-characterization-tests"],
+      metric: 112,
+    });
+  });
+
+  it("con tests de componentes tambien dependen de add-component-tests", () => {
+    const plan = generatePlan(signals({ findingCounts: counts({ "with-router": 1, "unsafe-lifecycle": 1, "untested-component": 1 }) }));
+
+    expect(plan.find((task) => task.key === "apply-legacy-codemods")?.dependsOn).toEqual(["add-component-tests"]);
+    expect(plan.find((task) => task.key === "migrate-deprecated-apis")?.dependsOn).toEqual(["apply-legacy-codemods", "add-component-tests"]);
+  });
+});
+
 describe("generatePlan: exports sin uso (XRay X2)", () => {
   it("remove-unused-exports cuenta unused-export, va despues de remove-unused-files y depende de ella", () => {
     const plan = generatePlan(signals({ findingCounts: counts({ "unused-export": 40, "possibly-unused-file": 2 }) }));

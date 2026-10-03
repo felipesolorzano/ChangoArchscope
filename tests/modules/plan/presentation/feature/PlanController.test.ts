@@ -18,6 +18,8 @@ function snapshot(): AuditSnapshot {
     riskScore: { value: 3, breakdown: {} },
     riskBreakdown: { byFile: [], byClass: [], byModule: [], topRiskiestFiles: [] },
     skippedFiles: [],
+    scannedFiles: [],
+    testedBy: {},
   };
 }
 
@@ -230,5 +232,24 @@ describe("PlanController", async () => {
     expect(next).not.toHaveBeenCalled();
     expect(status).toHaveBeenCalledWith(200);
     expect((json.mock.calls[0][0] as { nodes: Array<{ id: string }> }).nodes.some((node) => node.id === "close-sql-injections")).toBe(true);
+  });
+
+  it("fases: pide el nivel de proteccion del target; si falla, sin datos (XRay X6)", async () => {
+    const getLevel = vi.fn(async (_target: "laravel" | "react") => "high" as const);
+    const { json, response } = fakeResponse();
+
+    await new PlanController({ snapshots, repository: repository(), projectOf, protection: { getLevel } }).show({ query: { target: "react" } } as unknown as Request, response, vi.fn() as unknown as NextFunction);
+
+    expect(getLevel).toHaveBeenCalledWith("react");
+    expect(json.mock.calls[0][0].phases[3].gates[0]).toMatchObject({ value: 3, status: "passed" });
+
+    const failing = fakeResponse();
+    const broken = { getLevel: vi.fn(async () => Promise.reject(new Error("boom"))) };
+    await new PlanController({ snapshots, repository: repository(), projectOf, protection: broken }).update(
+      { params: { key: "close-sql-injections" }, body: { state: "done" }, query: {} } as unknown as Request,
+      failing.response,
+      vi.fn() as unknown as NextFunction,
+    );
+    expect(failing.json.mock.calls[0][0].phases[3].gates[0]).toMatchObject({ value: null, status: "unknown" });
   });
 });

@@ -3,10 +3,11 @@ import type { NextFunction, Request, Response } from "express";
 import type { AuditSnapshotProvider } from "../../application/contracts/AuditSnapshotProvider.js";
 import type { DependencySignalsProvider } from "../../application/contracts/DependencySignalsProvider.js";
 import type { PlanTaskStateRepository } from "../../application/contracts/PlanTaskStateRepository.js";
+import type { ProtectionLevelProvider } from "../../application/contracts/ProtectionLevelProvider.js";
 import { buildPlan } from "../../application/use-cases/buildPlan.js";
 import { findingsForTask } from "../../application/use-cases/findingsForTask.js";
 import { updateTaskState } from "../../application/use-cases/updateTaskState.js";
-import type { DependencySignals } from "../../domain/value-objects/Plan.js";
+import type { DependencySignals, PlanProtectionLevel } from "../../domain/value-objects/Plan.js";
 
 export type PlanControllerDeps = {
   snapshots: AuditSnapshotProvider;
@@ -15,6 +16,8 @@ export type PlanControllerDeps = {
   projectOf: (target: string) => string;
   /** Tareas de actualizacion de paquetes; si falta o falla, el plan sale sin ellas. */
   dependencySignals?: DependencySignalsProvider;
+  /** Nivel de proteccion para las fases (XRay X6); si falta o falla, el gate queda sin datos. */
+  protection?: ProtectionLevelProvider;
 };
 
 export class PlanController {
@@ -25,7 +28,7 @@ export class PlanController {
       const target = targetFromRequest(request);
       const snapshot = await this.deps.snapshots.getSnapshot(target);
 
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target)));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, this.deps.projectOf(target), await this.dependencies(target), await this.protectionLevel(target)));
     } catch (error) {
       next(error);
     }
@@ -40,7 +43,7 @@ export class PlanController {
       updateTaskState(this.deps.repository, target, project, String(request.params.key), state);
 
       const snapshot = await this.deps.snapshots.getSnapshot(target);
-      response.status(200).json(buildPlan(snapshot, this.deps.repository, project, await this.dependencies(target)));
+      response.status(200).json(buildPlan(snapshot, this.deps.repository, project, await this.dependencies(target), await this.protectionLevel(target)));
     } catch (error) {
       next(error);
     }
@@ -60,6 +63,11 @@ export class PlanController {
   // El reporte de dependencias es opcional: si no hay proveedor o falla, el plan sale sin esas tareas.
   private async dependencies(target: "laravel" | "react"): Promise<DependencySignals | undefined> {
     return this.deps.dependencySignals?.getSignals(target).catch(() => undefined);
+  }
+
+  private async protectionLevel(target: "laravel" | "react"): Promise<PlanProtectionLevel | null> {
+    // Stryker disable next-line ArrowFunction: null y undefined son "sin datos" para las fases, mutante equivalente.
+    return (await this.deps.protection?.getLevel(target).catch(() => null)) ?? null;
   }
 }
 

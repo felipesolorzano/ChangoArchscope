@@ -303,7 +303,7 @@
 
 /* XRay X4: que proteger primero */
 .plan-protection__action { padding: 2px 10px; border-radius: 999px; border: 1px solid rgba(56, 189, 248, 0.5); background: rgba(14, 165, 233, 0.12); color: #7dd3fc; font-size: 12px; font-weight: 700; cursor: pointer; }
-.plan-characterization { top: 140px; right: auto; left: 18px; width: 460px; max-height: calc(100% - 160px); z-index: 7; }
+.plan-characterization { top: 172px; right: auto; left: 18px; width: 460px; max-height: calc(100% - 192px); z-index: 7; }
 .plan-characterization__close { background: transparent; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 8px; color: #cbd5e1; font-size: 12px; padding: 3px 10px; cursor: pointer; }
 .plan-characterization__item { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 8px; background: rgba(2, 6, 23, 0.55); font-size: 11px; }
 .plan-characterization__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -325,3 +325,10 @@
 .plan-codemods__count { font-variant-numeric: tabular-nums; color: #e2e8f0; }
 .plan-codemods__tested { color: #4ade80; }
 .plan-codemods__untested { color: #f87171; }
+.plan-phases__current { font-weight: 800; color: #f8fafc; }
+.plan-phases__item { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; background: rgba(2, 6, 23, 0.55); font-size: 11px; border: 1px solid transparent; }
+.plan-phases__item--current { border-color: rgba(56, 189, 248, 0.6); background: rgba(14, 165, 233, 0.1); }
+.plan-phases__gate { padding-left: 8px; color: #cbd5e1; }
+.plan-phases__gate--passed { color: #4ade80; }
+.plan-phases__gate--failed { color: #fca5a5; }
+.plan-phases__gate--unknown { color: #94a3b8; }

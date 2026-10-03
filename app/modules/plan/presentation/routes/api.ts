@@ -10,6 +10,9 @@ import { resolveAuditSnapshot } from "../../../audit/presentation/http/auditRequ
 import type { AuditSnapshotProvider } from "../../application/contracts/AuditSnapshotProvider.js";
 import { SqlitePlanTaskStateRepository } from "../../infrastructure/persistence/SqlitePlanTaskStateRepository.js";
 import { PlanController } from "../http/PlanController.js";
+import { buildProtectionBaseline } from "../../../protection/application/use-cases/buildProtectionBaseline.js";
+import { protectionStackOf } from "../../../protection/presentation/http/ProtectionController.js";
+import { NodeFsSourceTreeReader } from "../../../shared/infrastructure/filesystem/NodeFsSourceTreeReader.js";
 
 export function planApiRoutes(): Router {
   const router = Router();
@@ -35,6 +38,10 @@ export function planApiRoutes(): Router {
     dependencySignals: {
       getSignals: async (target) =>
         dependencyReportToSignals(await generateDependencyReport(getDependencyReportDeps(), { target, requested: {}, refresh: false, offline: true })),
+    },
+    // Fase 3 (XRay X6): el mismo nivel que muestra la franja "Red de seguridad".
+    protection: {
+      getLevel: async (target) => buildProtectionBaseline({ reader: new NodeFsSourceTreeReader(), ...protectionStackOf(auditDeps.getConfig(), target) }).level,
     },
   });
 

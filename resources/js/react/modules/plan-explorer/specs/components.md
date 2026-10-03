@@ -69,7 +69,7 @@ content }] }] }`.
   lanza con el status); `createPlanExplorerDependencies({ …, characterizationUrl })`; el shell usa
   `"/characterization.json"`.
 - Store Zustand `planDrawerStore` (X5, reemplaza a `characterizationStore`): `drawer`:
-  `"characterization" | "codemods" | null` (default `null`: un solo panel abierto a la vez) y
+  `"characterization" | "codemods" | "phases" | null` (default `null`: un solo panel abierto a la vez) y
   `setDrawer`; `getServerState` = `getState` (render estatico de los tests).
 - Helpers puros (`presentation/constants/characterizationView.ts`):
   - `targetKindLabel`: page → "Pagina", component → "Componente", php → "PHP".
@@ -114,3 +114,27 @@ protectedFiles }] }`.
   (una vez por montaje); "Buscando APIs legacy…" mientras carga, el error si falla, y la lista; boton
   "Cerrar". "Copiar" usa `infrastructure/browser/copyText(text)` (`navigator.clipboard.writeText`;
   adaptador de navegador, fuera de mutation).
+
+## Fases y quality gates (XRay X6)
+
+`PlanGraph.phases?: PlanPhase[]` (ver `app/modules/plan/specs/plan-phases.md`): `{ number, key, title,
+goal, status, current, gates: [{ key, label, value, target, comparator, format, status }], tasks }`.
+
+- Helpers puros (`presentation/constants/phaseView.ts`):
+  - `phaseStatusLabel`: passed → "Cumplida", failed → "Pendiente", unknown → "Sin datos",
+    not-applicable → "No aplica". `phaseStatusColor`: verde `#16a34a`, rojo `#dc2626`, gris
+    `#64748b`, gris tenue `#475569`.
+  - `gateValue(gate)`: `null` → "sin datos"; percent → `"<n>%"`; level → "Ninguna"/"Baja"/"Media"/
+    "Alta" (0–3); count → el numero.
+  - `gateTarget(gate)`: `"≤ <target>"` o `"≥ <target>"` con el mismo formato que el valor.
+  - `currentPhase(phases)`: la fase con `current`, o `null`.
+- `PhaseIndicator({ phases })` (en la cabecera del Plan, debajo de la franja de proteccion): sin fases no renderiza; con fase actual
+  `"Fase <n> · <titulo>"`; sin fase actual `"Todas las fases cumplidas"`; boton "Fases"
+  (`setDrawer("phases")`).
+- `PhaseList({ phases, taskTitles })` (presentacional): un item por fase con `"<n>. <titulo>"`, el
+  estado (etiqueta y color), la meta, cada gate `"<label>: <valor> (meta <objetivo>)"` con su estado
+  (✓ passed, ✗ failed, ? unknown) y, si tiene, `"Tareas: <titulos unidos por ' · '>"`
+  (`taskTitles[key]`, la key si no hay titulo); la fase actual lleva la clase `plan-phases__item--current`.
+- `PhaseDrawer({ graph })`: solo con `drawer === "phases"`; titulo "Fases y quality gates", boton
+  "Cerrar"; sin `graph`/`phases`, "Calculando fases…"; si no, `PhaseList` con los titulos de las
+  tareas del grafo. No pide nada: las fases vienen en `/plan.json`.

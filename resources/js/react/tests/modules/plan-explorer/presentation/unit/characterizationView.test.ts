@@ -48,6 +48,7 @@ describe("planDrawerStore (XRay X5)", () => {
   it("un solo panel abierto a la vez; el snapshot de servidor es el estado actual", () => {
     expect(usePlanDrawerStore.getInitialState().drawer).toBeNull();
     usePlanDrawerStore.getState().setDrawer("characterization");
+    usePlanDrawerStore.getState().setDrawer("phases");
     usePlanDrawerStore.getState().setDrawer("codemods");
 
     expect(usePlanDrawerStore.getState().drawer).toBe("codemods");

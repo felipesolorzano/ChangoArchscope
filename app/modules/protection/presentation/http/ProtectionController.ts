@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import type { ArchitectureConfig } from "../../../architecture/domain/value-objects/ArchitectureConfig.js";
 import type { SourceTreeReader } from "../../../shared/domain/repositories/SourceTreeReader.js";
-import { buildProtectionBaseline } from "../../application/use-cases/buildProtectionBaseline.js";
+import { buildProtectionBaseline, type BuildProtectionInput } from "../../application/use-cases/buildProtectionBaseline.js";
 
 export type ProtectionControllerDeps = { getConfig: () => ArchitectureConfig; reader: SourceTreeReader };
 
@@ -14,17 +14,18 @@ export class ProtectionController {
 
   show = (request: Request, response: Response, next: NextFunction): void => {
     try {
-      const config = this.deps.getConfig();
-      const stack =
-        request.query.target === "react"
-          ? // Stryker disable next-line ArrayDeclaration: una carpeta de tests inventada no existe, mutante equivalente.
-            { stackRoot: config.react.modulesPath, testPaths: config.react.testPaths ?? [], extensions: JS_EXTENSIONS, ignoredPaths: config.react.ignoredPaths }
-          : // Stryker disable next-line ArrayDeclaration: una carpeta de tests inventada no existe, mutante equivalente.
-            { stackRoot: config.laravel.modulesPath, testPaths: [], extensions: config.laravel.phpExtensions, ignoredPaths: config.laravel.ignoredPaths };
+      const stack = protectionStackOf(this.deps.getConfig(), request.query.target);
 
       response.status(200).json(buildProtectionBaseline({ reader: this.deps.reader, ...stack }));
     } catch (error) {
       next(error);
     }
   };
+}
+
+/** Raiz, tests, extensiones e ignorados del stack (tambien la usa el Plan para el nivel, XRay X6). Cualquier target que no sea react es laravel. */
+export function protectionStackOf(config: ArchitectureConfig, target: unknown): Omit<BuildProtectionInput, "reader"> {
+  return target === "react"
+    ? { stackRoot: config.react.modulesPath, testPaths: config.react.testPaths ?? [], extensions: JS_EXTENSIONS, ignoredPaths: config.react.ignoredPaths }
+    : { stackRoot: config.laravel.modulesPath, testPaths: [], extensions: config.laravel.phpExtensions, ignoredPaths: config.laravel.ignoredPaths };
 }

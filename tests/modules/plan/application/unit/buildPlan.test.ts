@@ -33,6 +33,8 @@ function snapshot(): AuditSnapshot {
       topRiskiestFiles: [],
     },
     skippedFiles: [{ file: "x", error: "y" }, { file: "z", error: "w" }],
+    scannedFiles: [],
+    testedBy: {},
   };
 }
 
@@ -92,6 +94,37 @@ describe("auditSnapshotToSignals", () => {
   });
 });
 
+describe("auditSnapshotToSignals: archivos riesgosos sin tests (XRay X6)", () => {
+  const entry = (key: string, value: number) => ({ key, value, byCategory: {}, bySeverity: {}, findingsCount: 1 });
+  const finding = (rule: string, file: string) => ({ ...snapshot().findings[0], rule, file });
+
+  it("top 10 por riesgo (empate por ruta) de los escaneados, sin copias ni muertos, que no tienen tests", () => {
+    const file = (index: number) => `/r/f${String(index).padStart(2, "0")}.php`;
+    const base = snapshot();
+    // Entrada desordenada: f02 y f01 empatan en 2 (gana f01 por ruta) en el puesto 10.
+    const byFile = [entry(file(2), 2), entry(file(1), 2), entry(file(13), 13), entry(file(12), 12), ...[11, 10, 9, 8, 7, 6, 5, 4, 3].map((index) => entry(file(index), index)), entry(file(0), 1), entry(file(14), 0), entry("Arch.php", 999)];
+    const signals = auditSnapshotToSignals({
+      ...base,
+      // f13 (copia) y f12 (sin uso) se excluyen; un hallazgo cualquiera (f10) no excluye; Arch.php no se escaneo.
+      findings: [finding("manual-copy-file", file(13)), finding("possibly-unused-file", file(12)), finding("eval-usage", file(10))],
+      riskBreakdown: { ...base.riskBreakdown, byFile },
+      scannedFiles: Array.from({ length: 15 }, (_, index) => file(index)),
+      // Con tests: f11 (en el top), f02 (pierde el empate), f00 (fuera del top) y los excluidos f13, f12 y Arch.php.
+      testedBy: Object.fromEntries([file(11), file(2), file(0), file(13), file(12), "Arch.php"].map((key) => [key, ["/r/tests/T.php"]])),
+    });
+
+    // Top 10: f11, f10..f03, f01; con tests solo f11.
+    expect(signals.topRiskUntested).toBe(9);
+  });
+
+  it("snapshot sin testedBy (cache viejo): todos sin tests", () => {
+    const base = snapshot();
+    const { testedBy: _omit, ...old } = { ...base, riskBreakdown: { ...base.riskBreakdown, byFile: [entry("/r/a.php", 3)] }, scannedFiles: ["/r/a.php"] };
+
+    expect(auditSnapshotToSignals(old as AuditSnapshot).topRiskUntested).toBe(1);
+  });
+});
+
 describe("buildPlan", () => {
   it("genera el grafo del plan con los estados del repositorio sobrepuestos", () => {
     const repository: PlanTaskStateRepository = {
@@ -125,6 +158,22 @@ describe("buildPlan", () => {
     const graph = buildPlan({ ...snapshot(), target: "react" }, repository, "/src");
 
     expect(graph.checks.at(-1)?.category).toBe("api_access");
+  });
+
+  it("fases: salud del proyecto, nivel de proteccion y tareas del plan (XRay X6)", () => {
+    const repository = { getStates: () => ({}), setState: () => {} };
+    const base = snapshot();
+    const healthy = { ...base, scannedFiles: ["/php/a.php", "/php/b.php", "/php/c.php", "/php/d.php"], riskBreakdown: { ...base.riskBreakdown, byFile: [{ key: "/php/a.php", value: 2, byCategory: {}, bySeverity: {}, findingsCount: 1 }] } };
+
+    const graph = buildPlan(healthy, repository, "/php", undefined, "medium");
+
+    expect(graph.phases).toHaveLength(11);
+    expect(graph.phases[3].gates[0]).toMatchObject({ key: "protection-level", value: 2, status: "passed" });
+    expect(graph.phases[10].gates.find((gate) => gate.key === "healthy-files")?.value).toBe(75);
+    expect(graph.phases[1].tasks).toEqual(["close-sql-injections"]);
+    expect(graph.phases[2].gates.map((gate) => gate.key)).not.toContain("unused-exports");
+    expect(buildPlan({ ...healthy, target: "react" }, repository, "/src").phases[2].gates.map((gate) => gate.key)).toContain("unused-exports");
+    expect(buildPlan(healthy, repository, "/php").phases[3].gates[0]).toMatchObject({ value: null, status: "unknown" });
   });
 
   it("con señales de dependencias agrega sus tareas al grafo", () => {

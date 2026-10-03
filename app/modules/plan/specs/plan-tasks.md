@@ -47,6 +47,8 @@ Cada tarea se incluye solo si su metrica es > 0. `dependsOn` se poda a las tarea
 | `isolate-http-layer` | api_access | `http-in-component`, `duplicate-endpoint`, `hardcoded-api-url` | `add-component-tests` |
 | `remove-jquery` | coupling | `jquery-usage`, `direct-dom-access` | `add-component-tests` |
 | `replace-base-class-inheritance` | coupling | `base-class-inheritance` | `add-component-tests`, `isolate-http-layer` |
+| `apply-legacy-codemods` | legacy_api | `unsafe-lifecycle`, `legacy-react-dom-api`, `string-ref`, `removed-php-function` (XRay X6) | `add-characterization-tests`, `add-component-tests` |
+| `migrate-deprecated-apis` | legacy_api | `with-router`, `deprecated-library`, `deprecated-php-function` (XRay X6) | `apply-legacy-codemods`, `add-characterization-tests`, `add-component-tests` |
 | `split-large-components` | complexity | `large-component`, `long-render`, `large-state` | `add-component-tests` |
 | `validate-risk-reduction` | validation | 0 (siempre, si hay alguna otra) | todas las demas |
 
@@ -122,6 +124,10 @@ proyecto no aparece en otro al cambiar `modulesPath` (proyecto = raiz del stack,
 - Fila dentro de la etapa en orden de roadmap, `y = fila * 250`: la tarjeta (titulo de 2 lineas,
   descripcion de 3 y dos filas de estados) mide ~225px; con menos espacio las tarjetas de una misma
   etapa se pisan (visible en React, que tiene 5 tareas en la etapa 1).
+
+## Fases con quality gates (`PlanGraph.phases`, XRay X6)
+
+Ver `plan-phases.md`.
 
 ## Checklist auditado (`PlanGraph.checks`)
 
